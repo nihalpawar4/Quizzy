@@ -17,10 +17,13 @@ import {
   User,
   Bot,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // FAQ Data
 const faqData = [
@@ -283,7 +286,7 @@ function Chatbot() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br [#1650EB] rounded-full shadow-lg flex items-center justify-center z-50 hover:shadow-xl transition-shadow"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-[#1650EB] rounded-full shadow-lg shadow-[#1650EB]/25 flex items-center justify-center z-50 hover:shadow-xl hover:bg-[#1243c7] transition-all"
       >
         <MessageCircle className="w-6 h-6 text-white" />
       </motion.button>
@@ -298,7 +301,7 @@ function Chatbot() {
             className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r [#1650EB]">
+            <div className="flex items-center justify-between p-4 bg-[#1650EB]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <Bot className="w-5 h-5 text-white" />
@@ -317,7 +320,7 @@ function Chatbot() {
             </div>
 
             {/* Messages */}
-            <div className="h-80 overflow-y-auto p-4 space-y-4">
+            <div className="h-80 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
               {messages.map((msg, index) => (
                 <motion.div
                   key={index}
@@ -326,16 +329,16 @@ function Chatbot() {
                   className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}
                 >
                   <div className={`flex items-start gap-2 max-w-[80%] ${msg.isBot ? '' : 'flex-row-reverse'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.isBot ? 'bg-[#1650EB]/10 dark:bg-indigo-900/50' : 'bg-gray-100 dark:bg-gray-800'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.isBot ? 'bg-[#1650EB]/10 dark:bg-[#1650EB]/20' : 'bg-gray-200 dark:bg-gray-800'
                       }`}>
                       {msg.isBot ? (
-                        <Bot className="w-4 h-4 text-[#1650EB] dark:text-indigo-400" />
+                        <Bot className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
                       ) : (
-                        <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        <User className="w-4 h-4 text-[#6D6D6D] dark:text-gray-400" />
                       )}
                     </div>
                     <div className={`p-3 rounded-2xl ${msg.isBot
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                      ? 'bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-gray-700'
                       : 'bg-[#1650EB] text-white rounded-tr-none'
                       }`}>
                       <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
@@ -352,14 +355,14 @@ function Chatbot() {
                   className="flex justify-start"
                 >
                   <div className="flex items-start gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1650EB]/10 dark:bg-indigo-900/50">
-                      <Bot className="w-4 h-4 text-[#1650EB] dark:text-indigo-400" />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1650EB]/10 dark:bg-[#1650EB]/20">
+                      <Bot className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
                     </div>
-                    <div className="p-3 rounded-2xl bg-gray-100 dark:bg-gray-800 rounded-tl-none">
+                    <div className="p-3 rounded-2xl bg-white dark:bg-gray-800 rounded-tl-none border border-gray-200 dark:border-gray-700">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                       </div>
                     </div>
                   </div>
@@ -372,16 +375,16 @@ function Chatbot() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   onSubmit={handleContactSubmit}
-                  className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-3"
+                  className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 border border-gray-200 dark:border-gray-700"
                 >
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Contact Support</p>
+                  <p className="text-sm font-medium text-[#020218] dark:text-gray-300">Contact Support</p>
                   <input
                     type="text"
                     placeholder="Your Name"
                     value={contactForm.name}
                     onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                     required
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
                   />
                   <input
                     type="email"
@@ -389,7 +392,7 @@ function Chatbot() {
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                     required
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
                   />
                   <textarea
                     placeholder="Your Message"
@@ -397,7 +400,7 @@ function Chatbot() {
                     onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     required
                     rows={3}
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none resize-none"
+                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none resize-none"
                   />
                   <button
                     type="submit"
@@ -423,7 +426,7 @@ function Chatbot() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -431,7 +434,7 @@ function Chatbot() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] outline-none"
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] outline-none"
                 />
                 <button
                   onClick={handleSend}
@@ -450,6 +453,11 @@ function Chatbot() {
 
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
@@ -470,8 +478,41 @@ export default function HomePage() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-4"
+            className="flex items-center gap-3"
           >
+            {/* Theme Toggle Button */}
+            <motion.button
+              onClick={toggleTheme}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#6D6D6D] dark:text-gray-400 hover:bg-[#1650EB]/10 dark:hover:bg-[#1650EB]/20 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors"
+              aria-label="Toggle theme"
+            >
+              <AnimatePresence mode="wait">
+                {resolvedTheme === 'dark' ? (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="w-5 h-5" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="w-5 h-5" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
             <Link
               href="#faq"
               className="hidden sm:block text-sm font-medium text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors"
