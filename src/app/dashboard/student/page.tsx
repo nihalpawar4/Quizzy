@@ -157,7 +157,7 @@ export default function StudentDashboard() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
             </div>
         );
     }
@@ -195,7 +195,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0, y: -100 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -100 }}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4"
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4"
                     >
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                             <Bell className="w-6 h-6 text-white animate-bounce" />
@@ -218,7 +218,7 @@ export default function StudentDashboard() {
             <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
                             <GraduationCap className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -233,8 +233,8 @@ export default function StudentDashboard() {
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Class {user.studentClass}</p>
                             </div>
-                            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-indigo-500 transition-all">
-                                <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                            <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                             </div>
                         </Link>
                         <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Sign Out">
@@ -259,8 +259,8 @@ export default function StudentDashboard() {
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                     <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
-                                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            <div className="w-12 h-12 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                                <BookOpen className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{tests.length}</p>
@@ -282,7 +282,7 @@ export default function StudentDashboard() {
                     <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
-                                <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                <Clock className="w-6 h-6 text-[#1650EB] dark:text-purple-400" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{averageScore}%</p>
@@ -299,7 +299,7 @@ export default function StudentDashboard() {
                     </h3>
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                            <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                         </div>
                     ) : tests.length === 0 ? (
                         <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -321,7 +321,7 @@ export default function StudentDashboard() {
                                     >
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex-1">
-                                                <span className="inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full mb-2">{test.subject}</span>
+                                                <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full mb-2">{test.subject}</span>
                                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                             </div>
                                         </div>
@@ -335,7 +335,7 @@ export default function StudentDashboard() {
                                                 <span className="text-sm font-medium">Score: {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)</span>
                                             </div>
                                         ) : (
-                                            <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                                            <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                                 Start Test <ArrowRight className="w-4 h-4" />
                                             </Link>
                                         )}
@@ -361,14 +361,14 @@ export default function StudentDashboard() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400">Top performers in your class</p>
                                     </div>
                                 </div>
-                                <button onClick={loadLeaderboard} className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Refresh">
+                                <button onClick={loadLeaderboard} className="p-2 text-gray-500 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors" title="Refresh">
                                     <RefreshCw className={`w-5 h-5 ${leaderboardLoading ? 'animate-spin' : ''}`} />
                                 </button>
                             </div>
 
                             {leaderboardLoading ? (
                                 <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                    <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                                 </div>
                             ) : leaderboard.length === 0 ? (
                                 <div className="text-center py-12">
@@ -384,7 +384,7 @@ export default function StudentDashboard() {
                                             </div>
                                             <div className="flex-1">
                                                 <p className="font-medium text-gray-900 dark:text-white">
-                                                    {entry.studentName} {entry.studentId === user.uid && <span className="text-xs text-indigo-600 dark:text-indigo-400">(You)</span>}
+                                                    {entry.studentName} {entry.studentId === user.uid && <span className="text-xs text-[#1650EB] dark:text-[#6095DB]">(You)</span>}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">{entry.totalTests} tests completed</p>
                                             </div>
@@ -396,7 +396,7 @@ export default function StudentDashboard() {
                                     ))}
 
                                     {leaderboard.length > 5 && (
-                                        <button onClick={() => setShowAllLeaderboard(!showAllLeaderboard)} className="w-full py-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <button onClick={() => setShowAllLeaderboard(!showAllLeaderboard)} className="w-full py-3 text-sm font-medium text-[#1650EB] dark:text-[#6095DB] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                             {showAllLeaderboard ? 'Show Less' : `Show All (${leaderboard.length})`}
                                         </button>
                                     )}
@@ -408,14 +408,14 @@ export default function StudentDashboard() {
                                 <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border-t border-gray-200 dark:border-gray-800">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 flex items-center justify-center">
-                                            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">#{userRank.rank}</span>
+                                            <span className="text-sm font-bold text-[#1650EB] dark:text-[#6095DB]">#{userRank.rank}</span>
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium text-gray-900 dark:text-white">Your Rank</p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">{userRank.totalTests} tests completed</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{userRank.averageScore}%</p>
+                                            <p className="font-bold text-lg text-[#1650EB] dark:text-[#6095DB]">{userRank.averageScore}%</p>
                                         </div>
                                     </div>
                                 </div>
@@ -434,7 +434,7 @@ export default function StudentDashboard() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.1 + index * 0.05 }}
                                     onClick={() => handleComingSoon(action.label)}
-                                    className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group flex items-center gap-3"
+                                    className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
                                 >
                                     <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                                         <action.icon className={`w-5 h-5 ${action.iconColor}`} />
@@ -500,14 +500,14 @@ export default function StudentDashboard() {
                 {showComingSoon && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowComingSoon(false)}>
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Coming Soon!</h3>
                             <p className="text-gray-600 dark:text-gray-400 mb-6">
-                                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{comingSoonFeature}</span> is under development and will be available soon. Stay tuned!
+                                <span className="font-semibold text-[#1650EB] dark:text-[#6095DB]">{comingSoonFeature}</span> is under development and will be available soon. Stay tuned!
                             </p>
-                            <button onClick={() => setShowComingSoon(false)} className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                            <button onClick={() => setShowComingSoon(false)} className="w-full flex items-center justify-center gap-2 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                 <X className="w-4 h-4" /> Close
                             </button>
                         </motion.div>

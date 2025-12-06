@@ -60,7 +60,7 @@ function LoginForm() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                     >
-                        <span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-full text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-full text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
                             <Sparkles className="w-4 h-4" />
                             Nihal&apos;s Home Tutoring Classes
                         </span>
@@ -70,10 +70,10 @@ function LoginForm() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight"
+                        className="text-4xl lg:text-5xl font-bold text-[#020218] dark:text-white leading-tight"
                     >
                         Welcome back to{' '}
-                        <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        <span className="text-[#1650EB]">
                             Quizy
                         </span>
                     </motion.h1>
@@ -82,7 +82,7 @@ function LoginForm() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="text-lg text-gray-600 dark:text-gray-400"
+                        className="text-lg text-[#6D6D6D] dark:text-gray-400"
                     >
                         Continue your learning journey. Practice tests, track progress, and excel in your exams.
                     </motion.p>
@@ -100,10 +100,10 @@ function LoginForm() {
                             { icon: GraduationCap, text: 'Continue where you left off' },
                         ].map((item, index) => (
                             <div key={index} className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
-                                    <item.icon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                <div className="w-10 h-10 rounded-xl bg-[#1650EB]/10 dark:bg-[#1650EB]/20 flex items-center justify-center">
+                                    <item.icon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                 </div>
-                                <span className="text-gray-700 dark:text-gray-300">{item.text}</span>
+                                <span className="text-[#020218] dark:text-gray-300">{item.text}</span>
                             </div>
                         ))}
                     </motion.div>
@@ -120,25 +120,25 @@ function LoginForm() {
                 {/* Card */}
                 <div className="relative">
                     {/* Decorative gradient blur */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-3xl blur-lg opacity-20 dark:opacity-30" />
+                    <div className="absolute -inset-1 bg-[#1650EB]/20 rounded-3xl blur-lg opacity-30" />
 
-                    <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-8">
+                    <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-8">
                         {/* Mobile Logo */}
                         <div className="lg:hidden text-center mb-6">
                             <Link href="/" className="inline-flex items-center gap-2">
-                                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <div className="w-12 h-12 bg-[#1650EB] rounded-xl flex items-center justify-center">
                                     <GraduationCap className="w-7 h-7 text-white" />
                                 </div>
-                                <span className="text-2xl font-bold text-gray-900 dark:text-white">Quizy</span>
+                                <span className="text-2xl font-bold text-[#020218] dark:text-white">Quizy</span>
                             </Link>
                         </div>
 
                         {/* Header */}
                         <div className="text-center mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <h2 className="text-2xl font-bold text-[#020218] dark:text-white mb-2">
                                 Sign In
                             </h2>
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-[#6D6D6D] dark:text-gray-400">
                                 {roleParam === 'teacher'
                                     ? 'Access your teacher dashboard'
                                     : 'Continue your learning journey'}
@@ -161,11 +161,11 @@ function LoginForm() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Email */}
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="email" className="block text-sm font-medium text-[#020218] dark:text-gray-300 mb-2">
                                     Email Address
                                 </label>
                                 <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#1650EB] transition-colors" />
                                     <input
                                         id="email"
                                         type="email"
@@ -173,18 +173,18 @@ function LoginForm() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="you@example.com"
                                         required
-                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-800 outline-none transition-all"
+                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent focus:bg-white dark:focus:bg-gray-800 outline-none transition-all"
                                     />
                                 </div>
                             </div>
 
                             {/* Password */}
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="password" className="block text-sm font-medium text-[#020218] dark:text-gray-300 mb-2">
                                     Password
                                 </label>
                                 <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#1650EB] transition-colors" />
                                     <input
                                         id="password"
                                         type="password"
@@ -193,7 +193,7 @@ function LoginForm() {
                                         placeholder="••••••••"
                                         required
                                         minLength={6}
-                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-800 outline-none transition-all"
+                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent focus:bg-white dark:focus:bg-gray-800 outline-none transition-all"
                                     />
                                 </div>
                             </div>
@@ -204,7 +204,7 @@ function LoginForm() {
                                 disabled={isSubmitting || loading}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1650EB] text-white rounded-xl font-semibold shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:bg-[#1243c7] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? (
                                     <>
@@ -226,7 +226,7 @@ function LoginForm() {
                                 <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-4 bg-white dark:bg-gray-900 text-gray-500">
+                                <span className="px-4 bg-white dark:bg-gray-900 text-[#6D6D6D]">
                                     New to Quizy?
                                 </span>
                             </div>
@@ -235,7 +235,7 @@ function LoginForm() {
                         {/* Register Link */}
                         <Link
                             href={roleParam === 'teacher' ? '/auth/register?role=teacher' : '/auth/register'}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all"
+                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-50 dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] transition-all"
                         >
                             Create Account
                             <ArrowRight className="w-4 h-4" />
@@ -244,8 +244,8 @@ function LoginForm() {
                 </div>
 
                 {/* Footer Link */}
-                <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1">
+                <p className="text-center mt-6 text-sm text-[#6D6D6D] dark:text-gray-400">
+                    <Link href="/" className="hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors inline-flex items-center gap-1">
                         <ArrowRight className="w-3 h-3 rotate-180" />
                         Back to Home
                     </Link>
@@ -260,7 +260,7 @@ function LoginLoading() {
         <div className="w-full max-w-md">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-8">
                 <div className="flex justify-center">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                 </div>
             </div>
         </div>
@@ -269,11 +269,11 @@ function LoginLoading() {
 
 export default function LoginPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex flex-col relative overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex flex-col relative overflow-hidden">
             {/* Background decorations */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-200/40 dark:bg-purple-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[#6095DB]/30 dark:bg-[#1650EB]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#1650EB]/20 dark:bg-[#6095DB]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
             </div>
 
             {/* Header */}
@@ -283,11 +283,11 @@ export default function LoginPage() {
                         <motion.div
                             whileHover={{ rotate: [0, -10, 10, 0] }}
                             transition={{ duration: 0.5 }}
-                            className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30"
+                            className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center shadow-lg shadow-[#1650EB]/25"
                         >
                             <GraduationCap className="w-6 h-6 text-white" />
                         </motion.div>
-                        <span className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Quizy</span>
+                        <span className="text-xl font-bold text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
                     </Link>
                 </div>
             </header>

@@ -186,14 +186,14 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden"
+      className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden hover:border-[#1650EB]/30 transition-colors"
     >
       <button
         onClick={onClick}
-        className="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-gray-900 hover:bg-[#1650EB]/5 dark:hover:bg-gray-800/50 transition-colors"
       >
-        <span className="font-medium text-gray-900 dark:text-white">{question}</span>
-        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="font-medium text-[#020218] dark:text-white">{question}</span>
+        <ChevronDown className={`w-5 h-5 text-[#1650EB] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {isOpen && (
@@ -204,7 +204,7 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-5 pt-0 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-900">
+            <div className="p-5 pt-0 text-[#6D6D6D] dark:text-gray-400 bg-white dark:bg-gray-900">
               {answer}
             </div>
           </motion.div>
@@ -213,6 +213,7 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
     </motion.div>
   );
 }
+
 
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -282,7 +283,7 @@ function Chatbot() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-lg flex items-center justify-center z-50 hover:shadow-xl transition-shadow"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br [#1650EB] rounded-full shadow-lg flex items-center justify-center z-50 hover:shadow-xl transition-shadow"
       >
         <MessageCircle className="w-6 h-6 text-white" />
       </motion.button>
@@ -297,7 +298,7 @@ function Chatbot() {
             className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-500 to-purple-600">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r [#1650EB]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <Bot className="w-5 h-5 text-white" />
@@ -325,17 +326,17 @@ function Chatbot() {
                   className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}
                 >
                   <div className={`flex items-start gap-2 max-w-[80%] ${msg.isBot ? '' : 'flex-row-reverse'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.isBot ? 'bg-indigo-100 dark:bg-indigo-900/50' : 'bg-gray-100 dark:bg-gray-800'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.isBot ? 'bg-[#1650EB]/10 dark:bg-indigo-900/50' : 'bg-gray-100 dark:bg-gray-800'
                       }`}>
                       {msg.isBot ? (
-                        <Bot className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <Bot className="w-4 h-4 text-[#1650EB] dark:text-indigo-400" />
                       ) : (
                         <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                     <div className={`p-3 rounded-2xl ${msg.isBot
                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
-                      : 'bg-indigo-600 text-white rounded-tr-none'
+                      : 'bg-[#1650EB] text-white rounded-tr-none'
                       }`}>
                       <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                     </div>
@@ -351,8 +352,8 @@ function Chatbot() {
                   className="flex justify-start"
                 >
                   <div className="flex items-start gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/50">
-                      <Bot className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1650EB]/10 dark:bg-indigo-900/50">
+                      <Bot className="w-4 h-4 text-[#1650EB] dark:text-indigo-400" />
                     </div>
                     <div className="p-3 rounded-2xl bg-gray-100 dark:bg-gray-800 rounded-tl-none">
                       <div className="flex gap-1">
@@ -380,7 +381,7 @@ function Chatbot() {
                     value={contactForm.name}
                     onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                     required
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
                   />
                   <input
                     type="email"
@@ -388,7 +389,7 @@ function Chatbot() {
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                     required
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
                   />
                   <textarea
                     placeholder="Your Message"
@@ -396,12 +397,12 @@ function Chatbot() {
                     onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     required
                     rows={3}
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none resize-none"
                   />
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] disabled:opacity-50 transition-colors"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {isSubmitting ? 'Sending...' : 'Send Message'}
@@ -430,11 +431,11 @@ function Chatbot() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] outline-none"
                 />
                 <button
                   onClick={handleSend}
-                  className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="p-2 bg-[#1650EB] text-white rounded-lg hover:bg-[#1243c7] transition-colors"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -451,19 +452,19 @@ export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Minimal Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-800/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-white/90 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">Quizy</span>
+            <span className="text-xl font-bold text-[#020218] dark:text-white">Quizy</span>
           </motion.div>
 
           <motion.div
@@ -473,19 +474,19 @@ export default function HomePage() {
           >
             <Link
               href="#faq"
-              className="hidden sm:block text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="hidden sm:block text-sm font-medium text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors"
             >
               FAQ
             </Link>
             <Link
               href="/auth/login"
-              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-sm font-medium text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors"
             >
               Sign In
             </Link>
             <Link
               href="/auth/register"
-              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+              className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] transition-colors shadow-sm"
             >
               Get Started
             </Link>
@@ -501,18 +502,18 @@ export default function HomePage() {
           <motion.div
             animate={{
               scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
+              opacity: [0.2, 0.4, 0.2],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-300/40 dark:bg-indigo-600/20 rounded-full blur-3xl"
+            className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#6095DB]/30 dark:bg-[#1650EB]/20 rounded-full blur-3xl"
           />
           <motion.div
             animate={{
               scale: [1.2, 1, 1.2],
-              opacity: [0.3, 0.5, 0.3],
+              opacity: [0.2, 0.4, 0.2],
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-300/40 dark:bg-purple-600/20 rounded-full blur-3xl"
+            className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#1650EB]/25 dark:bg-[#6095DB]/15 rounded-full blur-3xl"
           />
           <motion.div
             animate={{
@@ -520,14 +521,14 @@ export default function HomePage() {
               x: [0, 50, 0],
             }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/2 right-1/3 w-64 h-64 bg-indigo-200/30 dark:bg-indigo-800/15 rounded-full blur-3xl"
+            className="absolute top-1/2 right-1/3 w-64 h-64 bg-[#6095DB]/20 dark:bg-[#1650EB]/10 rounded-full blur-3xl"
           />
 
           {/* Floating Particles */}
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-2 h-2 bg-indigo-400/60 dark:bg-indigo-400/40 rounded-full"
+              className="absolute w-2 h-2 bg-[#1650EB]/50 dark:bg-[#6095DB]/40 rounded-full"
               style={{
                 left: `${15 + i * 15}%`,
                 top: `${20 + (i % 3) * 25}%`,
@@ -552,9 +553,9 @@ export default function HomePage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 border border-indigo-200 dark:border-indigo-700 rounded-full mb-4"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 border border-[#1650EB]/30 dark:border-[#1650EB]/50 rounded-full mb-4"
           >
-            <span className="text-sm font-bold bg-gradient-to-r from-indigo-700 to-purple-600 dark:from-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">
+            <span className="text-sm font-bold text-[#1650EB] dark:text-[#6095DB]">
               Nihal&apos;s Home Tutoring Classes
             </span>
           </motion.div>
@@ -564,15 +565,15 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-full mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#6095DB]/10 dark:bg-[#6095DB]/20 border border-[#6095DB]/30 dark:border-[#6095DB]/50 rounded-full mb-8"
           >
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
             </motion.div>
-            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+            <span className="text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
               For Classes 5-10 • All Subjects
             </span>
           </motion.div>
@@ -582,7 +583,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 dark:text-white mb-6"
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#020218] dark:text-white mb-6"
           >
             <motion.span
               initial={{ opacity: 0, x: -20 }}
@@ -597,7 +598,7 @@ export default function HomePage() {
               transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
               className="block mt-2"
             >
-              <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="text-[#1650EB]">
                 Exams
               </span>
             </motion.span>
@@ -608,7 +609,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
           >
             Practice smarter, not harder. Take interactive tests, track your progress,
             and achieve academic excellence with our distraction-free platform.
@@ -623,7 +624,7 @@ export default function HomePage() {
           >
             <Link
               href="/auth/register?role=student"
-              className="group relative flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 hover:shadow-xl hover:shadow-indigo-300 dark:hover:shadow-indigo-800/40 transition-all duration-500 hover:-translate-y-1 overflow-hidden"
+              className="group relative flex items-center gap-2 px-8 py-4 bg-[#1650EB] text-white rounded-xl font-semibold text-lg shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden"
             >
               <motion.span
                 className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
@@ -635,7 +636,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/auth/login?role=teacher"
-              className="group flex items-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-lg border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all"
+              className="group flex items-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl font-semibold text-lg border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all"
             >
               Teacher Portal
               <ArrowRight className="w-5 h-5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
@@ -647,9 +648,9 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-8 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400"
+            className="mt-8 flex items-center justify-center gap-2 text-sm text-[#6D6D6D] dark:text-gray-400"
           >
-            <Heart className="w-4 h-4 text-red-500" />
+            <Heart className="w-4 h-4 text-[#1650EB]" />
             <span>Trusted by students across India</span>
           </motion.div>
         </div>
@@ -684,19 +685,19 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 + index * 0.1 }}
               whileHover={{ y: -5, scale: 1.02 }}
-              className="group p-6 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg hover:shadow-indigo-50 dark:hover:shadow-none transition-all duration-300"
+              className="group p-6 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-[#1650EB]/50 dark:hover:border-[#1650EB]/50 hover:shadow-lg hover:shadow-[#1650EB]/10 dark:hover:shadow-none transition-all duration-300"
             >
               <motion.div
                 whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
                 transition={{ duration: 0.5 }}
-                className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center mb-4"
+                className="w-12 h-12 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-xl flex items-center justify-center mb-4"
               >
-                <feature.icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                <feature.icon className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
               </motion.div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-[#020218] dark:text-white mb-2">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[#6D6D6D] dark:text-gray-400">
                 {feature.description}
               </p>
             </motion.div>
@@ -713,10 +714,10 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#020218] dark:text-white mb-4">
               Frequently Asked Questions
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-[#6D6D6D] dark:text-gray-400">
               Got questions? We've got answers!
             </p>
           </motion.div>
@@ -736,36 +737,36 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <footer className="py-12 px-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center justify-center gap-6">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Quizy</span>
+              <span className="text-xl font-bold text-[#020218] dark:text-white">Quizy</span>
             </div>
 
             {/* Links */}
             <div className="flex items-center gap-8">
-              <Link href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link href="#" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link href="#" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#faq" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link href="#faq" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
                 FAQ
               </Link>
             </div>
 
             {/* Made with love */}
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-[#6D6D6D] dark:text-gray-400">
               <span className="text-sm">Made with</span>
-              <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+              <Heart className="w-4 h-4 text-[#1650EB] fill-[#1650EB]" />
               <span className="text-sm">by</span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Nihal Pawar</span>
+              <span className="text-sm font-semibold text-[#020218] dark:text-white">Nihal Pawar</span>
             </div>
 
             {/* Copyright */}

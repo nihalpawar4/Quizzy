@@ -335,7 +335,7 @@ export default function TeacherDashboard() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
             </div>
         );
     }
@@ -389,7 +389,7 @@ export default function TeacherDashboard() {
             <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
                             <GraduationCap className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -404,8 +404,8 @@ export default function TeacherDashboard() {
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Teacher</p>
                             </div>
-                            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-indigo-500 transition-all">
-                                <UserIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                            <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                <UserIcon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                             </div>
                         </Link>
                         <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Sign Out">
@@ -428,17 +428,17 @@ export default function TeacherDashboard() {
 
                 {/* Stats Cards - Clickable */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
-                    <button onClick={() => setShowTestsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg transition-all text-left group">
+                    <button onClick={() => setShowTestsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] hover:shadow-lg transition-all text-left group">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            <div className="w-12 h-12 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <BookOpen className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalTests}</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Tests</p>
                             </div>
                         </div>
-                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all tests →</p>
+                        <p className="text-xs text-[#1650EB] dark:text-[#6095DB] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all tests →</p>
                     </button>
                     <button onClick={() => setShowStudentsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all text-left group">
                         <div className="flex items-center gap-4">
@@ -455,14 +455,14 @@ export default function TeacherDashboard() {
                     <button onClick={() => setShowSubmissionsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg transition-all text-left group">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Trophy className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                <Trophy className="w-6 h-6 text-[#1650EB] dark:text-purple-400" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{results.length}</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Submissions</p>
                             </div>
                         </div>
-                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all submissions →</p>
+                        <p className="text-xs text-[#1650EB] dark:text-purple-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all submissions →</p>
                     </button>
                     <button onClick={() => setShowScoreModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 hover:shadow-lg transition-all text-left group">
                         <div className="flex items-center gap-4">
@@ -489,7 +489,7 @@ export default function TeacherDashboard() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                    ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm'
                                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                             >
@@ -508,7 +508,7 @@ export default function TeacherDashboard() {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Tests</h3>
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
                             >
                                 <Plus className="w-5 h-5" />
                                 Create Test
@@ -517,7 +517,7 @@ export default function TeacherDashboard() {
 
                         {loading ? (
                             <div className="flex items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                             </div>
                         ) : tests.length === 0 ? (
                             <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -525,7 +525,7 @@ export default function TeacherDashboard() {
                                 <p className="text-gray-600 dark:text-gray-400 mb-4">No tests created yet.</p>
                                 <button
                                     onClick={() => setShowCreateModal(true)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
                                 >
                                     <Plus className="w-5 h-5" />
                                     Create Your First Test
@@ -549,7 +549,7 @@ export default function TeacherDashboard() {
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
                                                             {test.subject}
                                                         </span>
                                                         <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
@@ -588,7 +588,7 @@ export default function TeacherDashboard() {
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => viewDetailedAnalytics(test)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-[#6095DB]/30 dark:border-indigo-800 text-[#1650EB] dark:text-[#6095DB] rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                     Analytics
@@ -622,14 +622,14 @@ export default function TeacherDashboard() {
                                         placeholder="Search students or tests..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
                                     />
                                 </div>
                             </div>
                             <select
                                 value={filterClass}
                                 onChange={(e) => setFilterClass(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
                             >
                                 <option value="all">All Classes</option>
                                 {CLASS_OPTIONS.map(c => (
@@ -639,7 +639,7 @@ export default function TeacherDashboard() {
                             <select
                                 value={filterSubject}
                                 onChange={(e) => setFilterSubject(e.target.value)}
-                                className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
                             >
                                 <option value="all">All Subjects</option>
                                 {SUBJECTS.map(s => (
@@ -690,7 +690,7 @@ export default function TeacherDashboard() {
                                                         {result.testTitle}
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
                                                             {result.subject}
                                                         </span>
                                                     </td>
@@ -771,13 +771,13 @@ export default function TeacherDashboard() {
                                         <div className="flex items-center gap-2">
                                             {[1, 2, 3].map((step) => (
                                                 <div key={step} className="flex items-center gap-2">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${createStep >= step ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${createStep >= step ? 'bg-[#1650EB] text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
                                                         {step}
                                                     </div>
                                                     <span className={`text-sm hidden sm:block ${createStep >= step ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
                                                         {step === 1 ? 'Details' : step === 2 ? 'Question Type' : 'Upload'}
                                                     </span>
-                                                    {step < 3 && <div className={`w-8 h-0.5 ${createStep > step ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`} />}
+                                                    {step < 3 && <div className={`w-8 h-0.5 ${createStep > step ? 'bg-[#1650EB]' : 'bg-gray-200 dark:bg-gray-700'}`} />}
                                                 </div>
                                             ))}
                                         </div>
@@ -790,23 +790,23 @@ export default function TeacherDashboard() {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Test Title *</label>
-                                                        <input type="text" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} placeholder="e.g., Chapter 5 Quiz" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                        <input type="text" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} placeholder="e.g., Chapter 5 Quiz" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
-                                                        <select value={newTest.subject} onChange={(e) => setNewTest({ ...newTest, subject: e.target.value as typeof SUBJECTS[number] })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                                        <select value={newTest.subject} onChange={(e) => setNewTest({ ...newTest, subject: e.target.value as typeof SUBJECTS[number] })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
                                                             {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                                                         </select>
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class *</label>
-                                                        <select value={newTest.targetClass} onChange={(e) => setNewTest({ ...newTest, targetClass: Number(e.target.value) })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                                        <select value={newTest.targetClass} onChange={(e) => setNewTest({ ...newTest, targetClass: Number(e.target.value) })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
                                                             {CLASS_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                                         </select>
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration (minutes)</label>
-                                                        <input type="number" value={newTest.duration} onChange={(e) => setNewTest({ ...newTest, duration: Number(e.target.value) })} min={5} max={180} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                        <input type="number" value={newTest.duration} onChange={(e) => setNewTest({ ...newTest, duration: Number(e.target.value) })} min={5} max={180} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -818,7 +818,7 @@ export default function TeacherDashboard() {
                                                 <p className="text-gray-600 dark:text-gray-400">Select the type of questions for this test:</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {QUESTION_TYPES.map((type) => (
-                                                        <button key={type.value} onClick={() => setNewTest({ ...newTest, questionType: type.value })} className={`p-6 rounded-2xl border-2 transition-all text-left ${newTest.questionType === type.value ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                                                        <button key={type.value} onClick={() => setNewTest({ ...newTest, questionType: type.value })} className={`p-6 rounded-2xl border-2 transition-all text-left ${newTest.questionType === type.value ? 'border-[#1650EB] bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                                                             <span className="text-3xl">{type.icon}</span>
                                                             <p className="font-semibold text-gray-900 dark:text-white mt-3">{type.label}</p>
                                                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{type.description}</p>
@@ -842,7 +842,7 @@ export default function TeacherDashboard() {
                                                 {/* Upload Method Selection */}
                                                 <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
                                                     {[{ id: 'csv', label: 'CSV Upload', icon: FileSpreadsheet }, { id: 'json', label: 'JSON Paste', icon: FileJson }, { id: 'manual', label: 'Manual Entry', icon: Edit }].map((method) => (
-                                                        <button key={method.id} onClick={() => setUploadMethod(method.id as typeof uploadMethod)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === method.id ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                                                        <button key={method.id} onClick={() => setUploadMethod(method.id as typeof uploadMethod)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === method.id ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
                                                             <method.icon className="w-4 h-4" />
                                                             {method.label}
                                                         </button>
@@ -861,7 +861,7 @@ export default function TeacherDashboard() {
                                                         <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center">
                                                             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                                             <input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && handleCSVUpload(e.target.files[0])} className="hidden" id="csv-upload" />
-                                                            <label htmlFor="csv-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors cursor-pointer">
+                                                            <label htmlFor="csv-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors cursor-pointer">
                                                                 <Upload className="w-4 h-4" /> Select CSV File
                                                             </label>
                                                         </div>
@@ -876,8 +876,8 @@ export default function TeacherDashboard() {
                                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sample JSON:</p>
                                                             <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">{sampleJSON}</pre>
                                                         </div>
-                                                        <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} placeholder="Paste your JSON here..." rows={8} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                        <button onClick={handleJSONParse} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                                                        <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} placeholder="Paste your JSON here..." rows={8} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-[#1650EB] outline-none" />
+                                                        <button onClick={handleJSONParse} className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                                             <FileJson className="w-4 h-4" /> Parse JSON
                                                         </button>
                                                     </div>
@@ -889,14 +889,14 @@ export default function TeacherDashboard() {
                                                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4">
                                                             <div>
                                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question Text</label>
-                                                                <input type="text" value={currentQuestion.text} onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })} placeholder="Enter your question..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                                <input type="text" value={currentQuestion.text} onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })} placeholder="Enter your question..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                             </div>
                                                             {newTest.questionType === 'mcq' && (
                                                                 <div className="grid grid-cols-2 gap-3">
                                                                     {currentQuestion.options.map((opt, idx) => (
                                                                         <div key={idx} className="flex items-center gap-2">
-                                                                            <input type="radio" name="correctOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx })} className="w-4 h-4 text-indigo-600" />
-                                                                            <input type="text" value={opt} onChange={(e) => { const newOptions = [...currentQuestion.options]; newOptions[idx] = e.target.value; setCurrentQuestion({ ...currentQuestion, options: newOptions }); }} placeholder={`Option ${String.fromCharCode(65 + idx)}`} className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                                            <input type="radio" name="correctOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx })} className="w-4 h-4 text-[#1650EB]" />
+                                                                            <input type="text" value={opt} onChange={(e) => { const newOptions = [...currentQuestion.options]; newOptions[idx] = e.target.value; setCurrentQuestion({ ...currentQuestion, options: newOptions }); }} placeholder={`Option ${String.fromCharCode(65 + idx)}`} className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -905,7 +905,7 @@ export default function TeacherDashboard() {
                                                                 <div className="flex gap-4">
                                                                     {['True', 'False'].map((opt, idx) => (
                                                                         <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                                                                            <input type="radio" name="tfOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx, options: ['True', 'False'] })} className="w-4 h-4 text-indigo-600" />
+                                                                            <input type="radio" name="tfOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx, options: ['True', 'False'] })} className="w-4 h-4 text-[#1650EB]" />
                                                                             <span className="text-gray-700 dark:text-gray-300">{opt}</span>
                                                                         </label>
                                                                     ))}
@@ -914,10 +914,10 @@ export default function TeacherDashboard() {
                                                             {(newTest.questionType === 'fill_blank' || newTest.questionType === 'one_word' || newTest.questionType === 'short_answer') && (
                                                                 <div>
                                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Correct Answer</label>
-                                                                    <input type="text" value={currentQuestion.options[0] || ''} onChange={(e) => setCurrentQuestion({ ...currentQuestion, options: [e.target.value], correctOption: 0 })} placeholder="Enter the correct answer..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                                    <input type="text" value={currentQuestion.options[0] || ''} onChange={(e) => setCurrentQuestion({ ...currentQuestion, options: [e.target.value], correctOption: 0 })} placeholder="Enter the correct answer..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                                 </div>
                                                             )}
-                                                            <button onClick={addManualQuestion} disabled={!currentQuestion.text.trim()} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                            <button onClick={addManualQuestion} disabled={!currentQuestion.text.trim()} className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                                 <Plus className="w-4 h-4" /> Add Question
                                                             </button>
                                                         </div>
@@ -957,11 +957,11 @@ export default function TeacherDashboard() {
                                             {createStep > 1 ? 'Back' : 'Cancel'}
                                         </button>
                                         {createStep < 3 ? (
-                                            <button onClick={() => setCreateStep((createStep + 1) as 1 | 2 | 3)} disabled={createStep === 1 && !newTest.title.trim()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button onClick={() => setCreateStep((createStep + 1) as 1 | 2 | 3)} disabled={createStep === 1 && !newTest.title.trim()} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 Next <ArrowRight className="w-4 h-4" />
                                             </button>
                                         ) : (
-                                            <button onClick={handleCreateTest} disabled={isCreating || (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button onClick={handleCreateTest} disabled={isCreating || (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><CheckCircle className="w-4 h-4" /> Create Test</>}
                                             </button>
                                         )}
@@ -1005,7 +1005,7 @@ export default function TeacherDashboard() {
                             <div className="flex-1 overflow-y-auto p-6">
                                 {loadingDetails ? (
                                     <div className="flex items-center justify-center py-12">
-                                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                        <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                                     </div>
                                 ) : detailedResults.length === 0 ? (
                                     <div className="text-center py-12">
@@ -1018,8 +1018,8 @@ export default function TeacherDashboard() {
                                                 {/* Student Header */}
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center">
-                                                            <UserIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                                        <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center">
+                                                            <UserIcon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                                         </div>
                                                         <div>
                                                             <p className="font-semibold text-gray-900 dark:text-white">{result.studentName}</p>
@@ -1078,7 +1078,7 @@ export default function TeacherDashboard() {
 
                             {/* Footer */}
                             <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end">
-                                <button onClick={() => setShowDetailedAnalytics(false)} className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                                <button onClick={() => setShowDetailedAnalytics(false)} className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                     Close
                                 </button>
                             </div>
@@ -1094,8 +1094,8 @@ export default function TeacherDashboard() {
                         <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
-                                        <BookOpen className="w-5 h-5 text-indigo-600" />
+                                    <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                                        <BookOpen className="w-5 h-5 text-[#1650EB]" />
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">All Tests ({tests.length})</h3>
@@ -1117,7 +1117,7 @@ export default function TeacherDashboard() {
                                                         <div>
                                                             <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                                             <div className="flex flex-wrap gap-2 mt-2">
-                                                                <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full">{test.subject}</span>
+                                                                <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs rounded-full">{test.subject}</span>
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">Class {test.targetClass}</span>
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">{test.questionCount || 0} Questions</span>
                                                                 {test.duration && <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">{test.duration} min</span>}
@@ -1204,7 +1204,7 @@ export default function TeacherDashboard() {
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
-                                        <Trophy className="w-5 h-5 text-purple-600" />
+                                        <Trophy className="w-5 h-5 text-[#1650EB]" />
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">All Submissions ({results.length})</h3>
@@ -1236,7 +1236,7 @@ export default function TeacherDashboard() {
                                                             <p className="text-xs text-gray-500">Class {result.studentClass}</p>
                                                         </td>
                                                         <td className="py-3 px-4 text-gray-700 dark:text-gray-300">{result.testTitle}</td>
-                                                        <td className="py-3 px-4"><span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full">{result.subject}</span></td>
+                                                        <td className="py-3 px-4"><span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs rounded-full">{result.subject}</span></td>
                                                         <td className="py-3 px-4">
                                                             <span className={`font-medium ${(result.score / result.totalQuestions) >= 0.7 ? 'text-green-600' : (result.score / result.totalQuestions) >= 0.4 ? 'text-yellow-600' : 'text-red-600'}`}>
                                                                 {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)

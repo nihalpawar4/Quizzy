@@ -151,7 +151,7 @@ export default function ProfilePage() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
             </div>
         );
     }
@@ -165,7 +165,7 @@ export default function ProfilePage() {
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
                                 <GraduationCap className="w-6 h-6 text-white" />
                             </div>
                             <div>
@@ -184,13 +184,13 @@ export default function ProfilePage() {
             <main className="max-w-4xl mx-auto px-6 py-8">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-full flex items-center justify-center">
                             <User className="w-8 h-8 text-white" />
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
                             <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
                                 {user.role === 'teacher' ? 'Teacher' : `Class ${user.studentClass} Student`}
                             </span>
                         </div>
@@ -202,7 +202,7 @@ export default function ProfilePage() {
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
-                                <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                <Palette className="w-5 h-5 text-[#1650EB] dark:text-purple-400" />
                             </div>
                             <div>
                                 <h3 className="font-semibold text-gray-900 dark:text-white">Appearance</h3>
@@ -211,9 +211,9 @@ export default function ProfilePage() {
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                             {[{ mode: 'light' as const, icon: Sun, label: 'Light' }, { mode: 'dark' as const, icon: Moon, label: 'Dark' }, { mode: 'system' as const, icon: Monitor, label: 'System' }].map(({ mode, icon: Icon, label }) => (
-                                <button key={mode} onClick={() => setTheme(mode)} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === mode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
-                                    <Icon className={`w-6 h-6 ${theme === mode ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${theme === mode ? 'text-indigo-600' : 'text-gray-700 dark:text-gray-300'}`}>{label}</span>
+                                <button key={mode} onClick={() => setTheme(mode)} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === mode ? 'border-[#1650EB] bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                                    <Icon className={`w-6 h-6 ${theme === mode ? 'text-[#1650EB]' : 'text-gray-500 dark:text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${theme === mode ? 'text-[#1650EB]' : 'text-gray-700 dark:text-gray-300'}`}>{label}</span>
                                 </button>
                             ))}
                         </div>
@@ -234,10 +234,10 @@ export default function ProfilePage() {
                             {classError && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-700 dark:text-red-400">{classError}</p></div>}
                             {classSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Class updated successfully!</p></div>}
                             <div className="flex gap-4">
-                                <select value={studentClass} onChange={(e) => setStudentClass(Number(e.target.value))} className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+                                <select value={studentClass} onChange={(e) => setStudentClass(Number(e.target.value))} className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all">
                                     {CLASS_OPTIONS.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
                                 </select>
-                                <button onClick={handleUpdateClass} disabled={isUpdatingClass || studentClass === user.studentClass} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <button onClick={handleUpdateClass} disabled={isUpdatingClass || studentClass === user.studentClass} className="flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                     {isUpdatingClass ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Save
                                 </button>
                             </div>
@@ -261,7 +261,7 @@ export default function ProfilePage() {
                                     <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                                     <div><p className="font-medium text-gray-900 dark:text-white">Push Notifications</p><p className="text-sm text-gray-500 dark:text-gray-400">Get notified about new tests</p></div>
                                 </div>
-                                <button onClick={() => setNotifications(!notifications)} className={`w-12 h-6 rounded-full transition-colors ${notifications ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                <button onClick={() => setNotifications(!notifications)} className={`w-12 h-6 rounded-full transition-colors ${notifications ? 'bg-[#1650EB]' : 'bg-gray-300 dark:bg-gray-600'}`}>
                                     <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${notifications ? 'translate-x-6' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
@@ -270,7 +270,7 @@ export default function ProfilePage() {
                                     <Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                                     <div><p className="font-medium text-gray-900 dark:text-white">Email Updates</p><p className="text-sm text-gray-500 dark:text-gray-400">Receive weekly progress reports</p></div>
                                 </div>
-                                <button onClick={() => setEmailUpdates(!emailUpdates)} className={`w-12 h-6 rounded-full transition-colors ${emailUpdates ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                <button onClick={() => setEmailUpdates(!emailUpdates)} className={`w-12 h-6 rounded-full transition-colors ${emailUpdates ? 'bg-[#1650EB]' : 'bg-gray-300 dark:bg-gray-600'}`}>
                                     <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${emailUpdates ? 'translate-x-6' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
@@ -291,10 +291,10 @@ export default function ProfilePage() {
                         {passwordError && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-700 dark:text-red-400">{passwordError}</p></div>}
                         {passwordSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Password updated successfully!</p></div>}
                         <form onSubmit={handleUpdatePassword} className="space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Password</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required placeholder="Enter current password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Enter new password (min 6 characters)" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New Password</label><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Confirm new password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
-                            <button type="submit" disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword} className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Password</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required placeholder="Enter current password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Enter new password (min 6 characters)" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New Password</label><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Confirm new password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all" /></div>
+                            <button type="submit" disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword} className="w-full flex items-center justify-center gap-2 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {isUpdatingPassword ? <><Loader2 className="w-5 h-5 animate-spin" /> Updating...</> : <><Lock className="w-5 h-5" /> Update Password</>}
                             </button>
                         </form>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="space-y-3">
                             <button onClick={handleExportData} className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                <Download className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                 <div className="text-left"><p className="font-medium text-gray-900 dark:text-white">Export My Data</p><p className="text-sm text-gray-500 dark:text-gray-400">Download a copy of your profile data</p></div>
                             </button>
                             <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">

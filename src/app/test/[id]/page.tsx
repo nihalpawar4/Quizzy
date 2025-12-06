@@ -310,7 +310,7 @@ export default function TestPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
                 <div className="text-center">
-                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-4" />
+                    <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400">Loading test...</p>
                 </div>
             </div>
@@ -324,7 +324,7 @@ export default function TestPage() {
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Unable to Load Test</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-                    <button onClick={() => router.push('/dashboard/student')} className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                    <button onClick={() => router.push('/dashboard/student')} className="inline-flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                         Back to Dashboard
                     </button>
@@ -338,7 +338,7 @@ export default function TestPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-6">
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-800 text-center">
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#1650EB] to-[#1650EB] flex items-center justify-center">
                         <CheckCircle className="w-10 h-10 text-white" />
                     </motion.div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Test Completed!</h2>
@@ -348,10 +348,10 @@ export default function TestPage() {
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-8">
                         <p className="text-lg text-gray-900 dark:text-white">
-                            You scored <span className="font-bold text-indigo-600">{score}</span> out of <span className="font-bold">{questions.length}</span>
+                            You scored <span className="font-bold text-[#1650EB]">{score}</span> out of <span className="font-bold">{questions.length}</span>
                         </p>
                     </div>
-                    <button onClick={() => router.push('/dashboard/student')} className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                    <button onClick={() => router.push('/dashboard/student')} className="w-full flex items-center justify-center gap-2 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                         Back to Dashboard
                         <ArrowRight className="w-5 h-5" />
                     </button>
@@ -394,7 +394,7 @@ export default function TestPage() {
                         <span>{answeredCount} answered</span>
                     </div>
                     <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
-                        <motion.div className="h-full bg-indigo-600" initial={{ width: 0 }} animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} transition={{ duration: 0.3 }} />
+                        <motion.div className="h-full bg-[#1650EB]" initial={{ width: 0 }} animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} transition={{ duration: 0.3 }} />
                     </div>
                 </div>
             </div>
@@ -405,7 +405,7 @@ export default function TestPage() {
                     <motion.div key={currentIndex} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
                         {/* Question Type Badge */}
                         <div className="mb-4">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${questionType === 'mcq' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' :
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${questionType === 'mcq' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-[#1243c7] dark:text-indigo-300' :
                                     questionType === 'true_false' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
                                         'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
                                 }`}>
@@ -427,7 +427,7 @@ export default function TestPage() {
                                     onChange={(e) => handleTextAnswer(e.target.value)}
                                     placeholder="Type your answer here..."
                                     rows={4}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg focus:ring-2 focus:ring-[#1650EB] focus:border-[#1650EB] outline-none transition-all resize-none"
                                 />
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                     💡 Type your answer exactly as you think it should be
@@ -447,12 +447,12 @@ export default function TestPage() {
                                             whileHover={{ scale: 1.01 }}
                                             whileTap={{ scale: 0.99 }}
                                             className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all ${isSelected
-                                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                                                ? 'border-[#1650EB] bg-indigo-50 dark:bg-indigo-900/20'
                                                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-gray-50 dark:bg-gray-800/50'
                                                 }`}
                                         >
                                             <span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-medium text-sm ${isSelected
-                                                ? 'bg-indigo-600 text-white'
+                                                ? 'bg-[#1650EB] text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                                                 }`}>
                                                 {questionType === 'true_false' ? (option === 'True' ? '✓' : '✗') : optionLetter}
@@ -483,7 +483,7 @@ export default function TestPage() {
                             {isSubmitting ? (<><Loader2 className="w-5 h-5 animate-spin" />Submitting...</>) : (<><Flag className="w-5 h-5" />Finish Test</>)}
                         </button>
                     ) : (
-                        <button onClick={handleNext} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                        <button onClick={handleNext} className="flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                             Next
                             <ArrowRight className="w-5 h-5" />
                         </button>
@@ -497,7 +497,7 @@ export default function TestPage() {
                             key={index}
                             onClick={() => { setDirection(index > currentIndex ? 1 : -1); setCurrentIndex(index); }}
                             className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${index === currentIndex
-                                ? 'bg-indigo-600 text-white'
+                                ? 'bg-[#1650EB] text-white'
                                 : answers[index] !== null && answers[index] !== ''
                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                     : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
