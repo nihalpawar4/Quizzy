@@ -3,10 +3,15 @@
  * Parse CSV and JSON formats into question objects for Firestore
  */
 
+// Question types supported
+export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer';
+
 export interface ParsedQuestion {
     text: string;
     options: string[];
-    correctOption: number; // 0-indexed (0 = A, 1 = B, 2 = C, 3 = D)
+    correctOption: number; // 0-indexed (0 = A, 1 = B, 2 = C, 3 = D) - for MCQ/True-False
+    type: QuestionType; // Type of question
+    correctAnswer?: string; // For text-based questions (fill_blank, one_word, short_answer)
 }
 
 export interface ParseResult {
@@ -70,7 +75,8 @@ export function parseCSV(csvText: string): ParseResult {
         questions.push({
             text: questionText,
             options: [optA, optB, optC, optD],
-            correctOption
+            correctOption,
+            type: 'mcq' // CSV format defaults to MCQ
         });
     }
 
@@ -274,10 +280,39 @@ export function parseJSON(jsonText: string): ParseResult {
             correctOption = 0;
         }
 
+        // Determine question type
+        let questionType: QuestionType = 'mcq';
+        if (q.type || q.questionType) {
+            const rawType = String(q.type || q.questionType).toLowerCase();
+            if (rawType === 'true_false' || rawType === 'truefalse' || rawType === 'tf') {
+                questionType = 'true_false';
+            } else if (rawType === 'fill_blank' || rawType === 'fillblank' || rawType === 'fill') {
+                questionType = 'fill_blank';
+            } else if (rawType === 'one_word' || rawType === 'oneword' || rawType === 'word') {
+                questionType = 'one_word';
+            } else if (rawType === 'short_answer' || rawType === 'shortanswer' || rawType === 'short') {
+                questionType = 'short_answer';
+            }
+        } else if (options.length === 2 && options[0].toLowerCase() === 'true' && options[1].toLowerCase() === 'false') {
+            questionType = 'true_false';
+        } else if (options.length <= 1) {
+            questionType = 'short_answer'; // Default for single-answer types
+        }
+
+        // For true_false type, ensure options are always ['True', 'False'] and correctOption is calculated
+        if (questionType === 'true_false') {
+            options = ['True', 'False'];
+            // Determine correct option from answer field
+            const answerStr = String(correctValue).toLowerCase().trim();
+            correctOption = (answerStr === 'false' || answerStr === 'f' || answerStr === '1') ? 1 : 0;
+        }
+
         questions.push({
             text,
             options,
-            correctOption
+            correctOption,
+            type: questionType,
+            correctAnswer: questionType !== 'mcq' && questionType !== 'true_false' ? String(correctValue) : undefined
         });
     });
 

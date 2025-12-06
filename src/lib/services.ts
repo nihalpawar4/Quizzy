@@ -78,6 +78,126 @@ export async function getAllStudents(): Promise<User[]> {
     })) as User[];
 }
 
+/**
+ * Restrict a student account (they won't be able to login)
+ */
+export async function restrictStudent(uid: string): Promise<void> {
+    const userRef = doc(db, COLLECTIONS.USERS, uid);
+    await updateDoc(userRef, { isRestricted: true });
+}
+
+/**
+ * Enable a restricted student account (they can login again)
+ */
+export async function enableStudent(uid: string): Promise<void> {
+    const userRef = doc(db, COLLECTIONS.USERS, uid);
+    await updateDoc(userRef, { isRestricted: false });
+}
+
+/**
+ * Permanently delete a student account and all their data
+ */
+export async function deleteStudent(uid: string): Promise<void> {
+    const batch = writeBatch(db);
+
+    // Delete user profile
+    const userRef = doc(db, COLLECTIONS.USERS, uid);
+    batch.delete(userRef);
+
+    // Delete all their results
+    const resultsRef = collection(db, COLLECTIONS.RESULTS);
+    const resultsQuery = query(resultsRef, where('studentId', '==', uid));
+    const resultsSnapshot = await getDocs(resultsQuery);
+    resultsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+    await batch.commit();
+}
+
+/**
+ * Get today's date in YYYY-MM-DD format (IST timezone)
+ */
+function getTodayDateString(): string {
+    const now = new Date();
+    // Convert to IST (UTC+5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    return istDate.toISOString().split('T')[0];
+}
+
+/**
+ * Get yesterday's date in YYYY-MM-DD format (IST timezone)
+ */
+function getYesterdayDateString(): string {
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset - 24 * 60 * 60 * 1000);
+    return istDate.toISOString().split('T')[0];
+}
+
+/**
+ * Check if user can claim streak today
+ */
+export function canClaimStreakToday(user: User): boolean {
+    const today = getTodayDateString();
+    return user.lastStreakDate !== today;
+}
+
+/**
+ * Claim daily streak for user
+ * Returns updated streak info or null if already claimed today
+ */
+export async function claimDailyStreak(uid: string, user: User): Promise<{
+    success: boolean;
+    currentStreak: number;
+    longestStreak: number;
+    message: string;
+} | null> {
+    const today = getTodayDateString();
+    const yesterday = getYesterdayDateString();
+
+    // Check if already claimed today
+    if (user.lastStreakDate === today) {
+        return {
+            success: false,
+            currentStreak: user.currentStreak || 0,
+            longestStreak: user.longestStreak || 0,
+            message: 'Already claimed today! Come back tomorrow.'
+        };
+    }
+
+    let newStreak = 1;
+    let newLongestStreak = user.longestStreak || 0;
+
+    // Check if last claim was yesterday (continue streak) or older (reset)
+    if (user.lastStreakDate === yesterday) {
+        // Continue streak
+        newStreak = (user.currentStreak || 0) + 1;
+    } else {
+        // Streak broken, start fresh
+        newStreak = 1;
+    }
+
+    // Update longest streak if needed
+    if (newStreak > newLongestStreak) {
+        newLongestStreak = newStreak;
+    }
+
+    // Update user in Firestore
+    const userRef = doc(db, COLLECTIONS.USERS, uid);
+    await updateDoc(userRef, {
+        currentStreak: newStreak,
+        longestStreak: newLongestStreak,
+        lastStreakDate: today
+    });
+
+    return {
+        success: true,
+        currentStreak: newStreak,
+        longestStreak: newLongestStreak,
+        message: newStreak === 1 ? 'Streak started! 🔥' : `${newStreak} day streak! 🔥`
+    };
+}
+
 // ==================== TEST OPERATIONS ====================
 
 /**
@@ -194,6 +314,8 @@ export async function uploadQuestions(
             text: q.text,
             options: q.options,
             correctOption: q.correctOption,
+            type: q.type || 'mcq', // Default to MCQ if not specified
+            correctAnswer: q.correctAnswer || '', // For text-based questions
             order: index
         });
     });

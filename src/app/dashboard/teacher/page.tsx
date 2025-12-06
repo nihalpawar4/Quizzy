@@ -33,7 +33,10 @@ import {
     Copy,
     Check,
     ArrowRight,
-    Mail
+    Mail,
+    Ban,
+    ShieldCheck,
+    ShieldX
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -45,14 +48,17 @@ import {
     deleteTest,
     deleteResult,
     uploadQuestions,
-    updateTestStatus
+    updateTestStatus,
+    restrictStudent,
+    enableStudent,
+    deleteStudent
 } from '@/lib/services';
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS } from '@/lib/constants';
 
-type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer';
+type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
 
 interface QuestionTypeOption {
     value: QuestionType;
@@ -67,6 +73,7 @@ const QUESTION_TYPES: QuestionTypeOption[] = [
     { value: 'fill_blank', label: 'Fill in Blank', description: 'Complete the sentence', icon: '📝' },
     { value: 'one_word', label: 'One Word', description: 'Single word answer', icon: '💬' },
     { value: 'short_answer', label: 'Short Answer', description: '2-3 sentence response', icon: '📄' },
+    { value: 'mixed', label: 'Comprehensive', description: 'All types via JSON (AI-friendly)', icon: '🎯' },
 ];
 
 export default function TeacherDashboard() {
@@ -84,6 +91,10 @@ export default function TeacherDashboard() {
     const [showStudentsModal, setShowStudentsModal] = useState(false);
     const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
     const [showScoreModal, setShowScoreModal] = useState(false);
+
+    // Student management state
+    const [studentActionLoading, setStudentActionLoading] = useState<string | null>(null); // uid of student being processed
+    const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<string | null>(null); // uid of student to delete
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'create'>('tests');
@@ -125,10 +136,18 @@ export default function TeacherDashboard() {
 
     // Manual question entry
     const [manualQuestions, setManualQuestions] = useState<ParsedQuestion[]>([]);
-    const [currentQuestion, setCurrentQuestion] = useState({
+    const [currentQuestion, setCurrentQuestion] = useState<{
+        text: string;
+        options: string[];
+        correctOption: number;
+        type: QuestionType;
+        correctAnswer: string;
+    }>({
         text: '',
         options: ['', '', '', ''],
-        correctOption: 0
+        correctOption: 0,
+        type: 'mcq',
+        correctAnswer: ''
     });
 
     const loadData = useCallback(async () => {
@@ -203,19 +222,56 @@ export default function TeacherDashboard() {
     const addManualQuestion = () => {
         if (!currentQuestion.text.trim()) return;
 
+        // Build options based on question type from Step 2 selection
+        const questionType = newTest.questionType;
+        let options: string[] = [];
+        let correctAnswer: string | undefined = undefined;
+
+        if (questionType === 'mcq') {
+            options = currentQuestion.options.filter(o => o.trim());
+            if (options.length < 2) {
+                setParseError('MCQ questions need at least 2 options');
+                return;
+            }
+        } else if (questionType === 'true_false') {
+            options = ['True', 'False'];
+        } else {
+            // Text-based questions (fill_blank, one_word, short_answer)
+            if (!currentQuestion.correctAnswer.trim()) {
+                setParseError('Please provide the correct answer');
+                return;
+            }
+            options = [currentQuestion.correctAnswer.trim()];
+            correctAnswer = currentQuestion.correctAnswer.trim();
+        }
+
         const newQuestion: ParsedQuestion = {
             text: currentQuestion.text,
-            options: currentQuestion.options.filter(o => o.trim()),
-            correctOption: currentQuestion.correctOption
+            options,
+            correctOption: questionType === 'true_false'
+                ? (currentQuestion.correctAnswer.toLowerCase() === 'false' ? 1 : 0)
+                : currentQuestion.correctOption,
+            type: questionType as ParsedQuestion['type'],
+            correctAnswer
         };
 
         setManualQuestions([...manualQuestions, newQuestion]);
-        setCurrentQuestion({ text: '', options: ['', '', '', ''], correctOption: 0 });
+        setCurrentQuestion({
+            text: '',
+            options: ['', '', '', ''],
+            correctOption: 0,
+            type: questionType as ParsedQuestion['type'], // Keep matching the test type
+            correctAnswer: ''
+        });
+        setParseError(null);
     };
 
     // Create test
     const handleCreateTest = async () => {
-        const questions = uploadMethod === 'manual' ? manualQuestions : parsedQuestions;
+        // For mixed type, always use parsedQuestions; for manual mode use manualQuestions
+        const questions = newTest.questionType === 'mixed'
+            ? parsedQuestions
+            : (uploadMethod === 'manual' ? manualQuestions : parsedQuestions);
 
         if (!newTest.title.trim() || questions.length === 0) {
             setParseError('Please provide a title and at least one question');
@@ -261,6 +317,7 @@ export default function TeacherDashboard() {
         setParseError(null);
         setUploadMethod('csv');
         setCreateStep(1);
+        setCurrentQuestion({ text: '', options: ['', '', '', ''], correctOption: 0, type: 'mcq', correctAnswer: '' });
     };
 
     // Delete test
@@ -314,6 +371,46 @@ export default function TeacherDashboard() {
     const handleDownloadResults = () => {
         const filteredResults = getFilteredResults();
         downloadAnalyticsCSV(filteredResults, `quizy-results-${new Date().toISOString().split('T')[0]}`);
+    };
+
+    // Restrict a student account
+    const handleRestrictStudent = async (uid: string) => {
+        setStudentActionLoading(uid);
+        try {
+            await restrictStudent(uid);
+            await loadData();
+        } catch (error) {
+            console.error('Error restricting student:', error);
+        } finally {
+            setStudentActionLoading(null);
+        }
+    };
+
+    // Enable a restricted student account
+    const handleEnableStudent = async (uid: string) => {
+        setStudentActionLoading(uid);
+        try {
+            await enableStudent(uid);
+            await loadData();
+        } catch (error) {
+            console.error('Error enabling student:', error);
+        } finally {
+            setStudentActionLoading(null);
+        }
+    };
+
+    // Delete a student account permanently
+    const handleDeleteStudent = async (uid: string) => {
+        setStudentActionLoading(uid);
+        try {
+            await deleteStudent(uid);
+            setConfirmDeleteStudent(null);
+            await loadData();
+        } catch (error) {
+            console.error('Error deleting student:', error);
+        } finally {
+            setStudentActionLoading(null);
+        }
     };
 
     // Filter results
@@ -376,6 +473,35 @@ export default function TeacherDashboard() {
                 return `[
   { "question": "Explain photosynthesis briefly.", "answer": "Process by which plants make food using sunlight" },
   { "question": "What causes rain?", "answer": "Water evaporates and condenses in clouds" }
+]`;
+            case 'mixed':
+                return `[
+  {
+    "type": "mcq",
+    "question": "What is the capital of India?",
+    "options": ["Mumbai", "Delhi", "Chennai", "Kolkata"],
+    "correct": 1
+  },
+  {
+    "type": "true_false",
+    "question": "The Earth revolves around the Sun.",
+    "answer": "True"
+  },
+  {
+    "type": "fill_blank",
+    "question": "The chemical formula for water is ___.",
+    "answer": "H2O"
+  },
+  {
+    "type": "one_word",
+    "question": "What is the largest planet in our solar system?",
+    "answer": "Jupiter"
+  },
+  {
+    "type": "short_answer",
+    "question": "Explain the process of photosynthesis in 2-3 sentences.",
+    "answer": "Photosynthesis is the process by which plants make food. They use sunlight, water, and carbon dioxide to produce glucose and oxygen."
+  }
 ]`;
             default:
                 return `[{ "question": "Your question?", "answer": "Answer" }]`;
@@ -835,22 +961,50 @@ export default function TeacherDashboard() {
                                                     <span className="text-2xl">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.icon}</span>
                                                     <div>
                                                         <p className="font-medium text-gray-900 dark:text-white">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.label} Questions</p>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-400">Upload or enter your {newTest.questionType.replace('_', ' ')} questions</p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                            {newTest.questionType === 'mixed'
+                                                                ? 'Paste JSON with mixed question types (MCQ, True/False, Fill Blank, etc.)'
+                                                                : `Upload or enter your ${newTest.questionType.replace('_', ' ')} questions`
+                                                            }
+                                                        </p>
                                                     </div>
                                                 </div>
 
-                                                {/* Upload Method Selection */}
-                                                <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
-                                                    {[{ id: 'csv', label: 'CSV Upload', icon: FileSpreadsheet }, { id: 'json', label: 'JSON Paste', icon: FileJson }, { id: 'manual', label: 'Manual Entry', icon: Edit }].map((method) => (
-                                                        <button key={method.id} onClick={() => setUploadMethod(method.id as typeof uploadMethod)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === method.id ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
-                                                            <method.icon className="w-4 h-4" />
-                                                            {method.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                {/* AI Tip for Mixed/Comprehensive */}
+                                                {newTest.questionType === 'mixed' && (
+                                                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                                                        <div className="flex items-start gap-3">
+                                                            <span className="text-2xl">🤖</span>
+                                                            <div>
+                                                                <p className="font-medium text-purple-900 dark:text-purple-200">AI Tip: Generate Questions Instantly!</p>
+                                                                <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
+                                                                    Copy the sample JSON format below and ask ChatGPT or any AI:
+                                                                    <span className="italic">"Generate 20 questions on [topic] for class [X] in this JSON format with mixed types"</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                                {/* CSV Upload */}
-                                                {uploadMethod === 'csv' && (
+                                                {/* Upload Method Selection - Hide for mixed type (JSON only) */}
+                                                {newTest.questionType !== 'mixed' ? (
+                                                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
+                                                        {[{ id: 'csv', label: 'CSV Upload', icon: FileSpreadsheet }, { id: 'json', label: 'JSON Paste', icon: FileJson }, { id: 'manual', label: 'Manual Entry', icon: Edit }].map((method) => (
+                                                            <button key={method.id} onClick={() => setUploadMethod(method.id as typeof uploadMethod)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === method.id ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                                                                <method.icon className="w-4 h-4" />
+                                                                {method.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 px-4 py-2 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-xl w-fit text-[#1650EB] dark:text-[#6095DB] font-medium">
+                                                        <FileJson className="w-4 h-4" />
+                                                        JSON Format Required for Mixed Types
+                                                    </div>
+                                                )}
+
+                                                {/* CSV Upload - Not available for mixed type */}
+                                                {uploadMethod === 'csv' && newTest.questionType !== 'mixed' && (
                                                     <div className="space-y-4">
                                                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-400">
                                                             <p className="font-medium text-gray-900 dark:text-white mb-2">CSV Format:</p>
@@ -869,12 +1023,20 @@ export default function TeacherDashboard() {
                                                     </div>
                                                 )}
 
-                                                {/* JSON Paste */}
-                                                {uploadMethod === 'json' && (
+                                                {/* JSON Paste - Always show for mixed type */}
+                                                {(uploadMethod === 'json' || newTest.questionType === 'mixed') && (
                                                     <div className="space-y-4">
                                                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sample JSON:</p>
-                                                            <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">{sampleJSON}</pre>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Sample JSON Format:</p>
+                                                                <button
+                                                                    onClick={() => { navigator.clipboard.writeText(sampleJSON); }}
+                                                                    className="text-xs text-[#1650EB] hover:underline"
+                                                                >
+                                                                    Copy Sample
+                                                                </button>
+                                                            </div>
+                                                            <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">{sampleJSON}</pre>
                                                         </div>
                                                         <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} placeholder="Paste your JSON here..." rows={8} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                         <button onClick={handleJSONParse} className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
@@ -883,44 +1045,80 @@ export default function TeacherDashboard() {
                                                     </div>
                                                 )}
 
-                                                {/* Manual Entry */}
-                                                {uploadMethod === 'manual' && (
+                                                {/* Manual Entry - Not available for mixed type */}
+                                                {uploadMethod === 'manual' && newTest.questionType !== 'mixed' && (
                                                     <div className="space-y-4">
                                                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4">
                                                             <div>
                                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question Text</label>
-                                                                <input type="text" value={currentQuestion.text} onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })} placeholder="Enter your question..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
+                                                                <input type="text" value={currentQuestion.text} onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })} placeholder={newTest.questionType === 'fill_blank' ? "Enter question with _____ for blank..." : "Enter your question..."} className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
                                                             </div>
+
+                                                            {/* MCQ Options */}
                                                             {newTest.questionType === 'mcq' && (
-                                                                <div className="grid grid-cols-2 gap-3">
-                                                                    {currentQuestion.options.map((opt, idx) => (
-                                                                        <div key={idx} className="flex items-center gap-2">
-                                                                            <input type="radio" name="correctOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx })} className="w-4 h-4 text-[#1650EB]" />
-                                                                            <input type="text" value={opt} onChange={(e) => { const newOptions = [...currentQuestion.options]; newOptions[idx] = e.target.value; setCurrentQuestion({ ...currentQuestion, options: newOptions }); }} placeholder={`Option ${String.fromCharCode(65 + idx)}`} className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#1650EB] outline-none" />
-                                                                        </div>
-                                                                    ))}
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Options (select correct answer)</label>
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        {currentQuestion.options.map((opt, idx) => (
+                                                                            <div key={idx} className="flex items-center gap-2">
+                                                                                <input type="radio" name="correctOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx })} className="w-4 h-4 text-[#1650EB]" />
+                                                                                <input type="text" value={opt} onChange={(e) => { const newOptions = [...currentQuestion.options]; newOptions[idx] = e.target.value; setCurrentQuestion({ ...currentQuestion, options: newOptions }); }} placeholder={`Option ${String.fromCharCode(65 + idx)}`} className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#1650EB] outline-none" />
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             )}
+
+                                                            {/* True/False Options */}
                                                             {newTest.questionType === 'true_false' && (
-                                                                <div className="flex gap-4">
-                                                                    {['True', 'False'].map((opt, idx) => (
-                                                                        <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                                                                            <input type="radio" name="tfOption" checked={currentQuestion.correctOption === idx} onChange={() => setCurrentQuestion({ ...currentQuestion, correctOption: idx, options: ['True', 'False'] })} className="w-4 h-4 text-[#1650EB]" />
-                                                                            <span className="text-gray-700 dark:text-gray-300">{opt}</span>
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            {(newTest.questionType === 'fill_blank' || newTest.questionType === 'one_word' || newTest.questionType === 'short_answer') && (
                                                                 <div>
                                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Correct Answer</label>
-                                                                    <input type="text" value={currentQuestion.options[0] || ''} onChange={(e) => setCurrentQuestion({ ...currentQuestion, options: [e.target.value], correctOption: 0 })} placeholder="Enter the correct answer..." className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
+                                                                    <div className="flex gap-4">
+                                                                        {['True', 'False'].map((opt) => (
+                                                                            <label key={opt} className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg border-2 transition-all ${currentQuestion.correctAnswer === opt ? 'border-[#1650EB] bg-[#1650EB]/10' : 'border-gray-200 dark:border-gray-700'}`}>
+                                                                                <input type="radio" name="tfOption" checked={currentQuestion.correctAnswer === opt} onChange={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: opt })} className="w-4 h-4 text-[#1650EB]" />
+                                                                                <span className={`font-medium ${currentQuestion.correctAnswer === opt ? 'text-[#1650EB]' : 'text-gray-700 dark:text-gray-300'}`}>{opt}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             )}
+
+                                                            {/* Text-based answers (Fill Blank, One Word, Short Answer) */}
+                                                            {(newTest.questionType === 'fill_blank' || newTest.questionType === 'one_word' || newTest.questionType === 'short_answer') && (
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                        Correct Answer
+                                                                        <span className="text-gray-400 font-normal ml-2">
+                                                                            ({newTest.questionType === 'one_word' ? 'single word' : newTest.questionType === 'fill_blank' ? 'word/phrase to fill' : '2-3 sentences'})
+                                                                        </span>
+                                                                    </label>
+                                                                    {newTest.questionType === 'short_answer' ? (
+                                                                        <textarea
+                                                                            value={currentQuestion.correctAnswer}
+                                                                            onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
+                                                                            placeholder="Enter the correct answer..."
+                                                                            rows={3}
+                                                                            className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none resize-none"
+                                                                        />
+                                                                    ) : (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={currentQuestion.correctAnswer}
+                                                                            onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
+                                                                            placeholder="Enter the correct answer..."
+                                                                            className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            )}
+
                                                             <button onClick={addManualQuestion} disabled={!currentQuestion.text.trim()} className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                                 <Plus className="w-4 h-4" /> Add Question
                                                             </button>
                                                         </div>
+
+                                                        {/* Added Questions List */}
                                                         {manualQuestions.length > 0 && (
                                                             <div className="space-y-2">
                                                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Added Questions ({manualQuestions.length})</p>
@@ -936,9 +1134,12 @@ export default function TeacherDashboard() {
                                                 )}
 
                                                 {/* Parsed Questions Preview */}
-                                                {parsedQuestions.length > 0 && uploadMethod !== 'manual' && (
+                                                {parsedQuestions.length > 0 && (uploadMethod !== 'manual' || newTest.questionType === 'mixed') && (
                                                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
-                                                        <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2"><CheckCircle className="w-4 h-4" />{parsedQuestions.length} questions parsed!</p>
+                                                        <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2"><CheckCircle className="w-4 h-4" />{parsedQuestions.length} questions parsed successfully!</p>
+                                                        {newTest.questionType === 'mixed' && (
+                                                            <p className="text-xs text-green-600 dark:text-green-500 mt-1">Contains {parsedQuestions.filter(q => q.type === 'mcq').length} MCQ, {parsedQuestions.filter(q => q.type === 'true_false').length} True/False, {parsedQuestions.filter(q => q.type === 'fill_blank').length} Fill Blank, {parsedQuestions.filter(q => q.type === 'one_word').length} One Word, {parsedQuestions.filter(q => q.type === 'short_answer').length} Short Answer</p>
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -961,7 +1162,7 @@ export default function TeacherDashboard() {
                                                 Next <ArrowRight className="w-4 h-4" />
                                             </button>
                                         ) : (
-                                            <button onClick={handleCreateTest} disabled={isCreating || (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button onClick={handleCreateTest} disabled={isCreating || (newTest.questionType === 'mixed' ? parsedQuestions.length === 0 : (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0))} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><CheckCircle className="w-4 h-4" /> Create Test</>}
                                             </button>
                                         )}
@@ -1164,25 +1365,93 @@ export default function TeacherDashboard() {
                                         {students.map((student) => {
                                             const studentResults = results.filter(r => r.studentId === student.uid);
                                             const avgScore = studentResults.length > 0 ? Math.round(studentResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / studentResults.length) : null;
+                                            const isLoading = studentActionLoading === student.uid;
+                                            const showDeleteConfirm = confirmDeleteStudent === student.uid;
                                             return (
-                                                <div key={student.uid} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
-                                                            <UserIcon className="w-6 h-6 text-green-600" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900 dark:text-white">{student.name}</h4>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                                <Mail className="w-4 h-4" />
-                                                                <span>{student.email}</span>
+                                                <div key={student.uid} className={`p-4 rounded-xl border ${student.isRestricted ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-gray-800 border-transparent'}`}>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-4 flex-1">
+                                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${student.isRestricted ? 'bg-red-100 dark:bg-red-900/50' : 'bg-green-100 dark:bg-green-900/50'}`}>
+                                                                {student.isRestricted ? (
+                                                                    <ShieldX className="w-6 h-6 text-red-600" />
+                                                                ) : (
+                                                                    <UserIcon className="w-6 h-6 text-green-600" />
+                                                                )}
                                                             </div>
-                                                            <span className="text-xs text-gray-400">Class {student.studentClass || 'N/A'}</span>
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="font-semibold text-gray-900 dark:text-white">{student.name}</h4>
+                                                                    {student.isRestricted && (
+                                                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs rounded-full font-medium">Restricted</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                                    <Mail className="w-4 h-4" />
+                                                                    <span>{student.email}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 mt-1">
+                                                                    <span className="text-xs text-gray-400">Class {student.studentClass || 'N/A'}</span>
+                                                                    <span className="text-xs text-gray-400">•</span>
+                                                                    <span className="text-xs text-gray-400">{studentResults.length} tests</span>
+                                                                    {avgScore !== null && (
+                                                                        <>
+                                                                            <span className="text-xs text-gray-400">•</span>
+                                                                            <span className={`text-xs font-medium ${avgScore >= 70 ? 'text-green-600' : avgScore >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>Avg: {avgScore}%</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-sm text-gray-500">{studentResults.length} tests taken</p>
-                                                        {avgScore !== null && (
-                                                            <p className={`text-sm font-medium ${avgScore >= 70 ? 'text-green-600' : avgScore >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>Avg: {avgScore}%</p>
+                                                        {/* Action Buttons */}
+                                                        {showDeleteConfirm ? (
+                                                            <div className="flex items-center gap-2 bg-red-100 dark:bg-red-900/50 px-3 py-2 rounded-xl">
+                                                                <span className="text-sm text-red-700 dark:text-red-300">Delete permanently?</span>
+                                                                <button
+                                                                    onClick={() => handleDeleteStudent(student.uid)}
+                                                                    disabled={isLoading}
+                                                                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                                                                >
+                                                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setConfirmDeleteStudent(null)}
+                                                                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300"
+                                                                >
+                                                                    No
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                {student.isRestricted ? (
+                                                                    <button
+                                                                        onClick={() => handleEnableStudent(student.uid)}
+                                                                        disabled={isLoading}
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900 transition-colors disabled:opacity-50"
+                                                                        title="Enable student account"
+                                                                    >
+                                                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                                                                        Enable
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleRestrictStudent(student.uid)}
+                                                                        disabled={isLoading}
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors disabled:opacity-50"
+                                                                        title="Restrict student account"
+                                                                    >
+                                                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                                                                        Restrict
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => setConfirmDeleteStudent(student.uid)}
+                                                                    disabled={isLoading}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900 transition-colors disabled:opacity-50"
+                                                                    title="Delete student permanently"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1324,6 +1593,6 @@ export default function TeacherDashboard() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

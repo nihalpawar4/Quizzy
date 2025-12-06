@@ -111,8 +111,18 @@ export default function TestPage() {
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-    // Determine question type based on options
+    // Determine question type - use stored type if available, otherwise infer from options
     const getQuestionType = (question: Question): 'mcq' | 'true_false' | 'text_input' => {
+        // Check stored type first
+        if (question.type) {
+            if (question.type === 'mcq') return 'mcq';
+            if (question.type === 'true_false') return 'true_false';
+            if (question.type === 'fill_blank' || question.type === 'one_word' || question.type === 'short_answer') {
+                return 'text_input';
+            }
+        }
+
+        // Fallback: infer from options
         if (question.options.length === 2 &&
             question.options[0].toLowerCase() === 'true' &&
             question.options[1].toLowerCase() === 'false') {
@@ -252,7 +262,8 @@ export default function TestPage() {
 
                 if (questionType === 'text_input') {
                     userAnswerStr = typeof userAnswer === 'string' ? userAnswer : '';
-                    correctAnswerStr = q.options[0] || '';
+                    // Use correctAnswer field if available, otherwise fallback to options[0]
+                    correctAnswerStr = q.correctAnswer || q.options[0] || '';
                     isCorrect = isTextAnswerCorrect(userAnswerStr, correctAnswerStr);
                 } else {
                     // MCQ or True/False
@@ -405,11 +416,17 @@ export default function TestPage() {
                     <motion.div key={currentIndex} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
                         {/* Question Type Badge */}
                         <div className="mb-4">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${questionType === 'mcq' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-[#1243c7] dark:text-indigo-300' :
-                                    questionType === 'true_false' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
-                                        'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${questionType === 'mcq' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' :
+                                questionType === 'true_false' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
+                                    currentQuestion.type === 'fill_blank' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' :
+                                        currentQuestion.type === 'one_word' ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' :
+                                            'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300'
                                 }`}>
-                                {questionType === 'mcq' ? '🔘 Multiple Choice' : questionType === 'true_false' ? '✅ True/False' : '📝 Type Your Answer'}
+                                {questionType === 'mcq' ? '🔘 Multiple Choice' :
+                                    questionType === 'true_false' ? '✅ True/False' :
+                                        currentQuestion.type === 'fill_blank' ? '📝 Fill in Blank' :
+                                            currentQuestion.type === 'one_word' ? '💬 One Word' :
+                                                '📄 Short Answer'}
                             </span>
                         </div>
 

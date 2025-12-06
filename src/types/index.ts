@@ -10,6 +10,12 @@ export interface User {
     role: 'student' | 'teacher';
     studentClass?: number; // 5-10, only for students
     createdAt: Date;
+    // Streak tracking
+    currentStreak?: number; // Current consecutive days
+    longestStreak?: number; // All-time longest streak
+    lastStreakDate?: string; // ISO date string of last streak claim (YYYY-MM-DD)
+    // Account status
+    isRestricted?: boolean; // If true, student cannot login
 }
 
 // Test Types
@@ -26,7 +32,7 @@ export interface Test {
 }
 
 // Question Types - supports multiple formats
-export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'match' | 'short_answer';
+export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'match';
 
 export interface Question {
     id: string;

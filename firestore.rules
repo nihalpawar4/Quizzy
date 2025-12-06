@@ -25,17 +25,29 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().role == 'student';
     }
     
+    // Check if target user is a student (for teacher management)
+    function isTargetStudent(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'student';
+    }
+    
     // ==================== USERS COLLECTION ====================
     
     match /users/{userId} {
+      // Teachers can read all users, students can only read their own
       allow read: if isOwner(userId) || isTeacher();
+      
+      // Users can only create their own profile
       allow create: if isOwner(userId) && 
         request.resource.data.uid == userId &&
         request.resource.data.email is string &&
         request.resource.data.name is string &&
         request.resource.data.role in ['student', 'teacher'];
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      
+      // Users can update their own profile, OR teachers can update students (for restrict/enable)
+      allow update: if isOwner(userId) || (isTeacher() && isTargetStudent(userId));
+      
+      // Users can delete their own profile, OR teachers can delete students
+      allow delete: if isOwner(userId) || (isTeacher() && isTargetStudent(userId));
     }
     
     // ==================== TESTS COLLECTION ====================

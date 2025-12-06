@@ -57,6 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const result = await signInWithEmailAndPassword(auth, email, password);
             const profile = await getUserProfile(result.user.uid);
             if (profile) {
+                // Check if account is restricted
+                if (profile.isRestricted) {
+                    // Sign out immediately
+                    await firebaseSignOut(auth);
+                    throw new Error('Your account has been restricted by your teacher. Please contact them to enable your account.');
+                }
                 setUser(profile);
             }
         } finally {
