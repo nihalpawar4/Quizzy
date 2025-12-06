@@ -1,0 +1,356 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import {
+    GraduationCap,
+    ArrowLeft,
+    User,
+    Lock,
+    Palette,
+    BookOpen,
+    Save,
+    Loader2,
+    CheckCircle,
+    AlertCircle,
+    Sun,
+    Moon,
+    Monitor,
+    LogOut,
+    Bell,
+    Mail,
+    Shield,
+    Download,
+    Trash2,
+    X
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { updateUserClass } from '@/lib/services';
+import { CLASS_OPTIONS } from '@/lib/constants';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
+
+export default function ProfilePage() {
+    const { user, loading: authLoading, signOut } = useAuth();
+    const { theme, setTheme } = useTheme();
+    const router = useRouter();
+
+    const [studentClass, setStudentClass] = useState<number>(5);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [notifications, setNotifications] = useState(true);
+    const [emailUpdates, setEmailUpdates] = useState(true);
+    const [isUpdatingClass, setIsUpdatingClass] = useState(false);
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+    const [classSuccess, setClassSuccess] = useState(false);
+    const [passwordSuccess, setPasswordSuccess] = useState(false);
+    const [classError, setClassError] = useState<string | null>(null);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/auth/login');
+        }
+        if (user?.studentClass) {
+            setStudentClass(user.studentClass);
+        }
+    }, [user, authLoading, router]);
+
+    const handleUpdateClass = async () => {
+        if (!user) return;
+        setIsUpdatingClass(true);
+        setClassError(null);
+        setClassSuccess(false);
+        try {
+            await updateUserClass(user.uid, studentClass);
+            setClassSuccess(true);
+            setTimeout(() => setClassSuccess(false), 3000);
+        } catch {
+            setClassError('Failed to update class. Please try again.');
+        } finally {
+            setIsUpdatingClass(false);
+        }
+    };
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!auth.currentUser) return;
+        setPasswordError(null);
+        setPasswordSuccess(false);
+        if (newPassword.length < 6) {
+            setPasswordError('New password must be at least 6 characters');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPasswordError('New passwords do not match');
+            return;
+        }
+        setIsUpdatingPassword(true);
+        try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email!, currentPassword);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, newPassword);
+            setPasswordSuccess(true);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setTimeout(() => setPasswordSuccess(false), 3000);
+        } catch (error: unknown) {
+            if (error instanceof Error && (error.message.includes('wrong-password') || error.message.includes('invalid-credential'))) {
+                setPasswordError('Current password is incorrect');
+            } else {
+                setPasswordError('Failed to update password. Please try again.');
+            }
+        } finally {
+            setIsUpdatingPassword(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!auth.currentUser || !user) return;
+        setDeleteError(null);
+        setIsDeleting(true);
+        try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email!, deletePassword);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await deleteDoc(doc(db, 'users', user.uid));
+            await deleteUser(auth.currentUser);
+            router.push('/');
+        } catch {
+            setDeleteError('Failed to delete account. Please check your password.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleExportData = () => {
+        if (!user) return;
+        const userData = { name: user.name, email: user.email, role: user.role, class: user.studentClass, exportedAt: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `quizy-profile-${user.uid}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleSignOut = async () => {
+        await signOut();
+        router.push('/');
+    };
+
+    if (authLoading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+                <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => router.back()} className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <GraduationCap className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="font-bold text-gray-900 dark:text-white">Profile Settings</h1>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Manage your account</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onClick={handleSignOut} className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden sm:inline">Sign Out</span>
+                    </button>
+                </div>
+            </header>
+
+            <main className="max-w-4xl mx-auto px-6 py-8">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                            <User className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
+                            <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                                {user.role === 'teacher' ? 'Teacher' : `Class ${user.studentClass} Student`}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+
+                <div className="grid gap-6">
+                    {/* Theme Settings */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
+                                <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Appearance</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Choose your preferred theme</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            {[{ mode: 'light' as const, icon: Sun, label: 'Light' }, { mode: 'dark' as const, icon: Moon, label: 'Dark' }, { mode: 'system' as const, icon: Monitor, label: 'System' }].map(({ mode, icon: Icon, label }) => (
+                                <button key={mode} onClick={() => setTheme(mode)} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === mode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                                    <Icon className={`w-6 h-6 ${theme === mode ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${theme === mode ? 'text-indigo-600' : 'text-gray-700 dark:text-gray-300'}`}>{label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </motion.div>
+
+                    {/* Class Settings - Only for students */}
+                    {user.role === 'student' && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center">
+                                    <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">Class Selection</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Update your current class</p>
+                                </div>
+                            </div>
+                            {classError && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-700 dark:text-red-400">{classError}</p></div>}
+                            {classSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Class updated successfully!</p></div>}
+                            <div className="flex gap-4">
+                                <select value={studentClass} onChange={(e) => setStudentClass(Number(e.target.value))} className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+                                    {CLASS_OPTIONS.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                                </select>
+                                <button onClick={handleUpdateClass} disabled={isUpdatingClass || studentClass === user.studentClass} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    {isUpdatingClass ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Save
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Notification Settings */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/50 rounded-xl flex items-center justify-center">
+                                <Bell className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your notification preferences</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                    <div><p className="font-medium text-gray-900 dark:text-white">Push Notifications</p><p className="text-sm text-gray-500 dark:text-gray-400">Get notified about new tests</p></div>
+                                </div>
+                                <button onClick={() => setNotifications(!notifications)} className={`w-12 h-6 rounded-full transition-colors ${notifications ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${notifications ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                    <div><p className="font-medium text-gray-900 dark:text-white">Email Updates</p><p className="text-sm text-gray-500 dark:text-gray-400">Receive weekly progress reports</p></div>
+                                </div>
+                                <button onClick={() => setEmailUpdates(!emailUpdates)} className={`w-12 h-6 rounded-full transition-colors ${emailUpdates ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${emailUpdates ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Password Settings */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center">
+                                <Lock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Change Password</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Update your account password</p>
+                            </div>
+                        </div>
+                        {passwordError && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-700 dark:text-red-400">{passwordError}</p></div>}
+                        {passwordSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Password updated successfully!</p></div>}
+                        <form onSubmit={handleUpdatePassword} className="space-y-4">
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Password</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required placeholder="Enter current password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Enter new password (min 6 characters)" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New Password</label><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Confirm new password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" /></div>
+                            <button type="submit" disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword} className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                {isUpdatingPassword ? <><Loader2 className="w-5 h-5 animate-spin" /> Updating...</> : <><Lock className="w-5 h-5" /> Update Password</>}
+                            </button>
+                        </form>
+                    </motion.div>
+
+                    {/* Data & Privacy */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
+                                <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Data & Privacy</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your data</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <button onClick={handleExportData} className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                <div className="text-left"><p className="font-medium text-gray-900 dark:text-white">Export My Data</p><p className="text-sm text-gray-500 dark:text-gray-400">Download a copy of your profile data</p></div>
+                            </button>
+                            <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                <div className="text-left"><p className="font-medium text-red-700 dark:text-red-400">Delete Account</p><p className="text-sm text-red-600 dark:text-red-500">Permanently delete your account and data</p></div>
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            </main>
+
+            {/* Delete Account Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteModal(false)}>
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-red-600 dark:text-red-400">Delete Account</h3>
+                                <button onClick={() => setShowDeleteModal(false)} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="mb-6">
+                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl mb-4"><p className="text-sm text-red-700 dark:text-red-400">⚠️ This action is irreversible. All your data including test results will be permanently deleted.</p></div>
+                                {deleteError && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mb-4"><p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p></div>}
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Enter your password to confirm</label>
+                                <input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder="Your password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all" />
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
+                                <button onClick={handleDeleteAccount} disabled={isDeleting || !deletePassword} className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
