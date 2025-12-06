@@ -43,6 +43,7 @@ import {
     getAllStudents,
     createTest,
     deleteTest,
+    deleteResult,
     uploadQuestions,
     updateTestStatus
 } from '@/lib/services';
@@ -280,6 +281,17 @@ export default function TeacherDashboard() {
             await loadData();
         } catch (error) {
             console.error('Error updating test status:', error);
+        }
+    };
+
+    // Delete a result/submission
+    const handleDeleteResult = async (resultId: string) => {
+        if (!confirm('Are you sure you want to delete this submission? This cannot be undone.')) return;
+        try {
+            await deleteResult(resultId);
+            await loadData();
+        } catch (error) {
+            console.error('Error deleting result:', error);
         }
     };
 
@@ -655,12 +667,13 @@ export default function TeacherDashboard() {
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                                         {filteredResults.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                                <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                                     No results found
                                                 </td>
                                             </tr>
@@ -693,6 +706,15 @@ export default function TeacherDashboard() {
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                                         {result.timestamp.toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button
+                                                            onClick={() => handleDeleteResult(result.id)}
+                                                            className="p-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                            title="Delete submission"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))

@@ -23,6 +23,7 @@ import { COLLECTIONS } from './constants';
 import type { User, Test, Question, TestResult } from '@/types';
 import type { ParsedQuestion } from './utils/parseQuestions';
 
+
 // ==================== USER OPERATIONS ====================
 
 /**
@@ -272,6 +273,14 @@ export async function getAllResults(): Promise<TestResult[]> {
         ...doc.data(),
         timestamp: doc.data().timestamp?.toDate() || new Date()
     })) as TestResult[];
+}
+
+/**
+ * Delete a result (for teachers)
+ */
+export async function deleteResult(resultId: string): Promise<void> {
+    const resultRef = doc(db, COLLECTIONS.RESULTS, resultId);
+    await deleteDoc(resultRef);
 }
 
 /**
