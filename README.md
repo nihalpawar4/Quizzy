@@ -29,38 +29,6 @@ A comprehensive, production-ready academic testing platform built with Next.js 1
 - **Backend**: Firebase (Authentication & Firestore)
 - **Icons**: Lucide React
 
-## 📁 Project Structure
-
-```
-quizy-app/
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── page.tsx            # Landing page
-│   │   ├── auth/
-│   │   │   ├── login/          # Login page
-│   │   │   └── register/       # Registration page
-│   │   ├── dashboard/
-│   │   │   ├── student/        # Student dashboard
-│   │   │   └── teacher/        # Teacher dashboard
-│   │   └── test/
-│   │       └── [id]/           # Test-taking interface
-│   ├── components/
-│   │   └── teacher/
-│   │       └── SmartUpload.tsx # CSV/JSON question upload
-│   ├── contexts/
-│   │   └── AuthContext.tsx     # Authentication state management
-│   ├── lib/
-│   │   ├── firebase.ts         # Firebase configuration
-│   │   ├── services.ts         # Firestore operations
-│   │   ├── constants.ts        # App constants
-│   │   └── utils/
-│   │       ├── downloadCSV.ts  # CSV export utility
-│   │       └── parseQuestions.ts # Question parsing utilities
-│   └── types/
-│       └── index.ts            # TypeScript definitions
-└── .env.example                # Environment variables template
-```
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -115,121 +83,7 @@ quizy-app/
    
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 👤 User Roles
 
-### Students
-- Register with email, password, name, and class selection (5-10)
-- Access only tests designed for their class
-- Take tests with a distraction-free interface
-- View instant results and test history
-
-### Teachers
-- Register with admin email or admin code (`QUIZY_ADMIN_2024`)
-- Default admin emails: `admin@quizy.com`, `teacher@quizy.com`
-- Create and manage tests for specific classes
-- Upload questions in bulk (CSV or JSON)
-- View analytics and download reports
-
-## 📤 Smart Upload Formats
-
-### CSV Format
-```csv
-Question,Option A,Option B,Option C,Option D,Correct Answer
-"What is 2 + 2?",3,4,5,6,B
-"Capital of France?",London,Paris,Berlin,Rome,B
-```
-
-### JSON Format
-```json
-[
-  {
-    "question": "What is 2 + 2?",
-    "options": ["3", "4", "5", "6"],
-    "correctAnswer": 1
-  },
-  {
-    "question": "Capital of France?",
-    "options": ["London", "Paris", "Berlin", "Rome"],
-    "correctAnswer": "B"
-  }
-]
-```
-
-**Supported correct answer formats:**
-- Letters: A, B, C, D
-- Numbers: 0, 1, 2, 3 (0-indexed) or 1, 2, 3, 4 (1-indexed)
-- Option text: The exact text of the correct option
-
-## 📊 Database Schema
-
-### Collections
-
-**users**
-```typescript
-{
-  uid: string;
-  email: string;
-  name: string;
-  role: 'student' | 'teacher';
-  studentClass?: number; // 5-10
-  createdAt: Timestamp;
-}
-```
-
-**tests**
-```typescript
-{
-  id: string;
-  title: string;
-  subject: string;
-  targetClass: number;
-  createdBy: string;
-  createdAt: Timestamp;
-  questionCount?: number;
-  duration?: number;
-  isActive: boolean;
-}
-```
-
-**questions**
-```typescript
-{
-  id: string;
-  testId: string;
-  text: string;
-  options: string[];
-  correctOption: number;
-  order?: number;
-}
-```
-
-**results**
-```typescript
-{
-  id: string;
-  studentId: string;
-  studentName: string;
-  studentEmail: string;
-  studentClass: number;
-  testId: string;
-  testTitle: string;
-  subject: string;
-  score: number;
-  totalQuestions: number;
-  answers: number[];
-  timestamp: Timestamp;
-}
-```
-
-## 🎨 Design Philosophy
-
-**"Zen Academic"** - A minimalist, distraction-free approach to educational software:
-
-- **Landing Page**: Clean hero section with bold headline, minimal navigation
-- **Student UI**: Focus mode during tests - UI fades to highlight questions
-- **Teacher UI**: Data-dense but organized tables with clear visual hierarchy
-- **Animations**: Subtle, purposeful Framer Motion transitions
-- **Colors**: Professional indigo/purple gradient accents on clean backgrounds
 
 ## 📝 License
 
@@ -241,4 +95,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-Built with ❤️ for educators and students
+Built with ❤️By Nihal pawar for educators and students
