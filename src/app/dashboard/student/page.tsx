@@ -30,13 +30,17 @@ import {
     AlertCircle,
     Download,
     Flame,
-    Timer
+    Timer,
+    BookMarked,
+    ExternalLink,
+    Trash2,
+    Megaphone
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getResultsByStudent, hasStudentTakenTest, getTopPerformers, canClaimStreakToday, claimDailyStreak } from '@/lib/services';
-import type { Test, TestResult } from '@/types';
+import { getResultsByStudent, hasStudentTakenTest, getTopPerformers, canClaimStreakToday, claimDailyStreak, markNotificationAsViewed, deleteNotification } from '@/lib/services';
+import type { Test, TestResult, SubjectNote, Notification } from '@/types';
 import type { LeaderboardEntry } from '@/lib/services';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 
@@ -60,7 +64,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -69,9 +73,22 @@ export default function StudentDashboard() {
     const [lastSeenReportsCount, setLastSeenReportsCount] = useState(0);
     const [newReportNotification, setNewReportNotification] = useState<TestResult | null>(null);
 
+    // Notes state
+    const [notes, setNotes] = useState<SubjectNote[]>([]);
+    const [selectedNote, setSelectedNote] = useState<SubjectNote | null>(null);
+
     // Streak state
     const [streakLoading, setStreakLoading] = useState(false);
     const [streakMessage, setStreakMessage] = useState<string | null>(null);
+
+    // Notification state
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+    const [viewedNotificationIds, setViewedNotificationIds] = useState<Set<string>>(new Set());
+    const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+
+    // Read notes tracking (persisted in localStorage)
+    const [readNoteIds, setReadNoteIds] = useState<Set<string>>(new Set());
 
     // Countdown timers for scheduled tests
     const [countdowns, setCountdowns] = useState<{ [testId: string]: string }>({});
@@ -81,6 +98,20 @@ export default function StudentDashboard() {
         const interval = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(interval);
     }, []);
+
+    // Load read notes from localStorage
+    useEffect(() => {
+        if (user?.uid) {
+            const stored = localStorage.getItem(`readNotes_${user.uid}`);
+            if (stored) {
+                try {
+                    setReadNoteIds(new Set(JSON.parse(stored)));
+                } catch (e) {
+                    console.error('Error parsing read notes:', e);
+                }
+            }
+        }
+    }, [user?.uid]);
 
     // Countdown timer for scheduled tests - update every second
     useEffect(() => {
@@ -117,38 +148,28 @@ export default function StudentDashboard() {
         return () => clearInterval(interval);
     }, [tests]);
 
-    // Check if report is available (between 1 hour and 6 hours after submission)
+    // Check if report is available (instantly available up to 24 hours after submission)
     const isReportAvailable = (result: TestResult): boolean => {
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
-        const oneHourLater = new Date(submittedAt.getTime() + 60 * 60 * 1000); // 1 hour
-        const sixHoursLater = new Date(submittedAt.getTime() + 6 * 60 * 60 * 1000); // 6 hours
-        return currentTime >= oneHourLater && currentTime < sixHoursLater;
+        const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+        return currentTime < twentyFourHoursLater;
     };
 
-    // Check if report has expired (after 6 hours)
+    // Check if report has expired (after 24 hours)
     const isReportExpired = (result: TestResult): boolean => {
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
-        const sixHoursLater = new Date(submittedAt.getTime() + 6 * 60 * 60 * 1000);
-        return currentTime >= sixHoursLater;
+        const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000);
+        return currentTime >= twentyFourHoursLater;
     };
 
-    // Get time remaining until report is available or expires
+    // Get time remaining until report expires (reports are now instantly available)
     const getTimeRemaining = (result: TestResult): string => {
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
-        const oneHourLater = new Date(submittedAt.getTime() + 60 * 60 * 1000);
-        const sixHoursLater = new Date(submittedAt.getTime() + 6 * 60 * 60 * 1000);
+        const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000);
 
-        if (currentTime < oneHourLater) {
-            // Not yet available
-            const diff = oneHourLater.getTime() - currentTime.getTime();
-            const minutes = Math.ceil(diff / 60000);
-            if (minutes >= 60) {
-                return `Available in ${Math.ceil(minutes / 60)} hr`;
-            }
-            return `Available in ${minutes} min`;
-        } else if (currentTime < sixHoursLater) {
+        if (currentTime < twentyFourHoursLater) {
             // Available, show expiry time
-            const diff = sixHoursLater.getTime() - currentTime.getTime();
+            const diff = twentyFourHoursLater.getTime() - currentTime.getTime();
             const hours = Math.floor(diff / 3600000);
             const minutes = Math.ceil((diff % 3600000) / 60000);
             if (hours > 0) {
@@ -400,6 +421,128 @@ export default function StudentDashboard() {
         return () => unsubscribe();
     }, [user?.uid]);
 
+    // Real-time listener for notes (filtered by student's class)
+    useEffect(() => {
+        if (!user?.studentClass) return;
+
+        const notesRef = collection(db, COLLECTIONS.NOTES);
+        const q = query(
+            notesRef,
+            where('targetClass', '==', user.studentClass),
+            where('isActive', '==', true),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allNotes: SubjectNote[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                allNotes.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate() || new Date()
+                } as SubjectNote);
+            });
+            setNotes(allNotes);
+        });
+
+        return () => unsubscribe();
+    }, [user?.studentClass]);
+
+    // Real-time listener for notifications (filtered by student's class)
+    useEffect(() => {
+        if (!user?.studentClass || !user?.uid) return;
+
+        const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+        const q = query(
+            notificationsRef,
+            where('targetClass', '==', user.studentClass),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allNotifications: Notification[] = [];
+            const now = new Date();
+
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                const createdAt = data.createdAt?.toDate() || new Date();
+                const viewedAt = data.viewedBy?.[user.uid]?.toDate ? data.viewedBy[user.uid].toDate() : null;
+
+                // Check if notification should be hidden (viewed more than 5 minutes ago)
+                if (viewedAt) {
+                    const timeSinceViewed = (now.getTime() - viewedAt.getTime()) / 1000 / 60; // minutes
+                    if (timeSinceViewed > 5) {
+                        return; // Skip this notification
+                    }
+                }
+
+                // Only show notifications from last 24 hours
+                const hoursSinceCreated = (now.getTime() - createdAt.getTime()) / 1000 / 60 / 60;
+                if (hoursSinceCreated > 24) {
+                    return;
+                }
+
+                allNotifications.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt
+                } as Notification);
+            });
+
+            setNotifications(allNotifications);
+        });
+
+        return () => unsubscribe();
+    }, [user?.studentClass, user?.uid]);
+
+    // Handle marking notification as viewed
+    const handleViewNotification = async (notificationId: string) => {
+        if (!user?.uid || viewedNotificationIds.has(notificationId)) return;
+
+        try {
+            await markNotificationAsViewed(notificationId, user.uid);
+            setViewedNotificationIds(prev => new Set([...prev, notificationId]));
+        } catch (error) {
+            console.error('Error marking notification as viewed:', error);
+        }
+    };
+
+    // Handle deleting notification (for student - just marks as viewed for immediate removal)
+    const handleDismissNotification = async (notificationId: string) => {
+        if (!user?.uid) return;
+
+        try {
+            await markNotificationAsViewed(notificationId, user.uid);
+            // Remove from local state immediately
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        } catch (error) {
+            console.error('Error dismissing notification:', error);
+        }
+    };
+
+    // Open notification in detail modal
+    const handleOpenNotification = async (notification: Notification) => {
+        setSelectedNotification(notification);
+        setShowNotificationPanel(false);
+        // Mark as viewed when opened
+        if (user?.uid && !notification.viewedBy?.[user.uid]) {
+            await handleViewNotification(notification.id);
+        }
+    };
+
+    // Mark note as read
+    const handleMarkNoteAsRead = (noteId: string) => {
+        if (!user?.uid) return;
+
+        const newReadIds = new Set([...readNoteIds, noteId]);
+        setReadNoteIds(newReadIds);
+        localStorage.setItem(`readNotes_${user.uid}`, JSON.stringify([...newReadIds]));
+    };
+
+    // Get unread notes count
+    const unreadNotesCount = notes.filter(n => !readNoteIds.has(n.id)).length;
+
     const handleSignOut = async () => {
         await signOut();
         router.push('/');
@@ -514,6 +657,112 @@ export default function StudentDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Notification Bell */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                                className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                {notifications.filter(n => !n.viewedBy?.[user.uid]).length > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                                        {notifications.filter(n => !n.viewedBy?.[user.uid]).length}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Notification Panel Dropdown */}
+                            <AnimatePresence>
+                                {showNotificationPanel && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50"
+                                    >
+                                        <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                                            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Bell className="w-4 h-4" /> Notifications
+                                            </h3>
+                                            <button
+                                                onClick={() => setShowNotificationPanel(false)}
+                                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                            >
+                                                <X className="w-4 h-4 text-gray-500" />
+                                            </button>
+                                        </div>
+
+                                        <div className="max-h-80 overflow-y-auto">
+                                            {notifications.length === 0 ? (
+                                                <div className="p-6 text-center">
+                                                    <Bell className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">No new notifications</p>
+                                                </div>
+                                            ) : (
+                                                notifications.map((notification) => {
+                                                    const isNew = !notification.viewedBy?.[user.uid];
+                                                    return (
+                                                        <div
+                                                            key={notification.id}
+                                                            className={`p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${isNew ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}
+                                                            onClick={() => handleOpenNotification(notification)}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${notification.type === 'test' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                                                                    notification.type === 'note' ? 'bg-green-100 dark:bg-green-900/30' :
+                                                                        'bg-amber-100 dark:bg-amber-900/30'
+                                                                    }`}>
+                                                                    {notification.type === 'test' ? (
+                                                                        <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                                    ) : notification.type === 'note' ? (
+                                                                        <BookMarked className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                                                    ) : (
+                                                                        <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{notification.title}</p>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{notification.message}</p>
+                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                                        {new Date(notification.createdAt).toLocaleString('en-IN', {
+                                                                            hour: '2-digit', minute: '2-digit',
+                                                                            day: '2-digit', month: 'short'
+                                                                        })}
+                                                                        {notification.createdByName && ` • ${notification.createdByName}`}
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDismissNotification(notification.id);
+                                                                    }}
+                                                                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                                    title="Dismiss"
+                                                                >
+                                                                    <X className="w-3 h-3 text-gray-400" />
+                                                                </button>
+                                                            </div>
+                                                            {isNew && (
+                                                                <span className="inline-block mt-2 px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full">New</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+
+                                        {notifications.length > 0 && (
+                                            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 text-center">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Notifications auto-dismiss 5 min after viewing
+                                                </p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
                         {/* Daily Streak in Navbar */}
                         <div className="relative">
                             <button
@@ -680,6 +929,17 @@ export default function StudentDashboard() {
                                 </span>
                             )}
                         </button>
+                        <button
+                            onClick={() => setActiveTab('notes')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'notes' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        >
+                            <BookMarked className="w-4 h-4" /> Study Notes
+                            {unreadNotesCount > 0 && (
+                                <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                                    {unreadNotesCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </motion.div>
 
@@ -781,7 +1041,7 @@ export default function StudentDashboard() {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                 📊 My Test Reports
                             </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Reports available 1-6 hours after test</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Reports available instantly for 24 hours</p>
                         </div>
                         {results.length === 0 ? (
                             <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -844,7 +1104,7 @@ export default function StudentDashboard() {
                                                             </button>
                                                         </>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl">
+                                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl">
                                                             <Clock className="w-4 h-4" />
                                                             <span className="text-sm">{getTimeRemaining(result)}</span>
                                                         </div>
@@ -854,6 +1114,71 @@ export default function StudentDashboard() {
                                         </motion.div>
                                     );
                                 })}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
+                {/* Study Notes Tab */}
+                {activeTab === 'notes' && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            📚 Study Notes for Class {user.studentClass}
+                        </h3>
+                        {notes.length === 0 ? (
+                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                                <BookMarked className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600 dark:text-gray-400">No study notes available for your class yet.</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Check back later for new materials from your teachers!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {notes.map((note, index) => (
+                                    <motion.div
+                                        key={note.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.05 * index }}
+                                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:shadow-lg transition-shadow ${!readNoteIds.has(note.id) ? 'ring-2 ring-green-500' : ''}`}
+                                    >
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                    <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB] text-xs font-medium rounded-full">
+                                                        {note.subject}
+                                                    </span>
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.contentType === 'json' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
+                                                        {note.contentType.toUpperCase()}
+                                                    </span>
+                                                    {!readNoteIds.has(note.id) && (
+                                                        <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full animate-pulse">
+                                                            New
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h4 className="font-semibold text-gray-900 dark:text-white">{note.title}</h4>
+                                                {note.description && (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{note.description}</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                            Added: {note.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                handleMarkNoteAsRead(note.id);
+                                                setSelectedNote(note);
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                        >
+                                            <BookOpen className="w-4 h-4" />
+                                            {readNoteIds.has(note.id) ? 'View Notes' : 'Read Notes'}
+                                        </button>
+                                    </motion.div>
+                                ))}
                             </div>
                         )}
                     </motion.div>
@@ -1125,6 +1450,257 @@ export default function StudentDashboard() {
                                 </div>
                                 <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                     Close Report
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Note Detail Modal */}
+            <AnimatePresence>
+                {selectedNote && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedNote(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB] text-xs font-medium rounded-full">
+                                            {selectedNote.subject}
+                                        </span>
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${selectedNote.contentType === 'json' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
+                                            {selectedNote.contentType.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedNote.title}</h3>
+                                    {selectedNote.description && (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{selectedNote.description}</p>
+                                    )}
+                                </div>
+                                <button onClick={() => setSelectedNote(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body - Scrollable */}
+                            <div className="p-6 max-h-[calc(90vh-180px)] overflow-y-auto">
+                                {selectedNote.contentType === 'json' ? (
+                                    (() => {
+                                        try {
+                                            const jsonContent = JSON.parse(selectedNote.content);
+                                            return (
+                                                <div className="space-y-6">
+                                                    {/* Title if present */}
+                                                    {jsonContent.title && (
+                                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{jsonContent.title}</h4>
+                                                    )}
+
+                                                    {/* Topics */}
+                                                    {jsonContent.topics && Array.isArray(jsonContent.topics) && (
+                                                        <div className="space-y-4">
+                                                            {jsonContent.topics.map((topic: { name?: string; content?: string; keyPoints?: string[]; formulas?: string[] }, idx: number) => (
+                                                                <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                                                    {topic.name && <h5 className="font-semibold text-gray-900 dark:text-white mb-2">{topic.name}</h5>}
+                                                                    {topic.content && <p className="text-gray-700 dark:text-gray-300 mb-3">{topic.content}</p>}
+                                                                    {topic.keyPoints && topic.keyPoints.length > 0 && (
+                                                                        <div className="mb-3">
+                                                                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Key Points:</p>
+                                                                            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm space-y-1">
+                                                                                {topic.keyPoints.map((point: string, i: number) => <li key={i}>{point}</li>)}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                    {topic.formulas && topic.formulas.length > 0 && (
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Formulas:</p>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {topic.formulas.map((formula: string, i: number) => (
+                                                                                    <code key={i} className="px-2 py-1 bg-white dark:bg-gray-900 rounded text-sm font-mono text-purple-600 dark:text-purple-400">{formula}</code>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Summary */}
+                                                    {jsonContent.summary && (
+                                                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                                                            <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Summary</p>
+                                                            <p className="text-gray-700 dark:text-gray-300">{jsonContent.summary}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Important Terms */}
+                                                    {jsonContent.importantTerms && Object.keys(jsonContent.importantTerms).length > 0 && (
+                                                        <div>
+                                                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Important Terms</p>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                {Object.entries(jsonContent.importantTerms).map(([term, def]) => (
+                                                                    <div key={term} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                                        <span className="font-medium text-gray-900 dark:text-white">{term}: </span>
+                                                                        <span className="text-gray-600 dark:text-gray-400">{String(def)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Raw JSON fallback for unrecognized structure */}
+                                                    {!jsonContent.topics && !jsonContent.summary && !jsonContent.importantTerms && (
+                                                        <pre className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl overflow-x-auto text-sm text-gray-700 dark:text-gray-300 font-mono">
+                                                            {JSON.stringify(jsonContent, null, 2)}
+                                                        </pre>
+                                                    )}
+                                                </div>
+                                            );
+                                        } catch {
+                                            return (
+                                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                                    <p className="text-red-700 dark:text-red-400">Error parsing JSON content. Raw content:</p>
+                                                    <pre className="mt-2 text-sm text-gray-700 dark:text-gray-300 overflow-x-auto">{selectedNote.content}</pre>
+                                                </div>
+                                            );
+                                        }
+                                    })()
+                                ) : (
+                                    <div className="prose dark:prose-invert max-w-none">
+                                        {/* Check if content is a URL */}
+                                        {selectedNote.content.startsWith('http://') || selectedNote.content.startsWith('https://') ? (
+                                            <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 text-center">
+                                                <p className="text-blue-700 dark:text-blue-400 mb-4">This is a link to external content:</p>
+                                                <a
+                                                    href={selectedNote.content}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <ExternalLink className="w-5 h-5" />
+                                                    Open Link
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                                                {selectedNote.content}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                                <button onClick={() => setSelectedNote(null)} className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                                    Close
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Notification Detail Modal */}
+            <AnimatePresence>
+                {selectedNotification && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedNotification(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header with type-specific color */}
+                            <div className={`p-6 ${selectedNotification.type === 'test' ? 'bg-blue-500' :
+                                    selectedNotification.type === 'note' ? 'bg-green-500' :
+                                        'bg-amber-500'
+                                } text-white`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                        {selectedNotification.type === 'test' ? (
+                                            <FileText className="w-6 h-6" />
+                                        ) : selectedNotification.type === 'note' ? (
+                                            <BookMarked className="w-6 h-6" />
+                                        ) : (
+                                            <Megaphone className="w-6 h-6" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm opacity-80">
+                                            {selectedNotification.type === 'test' ? 'New Test' :
+                                                selectedNotification.type === 'note' ? 'Study Material' :
+                                                    'Announcement'}
+                                        </p>
+                                        <h3 className="text-lg font-bold">{selectedNotification.title}</h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6">
+                                <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed mb-4">
+                                    {selectedNotification.message}
+                                </p>
+
+                                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                    {selectedNotification.subject && (
+                                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                            {selectedNotification.subject}
+                                        </span>
+                                    )}
+                                    <span>
+                                        {new Date(selectedNotification.createdAt).toLocaleString('en-IN', {
+                                            day: '2-digit', month: 'short', year: 'numeric',
+                                            hour: '2-digit', minute: '2-digit'
+                                        })}
+                                    </span>
+                                </div>
+
+                                {selectedNotification.createdByName && (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                                        From: <span className="font-medium">{selectedNotification.createdByName}</span>
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
+                                <button
+                                    onClick={() => {
+                                        handleDismissNotification(selectedNotification.id);
+                                        setSelectedNotification(null);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Dismiss
+                                </button>
+                                <button
+                                    onClick={() => setSelectedNotification(null)}
+                                    className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                >
+                                    Close
                                 </button>
                             </div>
                         </motion.div>

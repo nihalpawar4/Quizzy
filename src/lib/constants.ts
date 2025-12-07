@@ -43,4 +43,6 @@ export const COLLECTIONS = {
     TESTS: 'tests',
     QUESTIONS: 'questions',
     RESULTS: 'results',
+    NOTES: 'notes',
+    NOTIFICATIONS: 'notifications',
 } as const;

@@ -85,5 +85,29 @@ service cloud.firestore {
       allow update: if isTeacher();
       allow delete: if isTeacher();
     }
+    
+    // ==================== NOTES COLLECTION ====================
+    
+    match /notes/{noteId} {
+      // All authenticated users can read notes
+      allow read: if isAuthenticated();
+      // Only teachers can create, update, and delete notes
+      allow create: if isTeacher();
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+    
+    // ==================== NOTIFICATIONS COLLECTION ====================
+    
+    match /notifications/{notificationId} {
+      // All authenticated users can read notifications
+      allow read: if isAuthenticated();
+      // Only teachers can create notifications
+      allow create: if isTeacher();
+      // Students can update (to mark as viewed), teachers can also update
+      allow update: if isAuthenticated();
+      // Only teachers can delete notifications
+      allow delete: if isTeacher();
+    }
   }
 }

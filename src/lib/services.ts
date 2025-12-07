@@ -382,10 +382,16 @@ export async function deleteQuestion(questionId: string) {
  */
 export async function submitTestResult(result: Omit<TestResult, 'id' | 'timestamp'>): Promise<string> {
     const resultsRef = collection(db, COLLECTIONS.RESULTS);
-    const docRef = await addDoc(resultsRef, {
+
+    // Convert Date objects to Timestamps for proper Firestore storage
+    const resultData = {
         ...result,
-        timestamp: Timestamp.now()
-    });
+        timestamp: Timestamp.now(),
+        ...(result.startTime && { startTime: Timestamp.fromDate(result.startTime) }),
+        ...(result.endTime && { endTime: Timestamp.fromDate(result.endTime) })
+    };
+
+    const docRef = await addDoc(resultsRef, resultData);
     return docRef.id;
 }
 
@@ -397,11 +403,16 @@ export async function getAllResults(): Promise<TestResult[]> {
     const q = query(resultsRef, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-    })) as TestResult[];
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate() || new Date(),
+            startTime: data.startTime?.toDate ? data.startTime.toDate() : (data.startTime ? new Date(data.startTime) : undefined),
+            endTime: data.endTime?.toDate ? data.endTime.toDate() : (data.endTime ? new Date(data.endTime) : undefined)
+        } as TestResult;
+    });
 }
 
 /**
@@ -424,11 +435,16 @@ export async function getResultsByStudent(studentId: string): Promise<TestResult
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-    })) as TestResult[];
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate() || new Date(),
+            startTime: data.startTime?.toDate ? data.startTime.toDate() : (data.startTime ? new Date(data.startTime) : undefined),
+            endTime: data.endTime?.toDate ? data.endTime.toDate() : (data.endTime ? new Date(data.endTime) : undefined)
+        } as TestResult;
+    });
 }
 
 /**
@@ -542,3 +558,220 @@ export async function getTopPerformers(limit: number = 10, studentClass?: number
 
 export type { LeaderboardEntry };
 
+// ==================== TEST UPDATE OPERATIONS ====================
+
+/**
+ * Update an existing test
+ */
+export async function updateTest(testId: string, updates: Partial<Omit<Test, 'id' | 'createdAt'>>): Promise<void> {
+    const testRef = doc(db, COLLECTIONS.TESTS, testId);
+    const updateData: Record<string, unknown> = { ...updates };
+
+    // Convert scheduledStartTime to Timestamp if provided
+    if (updates.scheduledStartTime) {
+        updateData.scheduledStartTime = Timestamp.fromDate(new Date(updates.scheduledStartTime));
+    }
+
+    await updateDoc(testRef, updateData);
+}
+
+/**
+ * Update questions for a test (delete old ones and add new ones)
+ */
+export async function updateTestQuestions(
+    testId: string,
+    questions: ParsedQuestion[]
+): Promise<void> {
+    const batch = writeBatch(db);
+
+    // Delete existing questions for this test
+    const questionsRef = collection(db, COLLECTIONS.QUESTIONS);
+    const q = query(questionsRef, where('testId', '==', testId));
+    const existingQuestions = await getDocs(q);
+    existingQuestions.docs.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+    });
+
+    // Add new questions
+    questions.forEach((q, index) => {
+        const docRef = doc(questionsRef);
+        batch.set(docRef, {
+            testId,
+            text: q.text,
+            options: q.options,
+            correctOption: q.correctOption,
+            type: q.type || 'mcq',
+            correctAnswer: q.correctAnswer || '',
+            order: index
+        });
+    });
+
+    // Update question count on the test
+    const testRef = doc(db, COLLECTIONS.TESTS, testId);
+    batch.update(testRef, { questionCount: questions.length });
+
+    await batch.commit();
+}
+
+// ==================== NOTE OPERATIONS ====================
+
+import type { SubjectNote } from '@/types';
+
+/**
+ * Create a new subject note
+ */
+export async function createNote(note: Omit<SubjectNote, 'id' | 'createdAt'>): Promise<string> {
+    const notesRef = collection(db, COLLECTIONS.NOTES);
+    const docRef = await addDoc(notesRef, {
+        ...note,
+        createdAt: Timestamp.now(),
+        isActive: true
+    });
+    return docRef.id;
+}
+
+/**
+ * Get all notes (for teachers)
+ */
+export async function getAllNotes(): Promise<SubjectNote[]> {
+    const notesRef = collection(db, COLLECTIONS.NOTES);
+    const q = query(notesRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+    })) as SubjectNote[];
+}
+
+/**
+ * Get notes filtered by class (for students)
+ */
+export async function getNotesByClass(studentClass: number): Promise<SubjectNote[]> {
+    const notesRef = collection(db, COLLECTIONS.NOTES);
+    const q = query(
+        notesRef,
+        where('targetClass', '==', studentClass),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+    })) as SubjectNote[];
+}
+
+/**
+ * Update a note
+ */
+export async function updateNote(noteId: string, updates: Partial<Omit<SubjectNote, 'id' | 'createdAt'>>): Promise<void> {
+    const noteRef = doc(db, COLLECTIONS.NOTES, noteId);
+    await updateDoc(noteRef, updates);
+}
+
+/**
+ * Delete a note
+ */
+export async function deleteNote(noteId: string): Promise<void> {
+    const noteRef = doc(db, COLLECTIONS.NOTES, noteId);
+    await deleteDoc(noteRef);
+}
+
+/**
+ * Toggle note active status
+ */
+export async function updateNoteStatus(noteId: string, isActive: boolean): Promise<void> {
+    const noteRef = doc(db, COLLECTIONS.NOTES, noteId);
+    await updateDoc(noteRef, { isActive });
+}
+
+// ==================== NOTIFICATION OPERATIONS ====================
+
+import type { Notification, NotificationType } from '@/types';
+
+/**
+ * Create a new notification
+ */
+export async function createNotification(notification: Omit<Notification, 'id' | 'createdAt' | 'viewedBy'>): Promise<string> {
+    const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+    const docRef = await addDoc(notificationsRef, {
+        ...notification,
+        createdAt: Timestamp.now(),
+        viewedBy: {}
+    });
+    return docRef.id;
+}
+
+/**
+ * Mark notification as viewed by a student
+ */
+export async function markNotificationAsViewed(notificationId: string, studentId: string): Promise<void> {
+    const notificationRef = doc(db, COLLECTIONS.NOTIFICATIONS, notificationId);
+    await updateDoc(notificationRef, {
+        [`viewedBy.${studentId}`]: Timestamp.now()
+    });
+}
+
+/**
+ * Delete a notification
+ */
+export async function deleteNotification(notificationId: string): Promise<void> {
+    const notificationRef = doc(db, COLLECTIONS.NOTIFICATIONS, notificationId);
+    await deleteDoc(notificationRef);
+}
+
+/**
+ * Create notification when a new test is created
+ */
+export async function createTestNotification(test: Test, teacherName: string): Promise<string> {
+    return createNotification({
+        type: 'test',
+        title: '📝 New Test Available',
+        message: `${test.title} - ${test.subject}`,
+        targetClass: test.targetClass,
+        createdBy: test.createdBy,
+        createdByName: teacherName,
+        linkedId: test.id,
+        subject: test.subject
+    });
+}
+
+/**
+ * Create notification when a new note is uploaded
+ */
+export async function createNoteNotification(note: { title: string; subject: string; targetClass: number; createdBy: string; id: string }, teacherName: string): Promise<string> {
+    return createNotification({
+        type: 'note',
+        title: '📚 New Study Material',
+        message: `${note.title} - ${note.subject}`,
+        targetClass: note.targetClass,
+        createdBy: note.createdBy,
+        createdByName: teacherName,
+        linkedId: note.id,
+        subject: note.subject
+    });
+}
+
+/**
+ * Create announcement notification
+ */
+export async function createAnnouncement(announcement: {
+    title: string;
+    message: string;
+    targetClass: number;
+    createdBy: string;
+    createdByName: string;
+}): Promise<string> {
+    return createNotification({
+        type: 'announcement',
+        title: announcement.title,
+        message: announcement.message,
+        targetClass: announcement.targetClass,
+        createdBy: announcement.createdBy,
+        createdByName: announcement.createdByName
+    });
+}

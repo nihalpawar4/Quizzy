@@ -37,8 +37,14 @@ import {
     Ban,
     ShieldCheck,
     ShieldX,
+    Shield,
     Timer,
-    CalendarClock
+    CalendarClock,
+    FileText,
+    BookMarked,
+    Save,
+    Bell,
+    Megaphone
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -53,11 +59,20 @@ import {
     updateTestStatus,
     restrictStudent,
     enableStudent,
-    deleteStudent
+    deleteStudent,
+    updateTest,
+    updateTestQuestions,
+    getQuestionsByTestId,
+    createNote,
+    deleteNote,
+    updateNoteStatus,
+    createAnnouncement,
+    createTestNotification,
+    createNoteNotification
 } from '@/lib/services';
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
-import type { Test, TestResult, User } from '@/types';
+import type { Test, TestResult, User, SubjectNote } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -101,7 +116,7 @@ export default function TeacherDashboard() {
     const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<string | null>(null); // uid of student to delete
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'create'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes'>('tests');
 
     // Create test states
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -113,14 +128,27 @@ export default function TeacherDashboard() {
         duration: number;
         questionType: QuestionType;
         scheduledStartTime: string; // ISO string or empty
+        marksPerQuestion: number;
+        negativeMarking: boolean;
+        negativeMarksPerQuestion: number;
+        enableAntiCheat: boolean;
+        showInstructions: boolean;
     }>({
         title: '',
         subject: SUBJECTS[0],
         targetClass: 5,
         duration: 30,
         questionType: 'mcq',
-        scheduledStartTime: ''
+        scheduledStartTime: '',
+        marksPerQuestion: 1,
+        negativeMarking: false,
+        negativeMarksPerQuestion: 0.25,
+        enableAntiCheat: false,
+        showInstructions: true
     });
+
+    // Proctoring report modal state
+    const [selectedProctoringResult, setSelectedProctoringResult] = useState<TestResult | null>(null);
     const [uploadMethod, setUploadMethod] = useState<'csv' | 'json' | 'manual'>('csv');
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [jsonInput, setJsonInput] = useState('');
@@ -155,6 +183,65 @@ export default function TeacherDashboard() {
         type: 'mcq',
         correctAnswer: ''
     });
+
+    // Edit test states
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingTest, setEditingTest] = useState<Test | null>(null);
+    const [editTestData, setEditTestData] = useState<{
+        title: string;
+        subject: typeof SUBJECTS[number];
+        targetClass: number;
+        duration: number;
+        isActive: boolean;
+        scheduledStartTime: string;
+    }>({
+        title: '',
+        subject: SUBJECTS[0],
+        targetClass: 5,
+        duration: 30,
+        isActive: true,
+        scheduledStartTime: ''
+    });
+    const [editQuestions, setEditQuestions] = useState<ParsedQuestion[]>([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editSuccess, setEditSuccess] = useState(false);
+    const [loadingEditQuestions, setLoadingEditQuestions] = useState(false);
+
+    // Notes states
+    const [notes, setNotes] = useState<SubjectNote[]>([]);
+    const [showNotesModal, setShowNotesModal] = useState(false);
+    const [newNote, setNewNote] = useState<{
+        title: string;
+        subject: typeof SUBJECTS[number];
+        targetClass: number;
+        description: string;
+        contentType: 'json' | 'pdf' | 'text';
+        content: string;
+    }>({
+        title: '',
+        subject: SUBJECTS[0],
+        targetClass: 5,
+        description: '',
+        contentType: 'json',
+        content: ''
+    });
+    const [isCreatingNote, setIsCreatingNote] = useState(false);
+    const [noteSuccess, setNoteSuccess] = useState(false);
+    const [noteError, setNoteError] = useState<string | null>(null);
+
+    // Announcement states
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [newAnnouncement, setNewAnnouncement] = useState<{
+        title: string;
+        message: string;
+        targetClass: number | 'all';
+    }>({
+        title: '',
+        message: '',
+        targetClass: 'all'
+    });
+    const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
+    const [announcementSuccess, setAnnouncementSuccess] = useState(false);
 
     const loadStudents = useCallback(async () => {
         try {
@@ -219,10 +306,35 @@ export default function TeacherDashboard() {
                 allResults.push({
                     id: doc.id,
                     ...data,
-                    timestamp: data.timestamp?.toDate() || new Date()
+                    timestamp: data.timestamp?.toDate() || new Date(),
+                    startTime: data.startTime?.toDate ? data.startTime.toDate() : (data.startTime ? new Date(data.startTime) : undefined),
+                    endTime: data.endTime?.toDate ? data.endTime.toDate() : (data.endTime ? new Date(data.endTime) : undefined)
                 } as TestResult);
             });
             setResults(allResults);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Real-time listener for notes
+    useEffect(() => {
+        if (!user) return;
+
+        const notesRef = collection(db, COLLECTIONS.NOTES);
+        const q = query(notesRef, orderBy('createdAt', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allNotes: SubjectNote[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                allNotes.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate() || new Date()
+                } as SubjectNote);
+            });
+            setNotes(allNotes);
         });
 
         return () => unsubscribe();
@@ -334,6 +446,11 @@ export default function TeacherDashboard() {
                 createdBy: user!.uid,
                 isActive: true,
                 questionCount: questions.length,
+                marksPerQuestion: newTest.marksPerQuestion,
+                negativeMarking: newTest.negativeMarking,
+                negativeMarksPerQuestion: newTest.negativeMarksPerQuestion,
+                enableAntiCheat: newTest.enableAntiCheat,
+                showInstructions: newTest.showInstructions,
                 ...(newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
             });
 
@@ -356,7 +473,19 @@ export default function TeacherDashboard() {
     };
 
     const resetCreateForm = () => {
-        setNewTest({ title: '', subject: SUBJECTS[0], targetClass: 5, duration: 30, questionType: 'mcq', scheduledStartTime: '' });
+        setNewTest({
+            title: '',
+            subject: SUBJECTS[0],
+            targetClass: 5,
+            duration: 30,
+            questionType: 'mcq',
+            scheduledStartTime: '',
+            marksPerQuestion: 1,
+            negativeMarking: false,
+            negativeMarksPerQuestion: 0.25,
+            enableAntiCheat: false,
+            showInstructions: true
+        });
         setCsvFile(null);
         setJsonInput('');
         setParsedQuestions([]);
@@ -474,6 +603,216 @@ export default function TeacherDashboard() {
     const handleSignOut = async () => {
         await signOut();
         router.push('/');
+    };
+
+    // Open edit modal for a test
+    const openEditModal = async (test: Test) => {
+        setEditingTest(test);
+        setEditTestData({
+            title: test.title,
+            subject: test.subject as typeof SUBJECTS[number],
+            targetClass: test.targetClass,
+            duration: test.duration || 30,
+            isActive: test.isActive,
+            scheduledStartTime: test.scheduledStartTime ? new Date(test.scheduledStartTime).toISOString().slice(0, 16) : ''
+        });
+        setShowEditModal(true);
+        setLoadingEditQuestions(true);
+
+        try {
+            const questions = await getQuestionsByTestId(test.id);
+            const parsedQuestions: ParsedQuestion[] = questions.map(q => ({
+                text: q.text,
+                options: q.options,
+                correctOption: q.correctOption,
+                type: q.type as ParsedQuestion['type'],
+                correctAnswer: q.correctAnswer
+            }));
+            setEditQuestions(parsedQuestions);
+        } catch (error) {
+            console.error('Error loading questions:', error);
+            setEditQuestions([]);
+        } finally {
+            setLoadingEditQuestions(false);
+        }
+    };
+
+    // Close edit modal
+    const closeEditModal = () => {
+        setShowEditModal(false);
+        setEditingTest(null);
+        setEditTestData({
+            title: '',
+            subject: SUBJECTS[0],
+            targetClass: 5,
+            duration: 30,
+            isActive: true,
+            scheduledStartTime: ''
+        });
+        setEditQuestions([]);
+        setEditSuccess(false);
+    };
+
+    // Handle edit test submission
+    const handleEditTest = async () => {
+        if (!editingTest || !editTestData.title.trim()) {
+            setParseError('Please provide a test title');
+            return;
+        }
+
+        setIsEditing(true);
+        try {
+            // Update test details
+            await updateTest(editingTest.id, {
+                title: editTestData.title,
+                subject: editTestData.subject,
+                targetClass: editTestData.targetClass,
+                duration: editTestData.duration,
+                isActive: editTestData.isActive,
+                ...(editTestData.scheduledStartTime ? { scheduledStartTime: new Date(editTestData.scheduledStartTime) } : {})
+            });
+
+            // If questions were modified, update them
+            if (editQuestions.length > 0) {
+                await updateTestQuestions(editingTest.id, editQuestions);
+            }
+
+            setEditSuccess(true);
+            setTimeout(() => {
+                closeEditModal();
+            }, 2000);
+        } catch (error) {
+            console.error('Error updating test:', error);
+            setParseError('Failed to update test. Please try again.');
+        } finally {
+            setIsEditing(false);
+        }
+    };
+
+    // Remove a question from edit list
+    const removeEditQuestion = (index: number) => {
+        setEditQuestions(editQuestions.filter((_, i) => i !== index));
+    };
+
+    // Create new note
+    const handleCreateNote = async () => {
+        if (!newNote.title.trim() || !newNote.content.trim()) {
+            setNoteError('Please provide a title and content');
+            return;
+        }
+
+        // Validate JSON if content type is json
+        if (newNote.contentType === 'json') {
+            try {
+                JSON.parse(newNote.content);
+            } catch {
+                setNoteError('Invalid JSON format. Please check your content.');
+                return;
+            }
+        }
+
+        setIsCreatingNote(true);
+        setNoteError(null);
+
+        try {
+            await createNote({
+                title: newNote.title,
+                subject: newNote.subject,
+                targetClass: newNote.targetClass,
+                description: newNote.description,
+                contentType: newNote.contentType,
+                content: newNote.content,
+                createdBy: user!.uid,
+                isActive: true
+            });
+
+            setNoteSuccess(true);
+            setTimeout(() => {
+                setShowNotesModal(false);
+                setNoteSuccess(false);
+                resetNoteForm();
+            }, 2000);
+        } catch (error) {
+            console.error('Error creating note:', error);
+            setNoteError('Failed to create note. Please try again.');
+        } finally {
+            setIsCreatingNote(false);
+        }
+    };
+
+    // Delete note
+    const handleDeleteNote = async (noteId: string) => {
+        if (!confirm('Are you sure you want to delete this note?')) return;
+        try {
+            await deleteNote(noteId);
+        } catch (error) {
+            console.error('Error deleting note:', error);
+        }
+    };
+
+    // Toggle note status
+    const handleToggleNoteStatus = async (noteId: string, currentStatus: boolean) => {
+        try {
+            await updateNoteStatus(noteId, !currentStatus);
+        } catch (error) {
+            console.error('Error updating note status:', error);
+        }
+    };
+
+    // Create announcement
+    const handleCreateAnnouncement = async () => {
+        if (!newAnnouncement.title.trim() || !newAnnouncement.message.trim()) {
+            return;
+        }
+
+        setIsCreatingAnnouncement(true);
+
+        try {
+            if (newAnnouncement.targetClass === 'all') {
+                // Create announcements for all classes (5-10)
+                for (let classNum = 5; classNum <= 10; classNum++) {
+                    await createAnnouncement({
+                        title: newAnnouncement.title,
+                        message: newAnnouncement.message,
+                        targetClass: classNum,
+                        createdBy: user!.uid,
+                        createdByName: user?.name || 'Teacher'
+                    });
+                }
+            } else {
+                await createAnnouncement({
+                    title: newAnnouncement.title,
+                    message: newAnnouncement.message,
+                    targetClass: newAnnouncement.targetClass as number,
+                    createdBy: user!.uid,
+                    createdByName: user?.name || 'Teacher'
+                });
+            }
+
+            setAnnouncementSuccess(true);
+            setTimeout(() => {
+                setShowAnnouncementModal(false);
+                setAnnouncementSuccess(false);
+                setNewAnnouncement({ title: '', message: '', targetClass: 'all' });
+            }, 2000);
+        } catch (error) {
+            console.error('Error creating announcement:', error);
+        } finally {
+            setIsCreatingAnnouncement(false);
+        }
+    };
+
+    // Reset note form
+    const resetNoteForm = () => {
+        setNewNote({
+            title: '',
+            subject: SUBJECTS[0],
+            targetClass: 5,
+            description: '',
+            contentType: 'json',
+            content: ''
+        });
+        setNoteError(null);
     };
 
     if (authLoading || !user) {
@@ -657,6 +996,7 @@ export default function TeacherDashboard() {
                         {[
                             { id: 'tests', label: 'My Tests', icon: BookOpen },
                             { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+                            { id: 'notes', label: 'Subject Notes', icon: BookMarked },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -668,6 +1008,11 @@ export default function TeacherDashboard() {
                             >
                                 <tab.icon className="w-4 h-4" />
                                 {tab.label}
+                                {tab.id === 'notes' && notes.length > 0 && (
+                                    <span className="bg-[#1650EB]/20 text-[#1650EB] dark:bg-[#6095DB]/20 dark:text-[#6095DB] text-xs px-1.5 py-0.5 rounded-full">
+                                        {notes.length}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -679,13 +1024,22 @@ export default function TeacherDashboard() {
                         {/* Create Test Button */}
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Tests</h3>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Create Test
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setShowAnnouncementModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    <Megaphone className="w-5 h-5" />
+                                    Announce
+                                </button>
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Create Test
+                                </button>
+                            </div>
                         </div>
 
                         {loading ? (
@@ -784,11 +1138,17 @@ export default function TeacherDashboard() {
                                                     Analytics
                                                 </button>
                                                 <button
+                                                    onClick={() => openEditModal(test)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                    Edit
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteTest(test.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                    className="flex items-center justify-center gap-2 py-2 px-3 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
-                                                    Delete
                                                 </button>
                                             </div>
                                         </motion.div>
@@ -851,63 +1211,131 @@ export default function TeacherDashboard() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marks</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proctoring</th>
+                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                                         {filteredResults.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                                <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                                     No results found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredResults.slice(0, 50).map((result) => (
-                                                <tr key={result.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                    <td className="px-6 py-4">
-                                                        <p className="font-medium text-gray-900 dark:text-white">{result.studentName}</p>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
-                                                        Class {result.studentClass}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-900 dark:text-white">
-                                                        {result.testTitle}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
-                                                            {result.subject}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(result.score / result.totalQuestions) >= 0.7
-                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                            : (result.score / result.totalQuestions) >= 0.4
-                                                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                            }`}>
-                                                            {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                        {result.timestamp.toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <button
-                                                            onClick={() => handleDeleteResult(result.id)}
-                                                            className="p-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                            title="Delete submission"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                            filteredResults.slice(0, 50).map((result) => {
+                                                const formatDuration = (seconds?: number) => {
+                                                    if (!seconds) return '-';
+                                                    const hours = Math.floor(seconds / 3600);
+                                                    const mins = Math.floor((seconds % 3600) / 60);
+                                                    const secs = seconds % 60;
+                                                    if (hours > 0) return `${hours}h ${mins}m`;
+                                                    return `${mins}m ${secs}s`;
+                                                };
+
+                                                const hasAntiCheatData = result.antiCheatEnabled && (
+                                                    (result.tabSwitchCount || 0) > 0 ||
+                                                    (result.copyAttempts || 0) > 0 ||
+                                                    (result.rightClickAttempts || 0) > 0 ||
+                                                    (result.fullscreenExits || 0) > 0
+                                                );
+
+                                                return (
+                                                    <tr key={result.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                        <td className="px-4 py-3">
+                                                            <p className="font-medium text-gray-900 dark:text-white text-sm">{result.studentName}</p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">{result.studentEmail}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                                            Class {result.studentClass}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <p className="text-sm text-gray-900 dark:text-white">{result.testTitle}</p>
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400">{result.subject}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${(result.score / result.totalQuestions) >= 0.7
+                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                                : (result.score / result.totalQuestions) >= 0.4
+                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                                }`}>
+                                                                {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {result.marksObtained !== undefined ? (
+                                                                <div className="text-sm">
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {result.marksObtained.toFixed(1)}/{result.totalMarks}
+                                                                    </p>
+                                                                    {(result.negativeMarksApplied || 0) > 0 && (
+                                                                        <p className="text-xs text-red-500">
+                                                                            -{result.negativeMarksApplied?.toFixed(2)}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="text-sm">
+                                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                                    {formatDuration(result.timeTakenSeconds)}
+                                                                </p>
+                                                                {result.startTime && (
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {new Date(result.startTime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} {new Date(result.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {result.antiCheatEnabled ? (
+                                                                <button
+                                                                    onClick={() => setSelectedProctoringResult(result)}
+                                                                    className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                    title="Click for detailed report"
+                                                                >
+                                                                    {hasAntiCheatData ? (
+                                                                        <>
+                                                                            <span className="p-1 bg-amber-100 dark:bg-amber-900/30 rounded">
+                                                                                <ShieldX className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                                                            </span>
+                                                                            <span className="text-xs text-amber-600 underline">View</span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <span className="p-1 bg-green-100 dark:bg-green-900/30 rounded">
+                                                                                <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                                                            </span>
+                                                                            <span className="text-xs text-green-600 underline">View</span>
+                                                                        </>
+                                                                    )}
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400">Off</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <button
+                                                                onClick={() => handleDeleteResult(result.id)}
+                                                                className="p-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                                title="Delete submission"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -918,6 +1346,103 @@ export default function TeacherDashboard() {
                                 </div>
                             )}
                         </div>
+                    </motion.div>
+                )}
+
+                {/* Notes Tab */}
+                {activeTab === 'notes' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        {/* Header with Create Button */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subject Notes</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Upload study materials for students in JSON or text format</p>
+                            </div>
+                            <button
+                                onClick={() => setShowNotesModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add Notes
+                            </button>
+                        </div>
+
+                        {notes.length === 0 ? (
+                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                                <BookMarked className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600 dark:text-gray-400 mb-4">No notes uploaded yet.</p>
+                                <button
+                                    onClick={() => setShowNotesModal(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Upload Your First Notes
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {notes.map((note) => (
+                                    <motion.div
+                                        key={note.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${note.isActive ? 'border-gray-200 dark:border-gray-800' : 'border-red-200 dark:border-red-800 opacity-60'}`}
+                                    >
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                    <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
+                                                        {note.subject}
+                                                    </span>
+                                                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
+                                                        Class {note.targetClass}
+                                                    </span>
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.contentType === 'json' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : note.contentType === 'pdf' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
+                                                        {note.contentType.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <h4 className="font-semibold text-gray-900 dark:text-white">{note.title}</h4>
+                                                {note.description && (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{note.description}</p>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => handleToggleNoteStatus(note.id, note.isActive)}
+                                                className={`px-2 py-1 text-xs font-medium rounded-full ${note.isActive
+                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                                    }`}
+                                            >
+                                                {note.isActive ? 'Active' : 'Inactive'}
+                                            </button>
+                                        </div>
+
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                            Created: {note.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(note.content);
+                                                    alert('Content copied to clipboard!');
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                                Copy
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteNote(note.id)}
+                                                className="flex items-center justify-center gap-2 py-2 px-3 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </main>
@@ -1041,6 +1566,156 @@ export default function TeacherDashboard() {
                                                                 </div>
                                                             </div>
                                                         )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Marking Settings Section */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                                                            <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Marking Settings</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Configure points and negative marking</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                Marks per Correct Answer
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                value={newTest.marksPerQuestion}
+                                                                onChange={(e) => setNewTest({ ...newTest, marksPerQuestion: Number(e.target.value) })}
+                                                                min={1}
+                                                                max={10}
+                                                                step={0.5}
+                                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                Enable Negative Marking
+                                                            </label>
+                                                            <button
+                                                                onClick={() => setNewTest({ ...newTest, negativeMarking: !newTest.negativeMarking })}
+                                                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${newTest.negativeMarking
+                                                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                                                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                                                                    }`}
+                                                            >
+                                                                <span className={newTest.negativeMarking ? 'text-red-700 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
+                                                                    {newTest.negativeMarking ? 'Yes - Enabled' : 'No - Disabled'}
+                                                                </span>
+                                                                <div className={`w-10 h-6 rounded-full transition-colors ${newTest.negativeMarking ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                                    <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.negativeMarking ? 'translate-x-4.5 ml-4' : 'ml-0.5'}`} />
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                        {newTest.negativeMarking && (
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                    Negative Marks per Wrong Answer
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={newTest.negativeMarksPerQuestion}
+                                                                    onChange={(e) => setNewTest({ ...newTest, negativeMarksPerQuestion: Number(e.target.value) })}
+                                                                    min={0}
+                                                                    max={newTest.marksPerQuestion}
+                                                                    step={0.25}
+                                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {newTest.negativeMarking && (
+                                                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                                            <p className="text-sm text-red-700 dark:text-red-400">
+                                                                ⚠️ Students will lose <strong>{newTest.negativeMarksPerQuestion}</strong> marks for each wrong answer
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Anti-Cheat Settings Section */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                                                            <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Anti-Cheat Settings</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Enable proctoring features for secure testing</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setNewTest({ ...newTest, enableAntiCheat: !newTest.enableAntiCheat })}
+                                                        className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${newTest.enableAntiCheat
+                                                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                                                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <Shield className={`w-6 h-6 ${newTest.enableAntiCheat ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
+                                                            <div className="text-left">
+                                                                <p className={`font-medium ${newTest.enableAntiCheat ? 'text-purple-700 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                                    {newTest.enableAntiCheat ? 'Proctoring Enabled' : 'Proctoring Disabled'}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {newTest.enableAntiCheat ? 'Fullscreen mode, tab switch & copy detection enabled' : 'Standard test mode without proctoring'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-10 h-6 rounded-full transition-colors ${newTest.enableAntiCheat ? 'bg-purple-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.enableAntiCheat ? 'translate-x-4.5 ml-4' : 'ml-0.5'}`} />
+                                                        </div>
+                                                    </button>
+                                                    {newTest.enableAntiCheat && (
+                                                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                                                                <p className="text-xs text-purple-700 dark:text-purple-400">🖥️ Fullscreen</p>
+                                                            </div>
+                                                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                                                                <p className="text-xs text-purple-700 dark:text-purple-400">🚫 No Copy/Paste</p>
+                                                            </div>
+                                                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                                                                <p className="text-xs text-purple-700 dark:text-purple-400">👁️ Tab Detection</p>
+                                                            </div>
+                                                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                                                                <p className="text-xs text-purple-700 dark:text-purple-400">📊 Reports</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Instructions Screen Toggle */}
+                                                    <div className="mt-4">
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, showInstructions: !newTest.showInstructions })}
+                                                            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${newTest.showInstructions
+                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-2xl">{newTest.showInstructions ? '📋' : '⚡'}</span>
+                                                                <div className="text-left">
+                                                                    <p className={`font-medium ${newTest.showInstructions ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                                        {newTest.showInstructions ? 'Show Instructions Screen' : 'Skip Instructions'}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {newTest.showInstructions
+                                                                            ? 'Students must read & agree to rules before starting'
+                                                                            : 'Test starts immediately without instructions'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className={`w-10 h-6 rounded-full transition-colors ${newTest.showInstructions ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                                <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.showInstructions ? 'translate-x-4.5 ml-4' : 'ml-0.5'}`} />
+                                                            </div>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1697,6 +2372,663 @@ export default function TeacherDashboard() {
                                     </div>
                                 )}
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Test Modal */}
+            <AnimatePresence>
+                {showEditModal && editingTest && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                        onClick={closeEditModal}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {editSuccess ? (
+                                <div className="p-12 text-center">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Test Updated!</h3>
+                                    <p className="text-gray-600 dark:text-gray-400">Your changes have been saved successfully.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Header */}
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-xl flex items-center justify-center">
+                                                    <Edit className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Test</h3>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">Modify test details and questions</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={closeEditModal} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="p-6 space-y-6">
+                                        {/* Test Details */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Test Title *</label>
+                                                <input
+                                                    type="text"
+                                                    value={editTestData.title}
+                                                    onChange={(e) => setEditTestData({ ...editTestData, title: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+                                                <select
+                                                    value={editTestData.subject}
+                                                    onChange={(e) => setEditTestData({ ...editTestData, subject: e.target.value as typeof SUBJECTS[number] })}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                >
+                                                    {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class</label>
+                                                <select
+                                                    value={editTestData.targetClass}
+                                                    onChange={(e) => setEditTestData({ ...editTestData, targetClass: Number(e.target.value) })}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                >
+                                                    {CLASS_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration (minutes)</label>
+                                                <input
+                                                    type="number"
+                                                    value={editTestData.duration}
+                                                    onChange={(e) => setEditTestData({ ...editTestData, duration: Number(e.target.value) })}
+                                                    min={5}
+                                                    max={180}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Scheduled Start Time */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Scheduled Start Time (Optional)</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editTestData.scheduledStartTime}
+                                                onChange={(e) => setEditTestData({ ...editTestData, scheduledStartTime: e.target.value })}
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Status Toggle */}
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setEditTestData({ ...editTestData, isActive: !editTestData.isActive })}
+                                                className={`px-4 py-2 rounded-xl font-medium ${editTestData.isActive
+                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                                    }`}
+                                            >
+                                                {editTestData.isActive ? 'Active' : 'Inactive'}
+                                            </button>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                {editTestData.isActive ? 'Students can see and take this test' : 'Test is hidden from students'}
+                                            </span>
+                                        </div>
+
+                                        {/* Questions Preview */}
+                                        <div>
+                                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Questions ({editQuestions.length})</h4>
+                                            {loadingEditQuestions ? (
+                                                <div className="flex items-center justify-center py-8">
+                                                    <Loader2 className="w-6 h-6 text-[#1650EB] animate-spin" />
+                                                </div>
+                                            ) : editQuestions.length === 0 ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No questions found for this test.</p>
+                                            ) : (
+                                                <div className="space-y-2 max-h-60 overflow-y-auto">
+                                                    {editQuestions.map((q, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                                            <span className="text-sm text-gray-900 dark:text-white truncate flex-1 mr-2">
+                                                                {idx + 1}. {q.text}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => removeEditQuestion(idx)}
+                                                                className="p-1 text-red-500 hover:text-red-700"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between">
+                                        <button
+                                            onClick={closeEditModal}
+                                            className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleEditTest}
+                                            disabled={isEditing || !editTestData.title.trim()}
+                                            className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isEditing ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Create Notes Modal */}
+            <AnimatePresence>
+                {showNotesModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                        onClick={() => { setShowNotesModal(false); resetNoteForm(); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {noteSuccess ? (
+                                <div className="p-12 text-center">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Notes Created!</h3>
+                                    <p className="text-gray-600 dark:text-gray-400">Your notes are now available for students.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Header */}
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                                                    <BookMarked className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create Subject Notes</h3>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">Upload study materials for students</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => { setShowNotesModal(false); resetNoteForm(); }} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="p-6 space-y-6">
+                                        {/* Basic Info */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title *</label>
+                                                <input
+                                                    type="text"
+                                                    value={newNote.title}
+                                                    onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                                                    placeholder="e.g., Chapter 5 - Photosynthesis Notes"
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
+                                                <select
+                                                    value={newNote.subject}
+                                                    onChange={(e) => setNewNote({ ...newNote, subject: e.target.value as typeof SUBJECTS[number] })}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                >
+                                                    {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class *</label>
+                                                <select
+                                                    value={newNote.targetClass}
+                                                    onChange={(e) => setNewNote({ ...newNote, targetClass: Number(e.target.value) })}
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                >
+                                                    {CLASS_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Description */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={newNote.description}
+                                                onChange={(e) => setNewNote({ ...newNote, description: e.target.value })}
+                                                placeholder="Brief description of the notes"
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Content Type Selection */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Type *</label>
+                                            <div className="flex gap-2">
+                                                {[
+                                                    { id: 'json', label: 'JSON Format', icon: FileJson },
+                                                    { id: 'text', label: 'Plain Text', icon: FileText },
+                                                ].map((type) => (
+                                                    <button
+                                                        key={type.id}
+                                                        onClick={() => setNewNote({ ...newNote, contentType: type.id as 'json' | 'text' })}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${newNote.contentType === type.id
+                                                            ? 'bg-[#1650EB] text-white'
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                    >
+                                                        <type.icon className="w-4 h-4" />
+                                                        {type.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Sample JSON Format */}
+                                        {newNote.contentType === 'json' && (
+                                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Sample JSON Format:</p>
+                                                    <button
+                                                        onClick={() => navigator.clipboard.writeText(`{
+  "title": "Chapter Notes",
+  "topics": [
+    {
+      "name": "Introduction",
+      "content": "This is the introduction section...",
+      "keyPoints": ["Point 1", "Point 2", "Point 3"]
+    },
+    {
+      "name": "Main Concepts",
+      "content": "Main concepts explained here...",
+      "formulas": ["E = mc²", "F = ma"]
+    }
+  ],
+  "summary": "Brief summary of the chapter",
+  "importantTerms": {
+    "Term1": "Definition 1",
+    "Term2": "Definition 2"
+  }
+}`)}
+                                                        className="text-xs text-[#1650EB] hover:underline"
+                                                    >
+                                                        Copy Sample
+                                                    </button>
+                                                </div>
+                                                <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">{`{
+  "title": "Chapter Notes",
+  "topics": [...],
+  "summary": "...",
+  "importantTerms": {...}
+}`}</pre>
+                                            </div>
+                                        )}
+
+                                        {/* Content Input */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content *</label>
+                                            <textarea
+                                                value={newNote.content}
+                                                onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                                                placeholder={newNote.contentType === 'json' ? 'Paste your JSON notes here...' : 'Enter your notes text here...'}
+                                                rows={10}
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Error Message */}
+                                        {noteError && (
+                                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                                                <p className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
+                                                    <AlertCircle className="w-4 h-4" />
+                                                    {noteError}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Info about PDF upload */}
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                                            <p className="text-sm text-amber-700 dark:text-amber-400">
+                                                <strong>💡 Tip for PDFs:</strong> For PDF notes, you can upload your PDF to a cloud storage (like Google Drive or Dropbox), get a shareable link, and paste it in the content field with content type as "Text". Students can then click the link to view the PDF.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between">
+                                        <button
+                                            onClick={() => { setShowNotesModal(false); resetNoteForm(); }}
+                                            className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleCreateNote}
+                                            disabled={isCreatingNote || !newNote.title.trim() || !newNote.content.trim()}
+                                            className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isCreatingNote ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><CheckCircle className="w-4 h-4" /> Create Notes</>}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Proctoring Report Modal */}
+            <AnimatePresence>
+                {selectedProctoringResult && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedProctoringResult(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
+                                            (selectedProctoringResult.copyAttempts || 0) > 0 ||
+                                            (selectedProctoringResult.rightClickAttempts || 0) > 0 ||
+                                            (selectedProctoringResult.fullscreenExits || 0) > 0
+                                            ? 'bg-amber-100 dark:bg-amber-900/30'
+                                            : 'bg-green-100 dark:bg-green-900/30'
+                                            }`}>
+                                            {(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
+                                                (selectedProctoringResult.copyAttempts || 0) > 0 ? (
+                                                <ShieldX className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                                            ) : (
+                                                <ShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Proctoring Report</h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{selectedProctoringResult.studentName}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedProctoringResult(null)} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 space-y-6">
+                                {/* Test Info */}
+                                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedProctoringResult.testTitle}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{selectedProctoringResult.subject} • Class {selectedProctoringResult.studentClass}</p>
+                                </div>
+
+                                {/* Timing Information */}
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                                        <Clock className="w-4 h-4" /> Timing Details
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Started At</p>
+                                            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                                {selectedProctoringResult.startTime
+                                                    ? new Date(selectedProctoringResult.startTime).toLocaleString('en-IN', {
+                                                        day: '2-digit', month: 'short', year: 'numeric',
+                                                        hour: '2-digit', minute: '2-digit'
+                                                    })
+                                                    : 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Submitted At</p>
+                                            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                                {selectedProctoringResult.endTime
+                                                    ? new Date(selectedProctoringResult.endTime).toLocaleString('en-IN', {
+                                                        day: '2-digit', month: 'short', year: 'numeric',
+                                                        hour: '2-digit', minute: '2-digit'
+                                                    })
+                                                    : 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div className="col-span-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3">
+                                            <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">Total Duration</p>
+                                            <p className="text-lg font-bold text-indigo-800 dark:text-indigo-300">
+                                                {selectedProctoringResult.timeTakenSeconds
+                                                    ? `${Math.floor(selectedProctoringResult.timeTakenSeconds / 60)}m ${selectedProctoringResult.timeTakenSeconds % 60}s`
+                                                    : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Proctoring Violations */}
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                                        <Shield className="w-4 h-4" /> Proctoring Metrics
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className={`rounded-lg p-3 ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                            <p className={`text-xs mb-1 ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>Tab Switches</p>
+                                            <p className={`text-2xl font-bold ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {selectedProctoringResult.tabSwitchCount || 0}
+                                            </p>
+                                        </div>
+                                        <div className={`rounded-lg p-3 ${(selectedProctoringResult.copyAttempts || 0) > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                            <p className={`text-xs mb-1 ${(selectedProctoringResult.copyAttempts || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>Copy/Paste Attempts</p>
+                                            <p className={`text-2xl font-bold ${(selectedProctoringResult.copyAttempts || 0) > 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {selectedProctoringResult.copyAttempts || 0}
+                                            </p>
+                                        </div>
+                                        <div className={`rounded-lg p-3 ${(selectedProctoringResult.rightClickAttempts || 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                            <p className={`text-xs mb-1 ${(selectedProctoringResult.rightClickAttempts || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>Right-Click Attempts</p>
+                                            <p className={`text-2xl font-bold ${(selectedProctoringResult.rightClickAttempts || 0) > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {selectedProctoringResult.rightClickAttempts || 0}
+                                            </p>
+                                        </div>
+                                        <div className={`rounded-lg p-3 ${(selectedProctoringResult.fullscreenExits || 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                            <p className={`text-xs mb-1 ${(selectedProctoringResult.fullscreenExits || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>Fullscreen Exits</p>
+                                            <p className={`text-2xl font-bold ${(selectedProctoringResult.fullscreenExits || 0) > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {selectedProctoringResult.fullscreenExits || 0}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Status Badge */}
+                                <div className={`p-4 rounded-xl text-center ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
+                                    (selectedProctoringResult.copyAttempts || 0) > 0
+                                    ? 'bg-red-100 dark:bg-red-900/30'
+                                    : (selectedProctoringResult.rightClickAttempts || 0) > 0 ||
+                                        (selectedProctoringResult.fullscreenExits || 0) > 0
+                                        ? 'bg-amber-100 dark:bg-amber-900/30'
+                                        : 'bg-green-100 dark:bg-green-900/30'
+                                    }`}>
+                                    <p className={`text-sm font-medium ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
+                                        (selectedProctoringResult.copyAttempts || 0) > 0
+                                        ? 'text-red-700 dark:text-red-400'
+                                        : (selectedProctoringResult.rightClickAttempts || 0) > 0 ||
+                                            (selectedProctoringResult.fullscreenExits || 0) > 0
+                                            ? 'text-amber-700 dark:text-amber-400'
+                                            : 'text-green-700 dark:text-green-400'
+                                        }`}>
+                                        {(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
+                                            (selectedProctoringResult.copyAttempts || 0) > 0
+                                            ? '⚠️ Suspicious Activity Detected'
+                                            : (selectedProctoringResult.rightClickAttempts || 0) > 0 ||
+                                                (selectedProctoringResult.fullscreenExits || 0) > 0
+                                                ? '⚡ Minor Violations Detected'
+                                                : '✅ No Violations - Clean Test'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                                <button
+                                    onClick={() => setSelectedProctoringResult(null)}
+                                    className="px-6 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Announcement Modal */}
+            <AnimatePresence>
+                {showAnnouncementModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => !isCreatingAnnouncement && setShowAnnouncementModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {announcementSuccess ? (
+                                <div className="p-8 text-center">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Announcement Sent!</h3>
+                                    <p className="text-gray-600 dark:text-gray-400">Students will receive this notification in real-time.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                                                <Megaphone className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Send Announcement</h3>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">Notify students in real-time</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Target Class
+                                            </label>
+                                            <select
+                                                value={newAnnouncement.targetClass}
+                                                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, targetClass: e.target.value === 'all' ? 'all' : Number(e.target.value) })}
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            >
+                                                <option value="all">All Classes (5-10)</option>
+                                                {CLASS_OPTIONS.map(c => (
+                                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Title
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newAnnouncement.title}
+                                                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                                                placeholder="e.g., 📢 Important Update"
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Message
+                                            </label>
+                                            <textarea
+                                                value={newAnnouncement.message}
+                                                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
+                                                placeholder="Write your announcement message here..."
+                                                rows={3}
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
+                                        <button
+                                            onClick={() => setShowAnnouncementModal(false)}
+                                            disabled={isCreatingAnnouncement}
+                                            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleCreateAnnouncement}
+                                            disabled={isCreatingAnnouncement || !newAnnouncement.title.trim() || !newAnnouncement.message.trim()}
+                                            className="flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isCreatingAnnouncement ? (
+                                                <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+                                            ) : (
+                                                <><Megaphone className="w-4 h-4" /> Send Now</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
