@@ -16,9 +16,19 @@ import {
 import { auth } from '@/lib/firebase';
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
-import type { User, AuthContextType } from '@/types';
+import type { User } from '@/types';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Extended AuthContextType with refreshUser
+interface ExtendedAuthContextType {
+    user: User | null;
+    loading: boolean;
+    signIn: (email: string, password: string) => Promise<void>;
+    signUp: (email: string, password: string, name: string, role: 'student' | 'teacher', studentClass?: number) => Promise<void>;
+    signOut: () => Promise<void>;
+    refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -28,6 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isAdminEmail = (email: string): boolean => {
         return ADMIN_EMAILS.includes(email.toLowerCase());
     };
+
+    // Refresh user data from Firestore
+    const refreshUser = useCallback(async (): Promise<void> => {
+        if (!auth.currentUser) return;
+        const profile = await getUserProfile(auth.currentUser.uid);
+        if (profile) {
+            setUser(profile);
+        }
+    }, []);
 
     // Listen to auth state changes
     useEffect(() => {
@@ -113,12 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
     }, []);
 
-    const value: AuthContextType = {
+    const value: ExtendedAuthContextType = {
         user,
         loading,
         signIn,
         signUp,
-        signOut: signOutUser
+        signOut: signOutUser,
+        refreshUser
     };
 
     return (
@@ -128,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-export function useAuth(): AuthContextType {
+export function useAuth(): ExtendedAuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider');
@@ -142,3 +162,4 @@ export function useAuth(): AuthContextType {
 export function validateAdminCode(code: string): boolean {
     return code === ADMIN_CODE;
 }
+

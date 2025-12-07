@@ -29,6 +29,7 @@ export interface Test {
     questionCount?: number;
     duration?: number; // in minutes, optional
     isActive: boolean;
+    scheduledStartTime?: Date; // Optional scheduled start time for the test
 }
 
 // Question Types - supports multiple formats

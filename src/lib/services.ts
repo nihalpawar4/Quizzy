@@ -205,11 +205,18 @@ export async function claimDailyStreak(uid: string, user: User): Promise<{
  */
 export async function createTest(test: Omit<Test, 'id' | 'createdAt'>): Promise<string> {
     const testsRef = collection(db, COLLECTIONS.TESTS);
-    const docRef = await addDoc(testsRef, {
+    const testData: Record<string, unknown> = {
         ...test,
         createdAt: Timestamp.now(),
         isActive: true
-    });
+    };
+
+    // Convert scheduledStartTime to Firestore Timestamp if provided
+    if (test.scheduledStartTime) {
+        testData.scheduledStartTime = Timestamp.fromDate(new Date(test.scheduledStartTime));
+    }
+
+    const docRef = await addDoc(testsRef, testData);
     return docRef.id;
 }
 

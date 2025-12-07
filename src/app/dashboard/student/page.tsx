@@ -29,10 +29,11 @@ import {
     XCircle,
     AlertCircle,
     Download,
-    Flame
+    Flame,
+    Timer
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTestsByClass, getResultsByStudent, hasStudentTakenTest, getTopPerformers, canClaimStreakToday, claimDailyStreak } from '@/lib/services';
+import { getResultsByStudent, hasStudentTakenTest, getTopPerformers, canClaimStreakToday, claimDailyStreak } from '@/lib/services';
 import type { Test, TestResult } from '@/types';
 import type { LeaderboardEntry } from '@/lib/services';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
@@ -40,7 +41,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 
 export default function StudentDashboard() {
-    const { user, loading: authLoading, signOut } = useAuth();
+    const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const router = useRouter();
 
     const [tests, setTests] = useState<Test[]>([]);
@@ -63,15 +64,58 @@ export default function StudentDashboard() {
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
+    // New reports notification state
+    const [newReportsCount, setNewReportsCount] = useState(0);
+    const [lastSeenReportsCount, setLastSeenReportsCount] = useState(0);
+    const [newReportNotification, setNewReportNotification] = useState<TestResult | null>(null);
+
     // Streak state
     const [streakLoading, setStreakLoading] = useState(false);
     const [streakMessage, setStreakMessage] = useState<string | null>(null);
+
+    // Countdown timers for scheduled tests
+    const [countdowns, setCountdowns] = useState<{ [testId: string]: string }>({});
 
     // Update current time every minute for report availability check
     useEffect(() => {
         const interval = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(interval);
     }, []);
+
+    // Countdown timer for scheduled tests - update every second
+    useEffect(() => {
+        const updateCountdowns = () => {
+            const now = new Date();
+            const newCountdowns: { [testId: string]: string } = {};
+
+            tests.forEach(test => {
+                if (test.scheduledStartTime) {
+                    const startTime = new Date(test.scheduledStartTime);
+                    const diff = startTime.getTime() - now.getTime();
+
+                    if (diff > 0) {
+                        const hours = Math.floor(diff / (1000 * 60 * 60));
+                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                        if (hours > 0) {
+                            newCountdowns[test.id] = `${hours}h ${minutes}m ${seconds}s`;
+                        } else if (minutes > 0) {
+                            newCountdowns[test.id] = `${minutes}m ${seconds}s`;
+                        } else {
+                            newCountdowns[test.id] = `${seconds}s`;
+                        }
+                    }
+                }
+            });
+
+            setCountdowns(newCountdowns);
+        };
+
+        updateCountdowns();
+        const interval = setInterval(updateCountdowns, 1000);
+        return () => clearInterval(interval);
+    }, [tests]);
 
     // Check if report is available (between 1 hour and 6 hours after submission)
     const isReportAvailable = (result: TestResult): boolean => {
@@ -151,7 +195,7 @@ export default function StudentDashboard() {
         URL.revokeObjectURL(url);
     };
 
-    // Handle streak claim
+    // Handle streak claim - no page refresh needed
     const handleClaimStreak = async () => {
         if (!user || streakLoading) return;
 
@@ -166,11 +210,9 @@ export default function StudentDashboard() {
             const result = await claimDailyStreak(user.uid, user);
             if (result) {
                 setStreakMessage(result.message);
-                // Reload page to get updated user data
-                setTimeout(() => {
-                    setStreakMessage(null);
-                    window.location.reload();
-                }, 2000);
+                // Refresh user data without page reload
+                await refreshUser();
+                setTimeout(() => setStreakMessage(null), 3000);
             }
         } catch (error) {
             console.error('Error claiming streak:', error);
@@ -195,17 +237,20 @@ export default function StudentDashboard() {
         }
     }, [user?.studentClass]);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (testsData?: Test[]) => {
         if (!user?.studentClass || !user?.uid) return;
 
         try {
             setLoading(true);
-            const testsData = await getTestsByClass(user.studentClass);
-            setTests(testsData);
+            // If testsData is provided (from real-time update), use it directly
+            if (testsData) {
+                setTests(testsData);
+            }
             const resultsData = await getResultsByStudent(user.uid);
             setResults(resultsData);
+            const currentTests = testsData || tests;
             const taken = new Set<string>();
-            for (const test of testsData) {
+            for (const test of currentTests) {
                 const hasTaken = await hasStudentTakenTest(user.uid, test.id);
                 if (hasTaken) taken.add(test.id);
             }
@@ -215,7 +260,7 @@ export default function StudentDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user?.studentClass, user?.uid]);
+    }, [user?.studentClass, user?.uid, tests]);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -232,7 +277,7 @@ export default function StudentDashboard() {
         }
     }, [user, authLoading, router, loadData, loadLeaderboard]);
 
-    // Real-time listener for new tests
+    // Real-time listener for ALL test changes (new tests, status changes, etc.)
     useEffect(() => {
         if (!user?.studentClass) return;
 
@@ -240,11 +285,28 @@ export default function StudentDashboard() {
         const q = query(
             testsRef,
             where('targetClass', '==', user.studentClass),
-            where('isActive', '==', true),
             orderBy('createdAt', 'desc')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
+            // Build the complete list of active tests from the snapshot
+            const allTests: Test[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                if (data.isActive) {
+                    allTests.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate() || new Date(),
+                        scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
+                    } as Test);
+                }
+            });
+
+            // Update tests state immediately for real-time sync
+            setTests(allTests);
+
+            // Check for new tests to show notification
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
@@ -253,26 +315,90 @@ export default function StudentDashboard() {
                     const timeDiff = now.getTime() - createdAt.getTime();
 
                     // Show notification only for tests created in the last 30 seconds
-                    if (timeDiff < 30000) {
+                    if (timeDiff < 30000 && data.isActive) {
                         const newTest: Test = {
                             id: change.doc.id,
                             ...data,
-                            createdAt
+                            createdAt,
+                            scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
                         } as Test;
                         setNewTestNotification(newTest);
-
-                        // Refresh tests list
-                        loadData();
 
                         // Auto-hide notification after 10 seconds
                         setTimeout(() => setNewTestNotification(null), 10000);
                     }
                 }
             });
+
+            // Reload taken tests status
+            loadData(allTests);
         });
 
         return () => unsubscribe();
-    }, [user?.studentClass, loadData]);
+    }, [user?.studentClass, user?.uid]);
+
+    // Real-time listener for new results (reports)
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const resultsRef = collection(db, COLLECTIONS.RESULTS);
+        const q = query(
+            resultsRef,
+            where('studentId', '==', user.uid),
+            orderBy('timestamp', 'desc')
+        );
+
+        let isInitialLoad = true;
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allResults: TestResult[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                allResults.push({
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp?.toDate() || new Date()
+                } as TestResult);
+            });
+
+            // Update results state
+            setResults(allResults);
+
+            // Check for new results (only after initial load)
+            if (!isInitialLoad) {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const data = change.doc.data();
+                        const timestamp = data.timestamp?.toDate() || new Date();
+                        const now = new Date();
+                        const timeDiff = now.getTime() - timestamp.getTime();
+
+                        // Show notification only for results added in the last 30 seconds
+                        if (timeDiff < 30000) {
+                            const newResult: TestResult = {
+                                id: change.doc.id,
+                                ...data,
+                                timestamp
+                            } as TestResult;
+
+                            // Increment new reports count
+                            setNewReportsCount(prev => prev + 1);
+
+                            // Show popup notification
+                            setNewReportNotification(newResult);
+
+                            // Auto-hide notification after 10 seconds
+                            setTimeout(() => setNewReportNotification(null), 10000);
+                        }
+                    }
+                });
+            }
+
+            isInitialLoad = false;
+        });
+
+        return () => unsubscribe();
+    }, [user?.uid]);
 
     const handleSignOut = async () => {
         await signOut();
@@ -325,7 +451,8 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0, y: -100 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -100 }}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4"
+                        onClick={() => setNewTestNotification(null)}
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
                     >
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                             <Bell className="w-6 h-6 text-white animate-bounce" />
@@ -333,13 +460,42 @@ export default function StudentDashboard() {
                         <div>
                             <p className="font-bold">New Test Available! 🎉</p>
                             <p className="text-sm text-white/90">{newTestNotification.title} - {newTestNotification.subject}</p>
+                            <p className="text-xs text-white/70 mt-1">Click to dismiss</p>
                         </div>
-                        <button
-                            onClick={() => setNewTestNotification(null)}
-                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                        >
+                        <div className="p-2 hover:bg-white/20 rounded-lg transition-colors">
                             <X className="w-5 h-5" />
-                        </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* New Report Notification */}
+            <AnimatePresence>
+                {newReportNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -100 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -100 }}
+                        onClick={() => {
+                            setNewReportNotification(null);
+                            setActiveTab('reports');
+                            setNewReportsCount(0);
+                        }}
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
+                    >
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-white animate-bounce" />
+                        </div>
+                        <div>
+                            <p className="font-bold">New Report Available! 📊</p>
+                            <p className="text-sm text-white/90">
+                                {newReportNotification.testTitle} - Score: {newReportNotification.score}/{newReportNotification.totalQuestions} ({Math.round((newReportNotification.score / newReportNotification.totalQuestions) * 100)}%)
+                            </p>
+                            <p className="text-xs text-white/70 mt-1">Click to view</p>
+                        </div>
+                        <div className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                            <X className="w-5 h-5" />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -509,12 +665,19 @@ export default function StudentDashboard() {
                             <BookOpen className="w-4 h-4" /> Available Tests
                         </button>
                         <button
-                            onClick={() => setActiveTab('reports')}
+                            onClick={() => {
+                                setActiveTab('reports');
+                                // Clear the new reports badge when clicked
+                                setNewReportsCount(0);
+                                setLastSeenReportsCount(results.length);
+                            }}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'reports' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             <FileText className="w-4 h-4" /> My Reports
-                            {results.length > 0 && (
-                                <span className="bg-[#1650EB] text-white text-xs px-2 py-0.5 rounded-full">{results.length}</span>
+                            {newReportsCount > 0 && (
+                                <span className="bg-[#1650EB] text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                                    {newReportsCount}
+                                </span>
                             )}
                         </button>
                     </div>
@@ -540,17 +703,28 @@ export default function StudentDashboard() {
                                 {tests.map((test, index) => {
                                     const hasTaken = takenTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
+                                    const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
+                                    const countdown = countdowns[test.id];
+
                                     return (
                                         <motion.div
                                             key={test.id}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.05 * index }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${hasTaken ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow`}
+                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow`}
                                         >
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
-                                                    <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full mb-2">{test.subject}</span>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">{test.subject}</span>
+                                                        {isScheduled && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full">
+                                                                <Timer className="w-3 h-3" />
+                                                                Scheduled
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                                 </div>
                                             </div>
@@ -558,10 +732,34 @@ export default function StudentDashboard() {
                                                 <span>{test.questionCount || '?'} Questions</span>
                                                 {test.duration && <span>{test.duration} min</span>}
                                             </div>
+
+                                            {/* Countdown Timer for Scheduled Tests */}
+                                            {isScheduled && countdown && (
+                                                <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Timer className="w-5 h-5 text-orange-600 dark:text-orange-400 animate-pulse" />
+                                                            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Starts in:</span>
+                                                        </div>
+                                                        <span className="text-lg font-bold text-orange-600 dark:text-orange-400 font-mono">
+                                                            {countdown}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">
+                                                        Scheduled: {new Date(test.scheduledStartTime!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {hasTaken && result ? (
                                                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                                                     <Trophy className="w-4 h-4" />
                                                     <span className="text-sm font-medium">Score: {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)</span>
+                                                </div>
+                                            ) : isScheduled ? (
+                                                <div className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl font-medium cursor-not-allowed">
+                                                    <Timer className="w-4 h-4" />
+                                                    Waiting for test to start
                                                 </div>
                                             ) : (
                                                 <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">

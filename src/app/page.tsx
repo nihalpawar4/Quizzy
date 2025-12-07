@@ -812,7 +812,7 @@ export default function HomePage() {
 
             {/* Copyright */}
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              © 2024 Quizy. All rights reserved.
+              © 2025 Quizy. All rights reserved.
             </p>
           </div>
         </div>

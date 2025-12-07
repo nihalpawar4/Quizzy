@@ -36,7 +36,9 @@ import {
     Mail,
     Ban,
     ShieldCheck,
-    ShieldX
+    ShieldX,
+    Timer,
+    CalendarClock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -56,7 +58,9 @@ import {
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User } from '@/types';
-import { CLASS_OPTIONS, SUBJECTS } from '@/lib/constants';
+import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
 
@@ -108,12 +112,14 @@ export default function TeacherDashboard() {
         targetClass: number;
         duration: number;
         questionType: QuestionType;
+        scheduledStartTime: string; // ISO string or empty
     }>({
         title: '',
         subject: SUBJECTS[0],
         targetClass: 5,
         duration: 30,
-        questionType: 'mcq'
+        questionType: 'mcq',
+        scheduledStartTime: ''
     });
     const [uploadMethod, setUploadMethod] = useState<'csv' | 'json' | 'manual'>('csv');
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -150,21 +156,12 @@ export default function TeacherDashboard() {
         correctAnswer: ''
     });
 
-    const loadData = useCallback(async () => {
+    const loadStudents = useCallback(async () => {
         try {
-            setLoading(true);
-            const [testsData, resultsData, studentsData] = await Promise.all([
-                getAllTests(),
-                getAllResults(),
-                getAllStudents()
-            ]);
-            setTests(testsData);
-            setResults(resultsData);
+            const studentsData = await getAllStudents();
             setStudents(studentsData);
         } catch (error) {
-            console.error('Error loading data:', error);
-        } finally {
-            setLoading(false);
+            console.error('Error loading students:', error);
         }
     }, []);
 
@@ -178,9 +175,58 @@ export default function TeacherDashboard() {
             return;
         }
         if (user) {
-            loadData();
+            // Load students once (they don't change often)
+            loadStudents();
         }
-    }, [user, authLoading, router, loadData]);
+    }, [user, authLoading, router, loadStudents]);
+
+    // Real-time listener for tests
+    useEffect(() => {
+        if (!user) return;
+
+        const testsRef = collection(db, COLLECTIONS.TESTS);
+        const q = query(testsRef, orderBy('createdAt', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allTests: Test[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                allTests.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate() || new Date(),
+                    scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
+                } as Test);
+            });
+            setTests(allTests);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Real-time listener for results (analytics)
+    useEffect(() => {
+        if (!user) return;
+
+        const resultsRef = collection(db, COLLECTIONS.RESULTS);
+        const q = query(resultsRef, orderBy('timestamp', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allResults: TestResult[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                allResults.push({
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp?.toDate() || new Date()
+                } as TestResult);
+            });
+            setResults(allResults);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     // Handle CSV file upload
     const handleCSVUpload = async (file: File) => {
@@ -287,13 +333,14 @@ export default function TeacherDashboard() {
                 duration: newTest.duration,
                 createdBy: user!.uid,
                 isActive: true,
-                questionCount: questions.length
+                questionCount: questions.length,
+                ...(newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
             });
 
             await uploadQuestions(testId, questions);
 
             setCreateSuccess(true);
-            await loadData();
+            // Data updates automatically via real-time listener
 
             setTimeout(() => {
                 setShowCreateModal(false);
@@ -309,7 +356,7 @@ export default function TeacherDashboard() {
     };
 
     const resetCreateForm = () => {
-        setNewTest({ title: '', subject: SUBJECTS[0], targetClass: 5, duration: 30, questionType: 'mcq' });
+        setNewTest({ title: '', subject: SUBJECTS[0], targetClass: 5, duration: 30, questionType: 'mcq', scheduledStartTime: '' });
         setCsvFile(null);
         setJsonInput('');
         setParsedQuestions([]);
@@ -325,7 +372,7 @@ export default function TeacherDashboard() {
         if (!confirm('Are you sure you want to delete this test?')) return;
         try {
             await deleteTest(testId);
-            await loadData();
+            // Data updates automatically via real-time listener
         } catch (error) {
             console.error('Error deleting test:', error);
         }
@@ -335,7 +382,7 @@ export default function TeacherDashboard() {
     const handleToggleStatus = async (testId: string, currentStatus: boolean) => {
         try {
             await updateTestStatus(testId, !currentStatus);
-            await loadData();
+            // Data updates automatically via real-time listener
         } catch (error) {
             console.error('Error updating test status:', error);
         }
@@ -346,7 +393,7 @@ export default function TeacherDashboard() {
         if (!confirm('Are you sure you want to delete this submission? This cannot be undone.')) return;
         try {
             await deleteResult(resultId);
-            await loadData();
+            // Data updates automatically via real-time listener
         } catch (error) {
             console.error('Error deleting result:', error);
         }
@@ -378,7 +425,7 @@ export default function TeacherDashboard() {
         setStudentActionLoading(uid);
         try {
             await restrictStudent(uid);
-            await loadData();
+            await loadStudents(); // Refresh students list
         } catch (error) {
             console.error('Error restricting student:', error);
         } finally {
@@ -391,7 +438,7 @@ export default function TeacherDashboard() {
         setStudentActionLoading(uid);
         try {
             await enableStudent(uid);
-            await loadData();
+            await loadStudents(); // Refresh students list
         } catch (error) {
             console.error('Error enabling student:', error);
         } finally {
@@ -405,7 +452,7 @@ export default function TeacherDashboard() {
         try {
             await deleteStudent(uid);
             setConfirmDeleteStudent(null);
-            await loadData();
+            await loadStudents(); // Refresh students list
         } catch (error) {
             console.error('Error deleting student:', error);
         } finally {
@@ -664,23 +711,30 @@ export default function TeacherDashboard() {
                                     const avgTestScore = testResults.length > 0
                                         ? Math.round(testResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / testResults.length)
                                         : null;
+                                    const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
 
                                     return (
                                         <motion.div
                                             key={test.id}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800"
+                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}
                                         >
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2">
+                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                         <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
                                                             {test.subject}
                                                         </span>
                                                         <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
                                                             Class {test.targetClass}
                                                         </span>
+                                                        {isScheduled && (
+                                                            <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                <Timer className="w-3 h-3" />
+                                                                Scheduled
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                                 </div>
@@ -699,6 +753,16 @@ export default function TeacherDashboard() {
                                                 <span>{test.questionCount || 0} Questions</span>
                                                 {test.duration && <span>{test.duration} min</span>}
                                             </div>
+
+                                            {/* Scheduled Start Time Info */}
+                                            {isScheduled && (
+                                                <div className="mb-4 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 text-xs">
+                                                        <CalendarClock className="w-3.5 h-3.5" />
+                                                        <span>Starts: {new Date(test.scheduledStartTime!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="flex items-center justify-between text-sm mb-4">
                                                 <span className="text-gray-500 dark:text-gray-400">
@@ -933,6 +997,50 @@ export default function TeacherDashboard() {
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration (minutes)</label>
                                                         <input type="number" value={newTest.duration} onChange={(e) => setNewTest({ ...newTest, duration: Number(e.target.value) })} min={5} max={180} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none" />
+                                                    </div>
+                                                </div>
+
+                                                {/* Scheduled Start Time Section */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                                                            <CalendarClock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Schedule Test Start Time (Optional)</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set a specific time when students can start taking this test</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                <Timer className="w-4 h-4 inline mr-1" />
+                                                                Scheduled Start Date & Time
+                                                            </label>
+                                                            <input
+                                                                type="datetime-local"
+                                                                value={newTest.scheduledStartTime}
+                                                                onChange={(e) => setNewTest({ ...newTest, scheduledStartTime: e.target.value })}
+                                                                min={new Date().toISOString().slice(0, 16)}
+                                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                            />
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                Leave empty to make test available immediately
+                                                            </p>
+                                                        </div>
+                                                        {newTest.scheduledStartTime && (
+                                                            <div className="flex items-center">
+                                                                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 w-full">
+                                                                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                                                                        <Timer className="w-4 h-4" />
+                                                                        <span className="font-medium">Students will see countdown</span>
+                                                                    </div>
+                                                                    <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                                                                        Test starts: {new Date(newTest.scheduledStartTime).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
