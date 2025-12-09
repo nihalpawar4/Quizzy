@@ -95,6 +95,7 @@ import {
     deleteAllStudentTransactions,
     deleteStudentWalletAndData,
     getCreditEconomyStats,
+    cleanupAllDuplicateWelcomeBonuses,
     type AppSettings
 } from '@/lib/creditServices';
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
@@ -402,6 +403,24 @@ export default function TeacherDashboard() {
             alert('Failed to delete transactions. Please try again.');
         } finally {
             setIsDeletingTransactions(false);
+        }
+    };
+
+    // Handle cleanup of duplicate welcome bonus transactions
+    const handleCleanupDuplicates = async () => {
+        try {
+            const result = await cleanupAllDuplicateWelcomeBonuses();
+            if (result.cleaned === 0) {
+                alert('✅ No duplicate welcome bonus transactions found!');
+            } else {
+                alert(`🧹 Cleaned ${result.cleaned} duplicate transaction(s) from ${result.studentsAffected} student(s).`);
+            }
+            // Reload transactions
+            const txData = await getAllTransactions(50);
+            setRecentTransactions(txData);
+        } catch (error) {
+            console.error('Error cleaning duplicates:', error);
+            alert('Failed to clean up duplicates. Please try again.');
         }
     };
 
@@ -2224,12 +2243,21 @@ export default function TeacherDashboard() {
                                     <Clock className="w-4 h-4" /> Recent Transactions
                                 </h4>
                                 {recentTransactions.length > 0 && (
-                                    <button
-                                        onClick={() => setShowDeleteTransactionsConfirm(true)}
-                                        className="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                                    >
-                                        Clear All
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleCleanupDuplicates}
+                                            className="text-xs px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                            title="Remove duplicate welcome bonus transactions"
+                                        >
+                                            Fix Duplicates
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDeleteTransactionsConfirm(true)}
+                                            className="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                             {recentTransactions.length === 0 ? (

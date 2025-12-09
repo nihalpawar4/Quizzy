@@ -3,6 +3,7 @@
 /**
  * Authentication Context Provider
  * Manages user authentication state across the application
+ * Supports Email/Password and Google Sign-In
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -10,22 +11,25 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
+    signInWithPopup,
     signOut as firebaseSignOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, googleProvider } from '@/lib/firebase';
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
 import type { User } from '@/types';
 
-// Extended AuthContextType with refreshUser
+// Extended AuthContextType with Google Sign-In and refreshUser
 interface ExtendedAuthContextType {
     user: User | null;
     loading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, name: string, role: 'student' | 'teacher', studentClass?: number) => Promise<void>;
+    signInWithGoogle: (role: 'student' | 'teacher', studentClass?: number) => Promise<{ isNewUser: boolean; needsClassSelection: boolean }>;
     signOut: () => Promise<void>;
     refreshUser: () => Promise<void>;
+    updateStudentClass: (studentClass: number) => Promise<void>;
 }
 
 const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined);
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (profile) {
                     setUser(profile);
                 } else {
-                    // User exists in Auth but not in Firestore (edge case)
+                    // User exists in Auth but not in Firestore (edge case - new Google user)
                     setUser(null);
                 }
             } else {
@@ -126,6 +130,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    // Sign in with Google
+    const signInWithGoogle = useCallback(async (
+        role: 'student' | 'teacher',
+        studentClass?: number
+    ): Promise<{ isNewUser: boolean; needsClassSelection: boolean }> => {
+        setLoading(true);
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const firebaseUser = result.user;
+            const email = firebaseUser.email?.toLowerCase() || '';
+            const displayName = firebaseUser.displayName || email.split('@')[0];
+
+            // Check if user already exists in Firestore
+            const existingProfile = await getUserProfile(firebaseUser.uid);
+
+            if (existingProfile) {
+                // Existing user - check if restricted
+                if (existingProfile.isRestricted) {
+                    await firebaseSignOut(auth);
+                    throw new Error('Your account has been restricted by your teacher. Please contact them to enable your account.');
+                }
+                setUser(existingProfile);
+                return { isNewUser: false, needsClassSelection: false };
+            }
+
+            // New user - validate teacher role
+            if (role === 'teacher' && !isAdminEmail(email)) {
+                await firebaseSignOut(auth);
+                throw new Error('This email is not authorized for teacher access. Please sign in as a student or use an authorized email.');
+            }
+
+            // For students, check if class needs to be selected
+            if (role === 'student' && !studentClass) {
+                // Don't create profile yet, return that class selection is needed
+                return { isNewUser: true, needsClassSelection: true };
+            }
+
+            // Create new user profile
+            const newUser: Omit<User, 'createdAt'> = {
+                uid: firebaseUser.uid,
+                email: email,
+                name: displayName,
+                role,
+                ...(role === 'student' && studentClass ? { studentClass } : {})
+            };
+
+            await createUserProfile(newUser);
+
+            const profile = await getUserProfile(firebaseUser.uid);
+            if (profile) {
+                setUser(profile);
+            }
+
+            return { isNewUser: true, needsClassSelection: false };
+        } catch (error) {
+            setLoading(false);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Update student class (for Google sign-in users who need to select class)
+    const updateStudentClass = useCallback(async (studentClass: number): Promise<void> => {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+            throw new Error('No user is currently signed in');
+        }
+
+        const email = firebaseUser.email?.toLowerCase() || '';
+        const displayName = firebaseUser.displayName || email.split('@')[0];
+
+        // Create user profile with selected class
+        const newUser: Omit<User, 'createdAt'> = {
+            uid: firebaseUser.uid,
+            email: email,
+            name: displayName,
+            role: 'student',
+            studentClass
+        };
+
+        await createUserProfile(newUser);
+
+        const profile = await getUserProfile(firebaseUser.uid);
+        if (profile) {
+            setUser(profile);
+        }
+    }, []);
+
     // Sign out
     const signOutUser = useCallback(async (): Promise<void> => {
         await firebaseSignOut(auth);
@@ -137,8 +230,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut: signOutUser,
-        refreshUser
+        refreshUser,
+        updateStudentClass
     };
 
     return (
@@ -162,4 +257,3 @@ export function useAuth(): ExtendedAuthContextType {
 export function validateAdminCode(code: string): boolean {
     return code === ADMIN_CODE;
 }
-

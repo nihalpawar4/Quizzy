@@ -79,6 +79,7 @@ export function shouldGiveAllowance(wallet: CreditWallet): boolean {
 
 /**
  * Get or create a wallet for a student
+ * Uses atomic operations to prevent duplicate welcome bonus transactions
  */
 export async function getOrCreateWallet(user: User): Promise<CreditWallet> {
     if (user.role !== 'student') {
@@ -111,9 +112,9 @@ export async function getOrCreateWallet(user: User): Promise<CreditWallet> {
         return wallet;
     }
 
-    // Create new wallet
+    // Create new wallet with welcomeBonusGiven flag to prevent duplicates
     const currentWeekStart = getCurrentWeekStart();
-    const newWallet: Omit<CreditWallet, 'id'> = {
+    const newWallet: Omit<CreditWallet, 'id'> & { welcomeBonusGiven?: boolean } = {
         studentId: user.uid,
         studentName: user.name,
         studentClass: user.studentClass || 0,
@@ -125,37 +126,48 @@ export async function getOrCreateWallet(user: User): Promise<CreditWallet> {
         totalEarned: CREDIT_CONSTANTS.WEEKLY_ALLOWANCE,
         totalSpent: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        welcomeBonusGiven: true // Flag to prevent duplicates
     };
 
-    // Use setDoc with merge to prevent race conditions
+    // Use setDoc without merge for new wallet creation
+    // The welcomeBonusGiven flag ensures we know if this wallet was just created
     await setDoc(walletRef, {
         ...newWallet,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
-    }, { merge: true });
+    });
 
-    // Check if welcome bonus transaction already exists before creating
-    const existingTxQuery = query(
-        collection(db, COLLECTIONS.TRANSACTIONS),
-        where('studentId', '==', user.uid),
-        where('type', '==', 'allowance'),
-        where('description', '==', 'Welcome bonus! Your first weekly allowance.'),
-        limit(1)
-    );
-    const existingTx = await getDocs(existingTxQuery);
+    // Double check: Only record transaction if wallet was just created AND no welcome bonus exists
+    // Fetch wallet again to confirm our write went through first
+    const confirmSnap = await getDoc(walletRef);
+    const confirmData = confirmSnap.data();
 
-    // Only record initial allowance if no welcome bonus exists
-    if (existingTx.empty) {
-        await recordTransaction({
-            studentId: user.uid,
-            studentName: user.name,
-            type: 'allowance',
-            amount: CREDIT_CONSTANTS.WEEKLY_ALLOWANCE,
-            balance: CREDIT_CONSTANTS.WEEKLY_ALLOWANCE,
-            description: 'Welcome bonus! Your first weekly allowance.',
-            countsForReward: false
-        });
+    // Only proceed if welcomeBonusGiven flag matches what we just set
+    // This prevents race conditions in React StrictMode or multiple component mounts
+    if (confirmData?.welcomeBonusGiven === true) {
+        // Check if welcome bonus transaction already exists
+        const existingTxQuery = query(
+            collection(db, COLLECTIONS.TRANSACTIONS),
+            where('studentId', '==', user.uid),
+            where('type', '==', 'allowance'),
+            where('description', '==', 'Welcome bonus! Your first weekly allowance.'),
+            limit(1)
+        );
+        const existingTx = await getDocs(existingTxQuery);
+
+        // Only record initial allowance if no welcome bonus transaction exists
+        if (existingTx.empty) {
+            await recordTransaction({
+                studentId: user.uid,
+                studentName: user.name,
+                type: 'allowance',
+                amount: CREDIT_CONSTANTS.WEEKLY_ALLOWANCE,
+                balance: CREDIT_CONSTANTS.WEEKLY_ALLOWANCE,
+                description: 'Welcome bonus! Your first weekly allowance.',
+                countsForReward: false
+            });
+        }
     }
 
     return { id: user.uid, ...newWallet };
@@ -910,5 +922,82 @@ export async function getCreditEconomyStats(): Promise<{
     };
 }
 
+/**
+ * Clean up duplicate welcome bonus transactions for a student
+ * This removes all but the first welcome bonus transaction
+ */
+export async function cleanupDuplicateWelcomeBonuses(studentId: string): Promise<number> {
+    const txQuery = query(
+        collection(db, COLLECTIONS.TRANSACTIONS),
+        where('studentId', '==', studentId),
+        where('type', '==', 'allowance'),
+        where('description', '==', 'Welcome bonus! Your first weekly allowance.'),
+        orderBy('createdAt', 'asc')
+    );
+
+    const snapshot = await getDocs(txQuery);
+
+    if (snapshot.size <= 1) {
+        return 0; // No duplicates to clean
+    }
+
+    // Keep the first one (oldest), delete the rest
+    const docsToDelete = snapshot.docs.slice(1);
+    const batch = writeBatch(db);
+
+    docsToDelete.forEach(docSnap => {
+        batch.delete(doc(db, COLLECTIONS.TRANSACTIONS, docSnap.id));
+    });
+
+    await batch.commit();
+    return docsToDelete.length;
+}
+
+/**
+ * Clean up duplicate welcome bonuses for ALL students
+ * Returns total number of duplicates removed
+ */
+export async function cleanupAllDuplicateWelcomeBonuses(): Promise<{ cleaned: number; studentsAffected: number }> {
+    // Get all unique student IDs with welcome bonuses
+    const txQuery = query(
+        collection(db, COLLECTIONS.TRANSACTIONS),
+        where('type', '==', 'allowance'),
+        where('description', '==', 'Welcome bonus! Your first weekly allowance.')
+    );
+
+    const snapshot = await getDocs(txQuery);
+
+    // Group by student ID
+    const byStudent: { [studentId: string]: string[] } = {};
+    snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (!byStudent[data.studentId]) {
+            byStudent[data.studentId] = [];
+        }
+        byStudent[data.studentId].push(docSnap.id);
+    });
+
+    let totalCleaned = 0;
+    let studentsAffected = 0;
+
+    // For each student with duplicates, keep first, delete rest
+    for (const studentId of Object.keys(byStudent)) {
+        const txIds = byStudent[studentId];
+        if (txIds.length > 1) {
+            const toDelete = txIds.slice(1);
+            const batch = writeBatch(db);
+            toDelete.forEach(txId => {
+                batch.delete(doc(db, COLLECTIONS.TRANSACTIONS, txId));
+            });
+            await batch.commit();
+            totalCleaned += toDelete.length;
+            studentsAffected++;
+        }
+    }
+
+    return { cleaned: totalCleaned, studentsAffected };
+}
+
 export { getBadgeInfo };
+
 

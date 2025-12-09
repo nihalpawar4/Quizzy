@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -356,9 +356,16 @@ export default function StudentDashboard() {
         }
     }, [user?.studentClass, user?.uid, tests]);
 
+    // Ref to track if credit data has been loaded (prevents duplicate calls)
+    const creditDataLoadedRef = useRef(false);
+
     // Load credit economy data (wallet, transactions, badges, premium tests)
     const loadCreditEconomyData = useCallback(async () => {
         if (!user?.uid || !user?.studentClass) return;
+
+        // Prevent duplicate loading
+        if (creditDataLoadedRef.current) return;
+        creditDataLoadedRef.current = true;
 
         setWalletLoading(true);
         try {
@@ -381,6 +388,8 @@ export default function StudentDashboard() {
             // Premium tests are loaded via real-time listener, no need to fetch here
         } catch (error) {
             console.error('Error loading credit economy data:', error);
+            // Reset ref on error so it can retry
+            creditDataLoadedRef.current = false;
         } finally {
             setWalletLoading(false);
         }
@@ -440,6 +449,8 @@ export default function StudentDashboard() {
             return;
         }
         if (user?.studentClass) {
+            // Reset the ref when user changes so data can be loaded
+            creditDataLoadedRef.current = false;
             loadData();
             loadCreditEconomyData(); // Load credit economy data
         }

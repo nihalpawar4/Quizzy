@@ -1,7 +1,13 @@
 // Firebase Configuration for Quizy App
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+
+// Initialize Google Auth Provider
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+    prompt: 'select_account' // Always show account selector
+});
 
 const firebaseConfig = {
     apiKey: "AIzaSyBlCfylXmtdVgloa8eECVLINdsDecQxWoc",
@@ -17,4 +23,4 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-export { app, auth, db };
+export { app, auth, db, googleProvider };
