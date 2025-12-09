@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
@@ -23,15 +23,17 @@ import {
     Shield,
     Download,
     Trash2,
-    X
+    X,
+    Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext'
 import { updateUserClass } from '@/lib/services';
 import { CLASS_OPTIONS } from '@/lib/constants';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
+import { getGlowProgress } from '@/lib/creditServices';
 
 export default function ProfilePage() {
     const { user, loading: authLoading, signOut } = useAuth();
@@ -55,12 +57,43 @@ export default function ProfilePage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
+    // Glow status
+    const [glowProgress, setGlowProgress] = useState({ spent: 0, threshold: 40, percentage: 0, hasGlow: false });
+
+    // Get glow color based on current hour (changes every 3 hours)
+    const getGlowColors = useCallback(() => {
+        const hour = new Date().getHours();
+        const colorSet = Math.floor(hour / 3) % 4;
+        const colors = [
+            { from: 'from-amber-50', via: 'via-yellow-50', to: 'to-orange-50', dark: 'dark:via-amber-950/20', border: 'from-amber-400 via-yellow-400 to-orange-400', glow1: 'from-amber-400/20 via-yellow-400/10', glow2: 'from-orange-400/20 via-amber-400/10' },
+            { from: 'from-pink-50', via: 'via-rose-50', to: 'to-red-50', dark: 'dark:via-pink-950/20', border: 'from-pink-400 via-rose-400 to-red-400', glow1: 'from-pink-400/20 via-rose-400/10', glow2: 'from-red-400/20 via-pink-400/10' },
+            { from: 'from-cyan-50', via: 'via-teal-50', to: 'to-emerald-50', dark: 'dark:via-cyan-950/20', border: 'from-cyan-400 via-teal-400 to-emerald-400', glow1: 'from-cyan-400/20 via-teal-400/10', glow2: 'from-emerald-400/20 via-cyan-400/10' },
+            { from: 'from-violet-50', via: 'via-purple-50', to: 'to-fuchsia-50', dark: 'dark:via-violet-950/20', border: 'from-violet-400 via-purple-400 to-fuchsia-400', glow1: 'from-violet-400/20 via-purple-400/10', glow2: 'from-fuchsia-400/20 via-violet-400/10' }
+        ];
+        return colors[colorSet];
+    }, []);
+
+    const glowColors = getGlowColors();
+    const hasActiveGlow = glowProgress.spent >= 40;
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/auth/login');
         }
         if (user?.studentClass) {
             setStudentClass(user.studentClass);
+        }
+        // Load glow status for students
+        if (user?.role === 'student' && user?.uid) {
+            const loadGlowStatus = async () => {
+                try {
+                    const progress = await getGlowProgress(user.uid);
+                    setGlowProgress(progress);
+                } catch (error) {
+                    console.error('Error loading glow status:', error);
+                }
+            };
+            loadGlowStatus();
         }
     }, [user, authLoading, router]);
 
@@ -157,7 +190,18 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className={`min-h-screen ${hasActiveGlow ? `bg-gradient-to-br ${glowColors.from} ${glowColors.via} ${glowColors.to} dark:from-gray-950 ${glowColors.dark} dark:to-gray-950` : 'bg-gray-50 dark:bg-gray-950'} relative`}>
+            {/* Glow Effect Overlay for completed users */}
+            {hasActiveGlow && (
+                <>
+                    {/* Animated gradient border at top */}
+                    <div className={`fixed top-0 left-0 right-0 h-1 bg-gradient-to-r ${glowColors.border} animate-pulse z-[999]`} />
+
+                    {/* Corner glow effects */}
+                    <div className={`fixed top-0 left-0 w-96 h-96 bg-gradient-radial ${glowColors.glow1} to-transparent rounded-full blur-3xl pointer-events-none`} />
+                    <div className={`fixed bottom-0 right-0 w-96 h-96 bg-gradient-radial ${glowColors.glow2} to-transparent rounded-full blur-3xl pointer-events-none`} />
+                </>
+            )}
             <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">

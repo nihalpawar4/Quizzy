@@ -21,8 +21,6 @@ import {
     X,
     Sparkles,
     Bell,
-    Crown,
-    Medal,
     RefreshCw,
     FileText,
     CheckCircle,
@@ -34,15 +32,39 @@ import {
     BookMarked,
     ExternalLink,
     Trash2,
-    Megaphone
+    Megaphone,
+    Coins,
+    ShoppingCart,
+    Gift,
+    History,
+    Star
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getResultsByStudent, hasStudentTakenTest, getTopPerformers, canClaimStreakToday, claimDailyStreak, markNotificationAsViewed, deleteNotification } from '@/lib/services';
-import type { Test, TestResult, SubjectNote, Notification } from '@/types';
-import type { LeaderboardEntry } from '@/lib/services';
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { getResultsByStudent, hasStudentTakenTest, canClaimStreakToday, claimDailyStreak, markNotificationAsViewed, deleteNotification } from '@/lib/services';
+import {
+    getOrCreateWallet,
+    getStudentTransactions,
+    getStudentBadges,
+    deductCoinsForTest,
+    getGlowProgress,
+    hasGlowStatus,
+    getPremiumTestById,
+    incrementPremiumTestAttempts,
+    getAppSettings
+} from '@/lib/creditServices';
+import type { Test, TestResult, SubjectNote, Notification, CreditWallet, CreditTransaction, UserBadge, PremiumTest } from '@/types';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
+import {
+    WalletDisplay,
+    GlowProfileFrame,
+    BadgesCollection,
+    TransactionHistory,
+    PremiumTestCard,
+    RewardPopup,
+    GlowStatusIndicator
+} from '@/components/CreditEconomy';
 
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
@@ -55,16 +77,11 @@ export default function StudentDashboard() {
     const [showComingSoon, setShowComingSoon] = useState(false);
     const [comingSoonFeature, setComingSoonFeature] = useState('');
 
-    // Leaderboard state
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [leaderboardLoading, setLeaderboardLoading] = useState(true);
-    const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
-
     // New test notification
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'premium'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -92,6 +109,75 @@ export default function StudentDashboard() {
 
     // Countdown timers for scheduled tests
     const [countdowns, setCountdowns] = useState<{ [testId: string]: string }>({});
+
+    // ==================== CREDIT ECONOMY STATES ====================
+    const [wallet, setWallet] = useState<CreditWallet | null>(null);
+    const [walletLoading, setWalletLoading] = useState(true);
+    const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+    const [badges, setBadges] = useState<UserBadge[]>([]);
+    const [premiumTests, setPremiumTests] = useState<PremiumTest[]>([]);
+    const [premiumTestsLoading, setPremiumTestsLoading] = useState(false);
+    const [showWalletModal, setShowWalletModal] = useState(false);
+    const [showBadgesModal, setShowBadgesModal] = useState(false);
+    const [showRewardPopup, setShowRewardPopup] = useState(false);
+    const [rewardData, setRewardData] = useState<{ badge?: UserBadge; coinsEarned?: number; message?: string } | null>(null);
+    const [attemptingPremiumTest, setAttemptingPremiumTest] = useState<string | null>(null);
+    const [glowProgress, setGlowProgress] = useState({ spent: 0, threshold: 40, percentage: 0, hasGlow: false });
+    const [hasNewPremiumTests, setHasNewPremiumTests] = useState(false);
+    const [lastSeenPremiumTestCount, setLastSeenPremiumTestCount] = useState(0);
+    const [showGlowCelebration, setShowGlowCelebration] = useState(false);
+    const [previousGlowSpent, setPreviousGlowSpent] = useState(0);
+    const [showInitialSparkles, setShowInitialSparkles] = useState(false);
+    const [creditEconomyEnabled, setCreditEconomyEnabled] = useState(true);
+
+    // Detect when glow threshold is reached and trigger celebration
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        // Get current week key for localStorage
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        const weekKey = `glowCelebrated_${user.uid}_${weekStart.toISOString().split('T')[0]}`;
+
+        // Check if we've already celebrated this week
+        const alreadyCelebrated = localStorage.getItem(weekKey) === 'true';
+
+        // Trigger celebration if reached 40 and not already celebrated this week
+        if (glowProgress.spent >= 40 && !alreadyCelebrated) {
+            setShowGlowCelebration(true);
+            localStorage.setItem(weekKey, 'true');
+            // Auto-hide after 5 seconds
+            setTimeout(() => setShowGlowCelebration(false), 5000);
+        }
+
+        setPreviousGlowSpent(glowProgress.spent);
+    }, [glowProgress.spent, user?.uid]);
+
+    // Show sparkles only once when glow is first detected
+    useEffect(() => {
+        if (glowProgress.spent >= 40 && user?.uid) {
+            const sparkleShown = localStorage.getItem(`sparklesShown_${user.uid}_${new Date().toDateString()}`);
+            if (!sparkleShown) {
+                setShowInitialSparkles(true);
+                localStorage.setItem(`sparklesShown_${user.uid}_${new Date().toDateString()}`, 'true');
+                // Hide after 5 seconds
+                setTimeout(() => setShowInitialSparkles(false), 5000);
+            }
+        }
+    }, [glowProgress.spent, user?.uid]);
+
+    // Real-time listener for app settings (credit economy toggle)
+    useEffect(() => {
+        const settingsRef = doc(db, COLLECTIONS.APP_SETTINGS, 'main');
+        const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                setCreditEconomyEnabled(data.creditEconomyEnabled ?? true);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Update current time every minute for report availability check
     useEffect(() => {
@@ -245,19 +331,6 @@ export default function StudentDashboard() {
     };
 
 
-    const loadLeaderboard = useCallback(async () => {
-        if (!user?.studentClass) return;
-        setLeaderboardLoading(true);
-        try {
-            const data = await getTopPerformers(10, user.studentClass);
-            setLeaderboard(data);
-        } catch (error) {
-            console.error('Error loading leaderboard:', error);
-        } finally {
-            setLeaderboardLoading(false);
-        }
-    }, [user?.studentClass]);
-
     const loadData = useCallback(async (testsData?: Test[]) => {
         if (!user?.studentClass || !user?.uid) return;
 
@@ -283,6 +356,80 @@ export default function StudentDashboard() {
         }
     }, [user?.studentClass, user?.uid, tests]);
 
+    // Load credit economy data (wallet, transactions, badges, premium tests)
+    const loadCreditEconomyData = useCallback(async () => {
+        if (!user?.uid || !user?.studentClass) return;
+
+        setWalletLoading(true);
+        try {
+            // Load wallet (creates one if doesn't exist)
+            const walletData = await getOrCreateWallet(user);
+            setWallet(walletData);
+
+            // Load transactions
+            const txData = await getStudentTransactions(user.uid);
+            setTransactions(txData);
+
+            // Load badges
+            const badgesData = await getStudentBadges(user.uid);
+            setBadges(badgesData);
+
+            // Load glow progress
+            const progressData = await getGlowProgress(user.uid);
+            setGlowProgress(progressData);
+
+            // Premium tests are loaded via real-time listener, no need to fetch here
+        } catch (error) {
+            console.error('Error loading credit economy data:', error);
+        } finally {
+            setWalletLoading(false);
+        }
+    }, [user]);
+
+    // Handle premium test attempt
+    const handlePremiumTestAttempt = async (test: PremiumTest) => {
+        if (!user || !wallet) return;
+
+        setAttemptingPremiumTest(test.id);
+
+        try {
+            // Check if test is free (mandatory)
+            if (!test.isMandatory && test.coinCost > 0) {
+                // Deduct coins
+                const result = await deductCoinsForTest(
+                    user.uid,
+                    user.name,
+                    test.id,
+                    test.title,
+                    test.coinCost,
+                    true // isPremiumTest = true (doesn't count for rewards)
+                );
+
+                if (!result.success) {
+                    alert(result.message);
+                    setAttemptingPremiumTest(null);
+                    return;
+                }
+
+                // Update wallet balance locally
+                setWallet(prev => prev ? { ...prev, balance: result.newBalance } : null);
+            }
+
+            // Increment attempt count
+            await incrementPremiumTestAttempts(test.id);
+
+            // Navigate to test - use testId if linked to actual test, otherwise use premium test id
+            const targetTestId = test.testId || test.id;
+            router.push(`/test/${targetTestId}?premium=true`);
+
+        } catch (error) {
+            console.error('Error attempting premium test:', error);
+            alert('Failed to start test. Please try again.');
+        } finally {
+            setAttemptingPremiumTest(null);
+        }
+    };
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/auth/login');
@@ -294,9 +441,9 @@ export default function StudentDashboard() {
         }
         if (user?.studentClass) {
             loadData();
-            loadLeaderboard();
+            loadCreditEconomyData(); // Load credit economy data
         }
-    }, [user, authLoading, router, loadData, loadLeaderboard]);
+    }, [user, authLoading, router, loadData, loadCreditEconomyData]);
 
     // Real-time listener for ALL test changes (new tests, status changes, etc.)
     useEffect(() => {
@@ -496,6 +643,41 @@ export default function StudentDashboard() {
         return () => unsubscribe();
     }, [user?.studentClass, user?.uid]);
 
+    // Real-time listener for premium tests
+    useEffect(() => {
+        if (!user?.studentClass) return;
+
+        const premiumTestsRef = collection(db, COLLECTIONS.PREMIUM_TESTS);
+        const q = query(
+            premiumTestsRef,
+            where('targetClass', '==', user.studentClass),
+            where('isActive', '==', true),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const tests: PremiumTest[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                tests.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate() || new Date()
+                } as PremiumTest);
+            });
+
+            // Check if there are new premium tests
+            if (tests.length > lastSeenPremiumTestCount && lastSeenPremiumTestCount > 0) {
+                setHasNewPremiumTests(true);
+            }
+
+            setPremiumTests(tests);
+        });
+
+        return () => unsubscribe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.studentClass]); // Only re-subscribe when class changes, not lastSeenPremiumTestCount
+
     // Handle marking notification as viewed
     const handleViewNotification = async (notificationId: string) => {
         if (!user?.uid || viewedNotificationIds.has(notificationId)) return;
@@ -508,12 +690,12 @@ export default function StudentDashboard() {
         }
     };
 
-    // Handle deleting notification (for student - just marks as viewed for immediate removal)
+    // Handle deleting notification completely
     const handleDismissNotification = async (notificationId: string) => {
         if (!user?.uid) return;
 
         try {
-            await markNotificationAsViewed(notificationId, user.uid);
+            await deleteNotification(notificationId);
             // Remove from local state immediately
             setNotifications(prev => prev.filter(n => n.id !== notificationId));
         } catch (error) {
@@ -574,19 +756,70 @@ export default function StudentDashboard() {
         { icon: HelpCircle, label: 'Help Center', color: 'bg-orange-100 dark:bg-orange-900/50', iconColor: 'text-orange-600 dark:text-orange-400', comingSoon: true },
     ];
 
-    // Get rank badge
-    const getRankBadge = (rank: number) => {
-        if (rank === 1) return <Crown className="w-5 h-5 text-yellow-500" />;
-        if (rank === 2) return <Medal className="w-5 h-5 text-gray-400" />;
-        if (rank === 3) return <Medal className="w-5 h-5 text-amber-600" />;
-        return <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{rank}</span>;
+    // Check if user has glow status (completed 40 coins)
+    const hasActiveGlow = glowProgress.spent >= 40;
+
+    // Get glow color based on current hour (changes every 3 hours)
+    const getGlowColors = () => {
+        const hour = new Date().getHours();
+        const colorSet = Math.floor(hour / 3) % 4;
+        const colors = [
+            { from: 'from-amber-50', via: 'via-yellow-50', to: 'to-orange-50', dark: 'dark:via-amber-950/20', border: 'from-amber-400 via-yellow-400 to-orange-400', glow1: 'from-amber-400/20 via-yellow-400/10', glow2: 'from-orange-400/20 via-amber-400/10' },
+            { from: 'from-pink-50', via: 'via-rose-50', to: 'to-red-50', dark: 'dark:via-pink-950/20', border: 'from-pink-400 via-rose-400 to-red-400', glow1: 'from-pink-400/20 via-rose-400/10', glow2: 'from-red-400/20 via-pink-400/10' },
+            { from: 'from-cyan-50', via: 'via-teal-50', to: 'to-emerald-50', dark: 'dark:via-cyan-950/20', border: 'from-cyan-400 via-teal-400 to-emerald-400', glow1: 'from-cyan-400/20 via-teal-400/10', glow2: 'from-emerald-400/20 via-cyan-400/10' },
+            { from: 'from-violet-50', via: 'via-purple-50', to: 'to-fuchsia-50', dark: 'dark:via-violet-950/20', border: 'from-violet-400 via-purple-400 to-fuchsia-400', glow1: 'from-violet-400/20 via-purple-400/10', glow2: 'from-fuchsia-400/20 via-violet-400/10' }
+        ];
+        return colors[colorSet];
     };
 
-    // Find current user's rank
-    const userRank = leaderboard.find(e => e.studentId === user.uid);
+    const glowColors = getGlowColors();
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className={`min-h-screen ${hasActiveGlow ? `bg-gradient-to-br ${glowColors.from} ${glowColors.via} ${glowColors.to} dark:from-gray-950 ${glowColors.dark} dark:to-gray-950` : 'bg-gray-50 dark:bg-gray-950'} relative overflow-hidden`}>
+            {/* Glow Effect Overlay for completed users */}
+            {hasActiveGlow && (
+                <>
+                    {/* Animated gradient border at top */}
+                    <div className={`fixed top-0 left-0 right-0 h-1 bg-gradient-to-r ${glowColors.border} animate-pulse z-[999]`} />
+
+                    {/* Floating sparkles - only show for 5 seconds initially */}
+                    <AnimatePresence>
+                        {showInitialSparkles && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.5 }}
+                                className="fixed inset-0 pointer-events-none z-[1] overflow-hidden"
+                            >
+                                {[...Array(20)].map((_, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: '100vh', x: `${Math.random() * 100}vw` }}
+                                        animate={{
+                                            opacity: [0, 1, 1, 0],
+                                            y: [-20, window?.innerHeight || 800],
+                                            x: `${20 + Math.random() * 60}vw`
+                                        }}
+                                        transition={{
+                                            duration: 3 + Math.random() * 2,
+                                            delay: Math.random() * 2,
+                                            ease: 'linear'
+                                        }}
+                                        className="absolute text-2xl"
+                                    >
+                                        {['✨', '⭐', '🌟', '💫', '🎉'][Math.floor(Math.random() * 5)]}
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Corner glow effects - permanent */}
+                    <div className={`fixed top-0 left-0 w-96 h-96 bg-gradient-radial ${glowColors.glow1} to-transparent rounded-full blur-3xl pointer-events-none`} />
+                    <div className={`fixed bottom-0 right-0 w-96 h-96 bg-gradient-radial ${glowColors.glow2} to-transparent rounded-full blur-3xl pointer-events-none`} />
+                </>
+            )}
             {/* New Test Notification */}
             <AnimatePresence>
                 {newTestNotification && (
@@ -678,7 +911,7 @@ export default function StudentDashboard() {
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50"
+                                        className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto top-20 sm:top-full sm:mt-2 sm:w-80 max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
                                     >
                                         <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -763,6 +996,16 @@ export default function StudentDashboard() {
                             </AnimatePresence>
                         </div>
 
+                        {/* Coin Balance Display */}
+                        {creditEconomyEnabled && (
+                            <WalletDisplay
+                                wallet={wallet}
+                                loading={walletLoading}
+                                compact={true}
+                                onClick={() => setShowWalletModal(true)}
+                            />
+                        )}
+
                         {/* Daily Streak in Navbar */}
                         <div className="relative">
                             <button
@@ -818,7 +1061,7 @@ export default function StudentDashboard() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8 relative overflow-hidden"
+                    className="mb-6 relative overflow-hidden"
                 >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
@@ -845,7 +1088,7 @@ export default function StudentDashboard() {
                                 ) : results.length === 0 ? (
                                     "Ready to challenge yourself? Pick a test below."
                                 ) : (
-                                    `You've completed ${results.length} test${results.length > 1 ? 's' : ''}. Keep up the great work!`
+                                    `You&apos;ve completed ${results.length} test${results.length > 1 ? 's' : ''}. Keep up the great work!`
                                 )}
                             </p>
                         </div>
@@ -860,56 +1103,19 @@ export default function StudentDashboard() {
                                 <span className="text-2xl">🔥</span>
                                 <div>
                                     <p className="text-sm font-bold text-orange-700 dark:text-orange-300">{user.currentStreak} Day Streak!</p>
-                                    <p className="text-xs text-orange-600 dark:text-orange-400">You're on fire!</p>
+                                    <p className="text-xs text-orange-600 dark:text-orange-400">You&apos;re on fire!</p>
                                 </div>
                             </motion.div>
                         )}
                     </div>
                 </motion.div>
 
-                {/* Stats Cards */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
-                                <BookOpen className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{tests.length}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Available Tests</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
-                                <Trophy className="w-6 h-6 text-green-600 dark:text-green-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalTests}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Tests Completed</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
-                                <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{averageScore}%</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Average Score</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Tab Navigation */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mb-6">
-                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
+                {/* Tab Navigation - Moved below greeting */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-6">
+                    <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl">
                         <button
                             onClick={() => setActiveTab('tests')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'tests' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'tests' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             <BookOpen className="w-4 h-4" /> Available Tests
                         </button>
@@ -920,7 +1126,7 @@ export default function StudentDashboard() {
                                 setNewReportsCount(0);
                                 setLastSeenReportsCount(results.length);
                             }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'reports' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'reports' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             <FileText className="w-4 h-4" /> My Reports
                             {newReportsCount > 0 && (
@@ -931,7 +1137,7 @@ export default function StudentDashboard() {
                         </button>
                         <button
                             onClick={() => setActiveTab('notes')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'notes' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'notes' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             <BookMarked className="w-4 h-4" /> Study Notes
                             {unreadNotesCount > 0 && (
@@ -940,6 +1146,24 @@ export default function StudentDashboard() {
                                 </span>
                             )}
                         </button>
+                        {creditEconomyEnabled && (
+                            <button
+                                onClick={() => {
+                                    setActiveTab('premium');
+                                    setHasNewPremiumTests(false);
+                                    setLastSeenPremiumTestCount(premiumTests.length);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'premium' ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-sm' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}
+                            >
+                                <Star className="w-4 h-4" /> Premium Tests
+                                {hasNewPremiumTests && activeTab !== 'premium' && (
+                                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                                        New
+                                    </span>
+                                )}
+                            </button>
+                        )}
+
                     </div>
                 </motion.div>
 
@@ -976,8 +1200,18 @@ export default function StudentDashboard() {
                                         >
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2">
+                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                         <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">{test.subject}</span>
+                                                        {test.isPremium && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-medium rounded-full">
+                                                                <Star className="w-3 h-3" /> Premium
+                                                            </span>
+                                                        )}
+                                                        {test.coinCost && test.coinCost > 0 && !test.isMandatory && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded-full">
+                                                                <Coins className="w-3 h-3" /> {test.coinCost}
+                                                            </span>
+                                                        )}
                                                         {isScheduled && (
                                                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full">
                                                                 <Timer className="w-3 h-3" />
@@ -1184,108 +1418,115 @@ export default function StudentDashboard() {
                     </motion.div>
                 )}
 
-                {/* Two Column Layout: Leaderboard + Quick Actions */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                    {/* Leaderboard - Takes 2 columns */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
-                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/50 rounded-xl flex items-center justify-center">
-                                        <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                {/* Premium Tests Tab */}
+                {activeTab === 'premium' && creditEconomyEnabled && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    ⭐ Premium Tests
+                                    <GlowStatusIndicator hasGlow={glowProgress.hasGlow} />
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Use your coins to attempt special tests. These don&apos;t count toward glow rewards.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Available Premium Tests - FIRST */}
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4" /> Available Premium Tests
+                        </h4>
+                        {premiumTests.length === 0 ? (
+                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 mb-8">
+                                <Star className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+                                <p className="text-gray-600 dark:text-gray-400">No premium tests available for your class yet.</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Check back later for special tests from your teachers!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                                {premiumTests.map((test) => (
+                                    <PremiumTestCard
+                                        key={test.id}
+                                        test={test}
+                                        canAfford={wallet ? wallet.balance >= test.coinCost : false}
+                                        onAttempt={handlePremiumTestAttempt}
+                                        loading={attemptingPremiumTest === test.id}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Wallet & Glow Progress Card */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            {/* Wallet Card */}
+                            <WalletDisplay wallet={wallet} loading={walletLoading} />
+
+                            {/* Badges & History Quick Access */}
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
+                                            <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900 dark:text-white">Your Badges</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{badges.length} earned</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-white">🏆 Class {user.studentClass} Leaderboard</h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">Top performers in your class</p>
-                                    </div>
+                                    <button
+                                        onClick={() => setShowBadgesModal(true)}
+                                        className="text-sm text-[#1650EB] dark:text-[#6095DB] hover:underline"
+                                    >
+                                        View All
+                                    </button>
                                 </div>
-                                <button onClick={loadLeaderboard} className="p-2 text-gray-500 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors" title="Refresh">
-                                    <RefreshCw className={`w-5 h-5 ${leaderboardLoading ? 'animate-spin' : ''}`} />
+                                <BadgesCollection badges={badges} maxDisplay={4} onViewAll={() => setShowBadgesModal(true)} />
+                            </div>
+                        </div>
+
+                        {/* Transaction History - LAST */}
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <History className="w-4 h-4" /> Recent Transactions
+                                </h4>
+                                <button
+                                    onClick={() => setShowWalletModal(true)}
+                                    className="text-sm text-[#1650EB] dark:text-[#6095DB] hover:underline"
+                                >
+                                    View All
                                 </button>
                             </div>
-
-                            {leaderboardLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
-                                </div>
-                            ) : leaderboard.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-gray-600 dark:text-gray-400">No rankings yet. Be the first to complete a test!</p>
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                                    {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 5)).map((entry) => (
-                                        <div key={entry.studentId} className={`flex items-center gap-4 p-4 ${entry.studentId === user.uid ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
-                                            <div className="w-10 h-10 flex items-center justify-center">
-                                                {getRankBadge(entry.rank)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900 dark:text-white">
-                                                    {entry.studentName} {entry.studentId === user.uid && <span className="text-xs text-[#1650EB] dark:text-[#6095DB]">(You)</span>}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{entry.totalTests} tests completed</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-lg text-gray-900 dark:text-white">{entry.averageScore}%</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">avg score</p>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {leaderboard.length > 5 && (
-                                        <button onClick={() => setShowAllLeaderboard(!showAllLeaderboard)} className="w-full py-3 text-sm font-medium text-[#1650EB] dark:text-[#6095DB] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                            {showAllLeaderboard ? 'Show Less' : `Show All (${leaderboard.length})`}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Your Rank Highlight */}
-                            {userRank && !leaderboard.slice(0, showAllLeaderboard ? leaderboard.length : 5).find(e => e.studentId === user.uid) && (
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border-t border-gray-200 dark:border-gray-800">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 flex items-center justify-center">
-                                            <span className="text-sm font-bold text-[#1650EB] dark:text-[#6095DB]">#{userRank.rank}</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-gray-900 dark:text-white">Your Rank</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{userRank.totalTests} tests completed</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-lg text-[#1650EB] dark:text-[#6095DB]">{userRank.averageScore}%</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <TransactionHistory transactions={transactions} maxDisplay={5} />
                         </div>
                     </motion.div>
+                )}
 
-                    {/* Quick Actions - Takes 1 column */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
-                        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                            {quickActions.map((action, index) => (
-                                <motion.button
-                                    key={action.label}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 + index * 0.05 }}
-                                    onClick={() => handleComingSoon(action.label)}
-                                    className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
-                                >
-                                    <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                        <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
-                                        {action.comingSoon && <p className="text-xs text-gray-400">Coming Soon</p>}
-                                    </div>
-                                </motion.button>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
+                {/* Quick Actions */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {quickActions.map((action, index) => (
+                            <motion.button
+                                key={action.label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 + index * 0.05 }}
+                                onClick={() => handleComingSoon(action.label)}
+                                className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
+                            >
+                                <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                    <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
+                                    {action.comingSoon && <p className="text-xs text-gray-400">Coming Soon</p>}
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
+                </motion.div>
 
                 {/* Recent Results */}
                 {results.length > 0 && (
@@ -1633,8 +1874,8 @@ export default function StudentDashboard() {
                         >
                             {/* Header with type-specific color */}
                             <div className={`p-6 ${selectedNotification.type === 'test' ? 'bg-blue-500' :
-                                    selectedNotification.type === 'note' ? 'bg-green-500' :
-                                        'bg-amber-500'
+                                selectedNotification.type === 'note' ? 'bg-green-500' :
+                                    'bg-amber-500'
                                 } text-white`}>
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
@@ -1702,6 +1943,291 @@ export default function StudentDashboard() {
                                 >
                                     Close
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Wallet Detail Modal */}
+            <AnimatePresence>
+                {showWalletModal && wallet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowWalletModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 bg-gradient-to-r from-amber-400 to-yellow-500 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                                            <Coins className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white/80 text-sm">Your Balance</p>
+                                            <p className="text-3xl font-bold">{wallet.balance} Coins</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowWalletModal(false)}
+                                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                {/* Glow Progress */}
+                                <div className="mt-4 p-3 bg-white/20 rounded-xl">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm">
+                                            {glowProgress.spent >= 40 ? '🎉 Glow Status Unlocked!' : 'Progress to Glow Status'}
+                                        </span>
+                                        <span className="font-bold">{glowProgress.spent}/{glowProgress.threshold}</span>
+                                    </div>
+                                    <div className="h-2 bg-white/30 rounded-full overflow-hidden">
+                                        <motion.div
+                                            className={`h-full transition-all ${glowProgress.spent >= 40 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-400' : 'bg-white'}`}
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min(glowProgress.percentage, 100)}%` }}
+                                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                                        />
+                                    </div>
+                                    {glowProgress.spent >= 40 ? (
+                                        <motion.p
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="text-xs mt-2 flex items-center gap-1 text-amber-200"
+                                        >
+                                            <Sparkles className="w-3 h-3" /> Hurray! You completed the task! Enjoy your perks! ✨
+                                        </motion.p>
+                                    ) : glowProgress.hasGlow ? (
+                                        <p className="text-xs mt-2 flex items-center gap-1">
+                                            <Sparkles className="w-3 h-3" /> Colors change every 3 hours!
+                                        </p>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 max-h-[400px] overflow-y-auto">
+                                <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                    <History className="w-4 h-4" /> Transaction History
+                                </h4>
+                                <TransactionHistory transactions={transactions} maxDisplay={20} />
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                                    <span>Total Earned: {wallet.totalEarned} coins</span>
+                                    <span>Total Spent: {wallet.totalSpent} coins</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Badges Modal */}
+            <AnimatePresence>
+                {showBadgesModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowBadgesModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-violet-500 rounded-xl flex items-center justify-center">
+                                        <Award className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Your Badges</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{badges.length} badges earned</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowBadgesModal(false)}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 max-h-[500px] overflow-y-auto">
+                                {badges.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                                        <p className="text-gray-500 dark:text-gray-400">No badges earned yet</p>
+                                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Complete tests and spend coins to earn badges!</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {badges.map((badge) => (
+                                            <div
+                                                key={badge.id}
+                                                className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:shadow-lg transition-shadow"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-12 h-12 bg-gradient-to-br ${badge.badgeColor} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                                        <span className="text-2xl">{badge.badgeIcon}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="font-semibold text-gray-900 dark:text-white">{badge.badgeName}</p>
+                                                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${badge.badgeRarity === 'legendary' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                                                                badge.badgeRarity === 'epic' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
+                                                                    badge.badgeRarity === 'rare' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                                                                        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                                                                }`}>
+                                                                {badge.badgeRarity}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{badge.awardReason}</p>
+                                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                                            {new Date(badge.earnedAt).toLocaleDateString('en-IN', {
+                                                                day: 'numeric', month: 'short', year: 'numeric'
+                                                            })}
+                                                            {badge.awardedByName && ` • Awarded by ${badge.awardedByName}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Reward Popup */}
+            <RewardPopup
+                isOpen={showRewardPopup}
+                onClose={() => {
+                    setShowRewardPopup(false);
+                    setRewardData(null);
+                }}
+                badge={rewardData?.badge}
+                coinsEarned={rewardData?.coinsEarned}
+                message={rewardData?.message}
+            />
+
+            {/* Glow Celebration Popup */}
+            <AnimatePresence>
+                {showGlowCelebration && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                        onClick={() => setShowGlowCelebration(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.5, opacity: 0, y: 50 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.5, opacity: 0, y: 50 }}
+                            transition={{ type: 'spring', damping: 15 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 rounded-3xl p-1 shadow-2xl max-w-sm w-full"
+                        >
+                            <div className="bg-white dark:bg-gray-900 rounded-[22px] p-8 text-center relative overflow-hidden">
+                                {/* Sparkle animations */}
+                                <div className="absolute inset-0 pointer-events-none">
+                                    {[...Array(20)].map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, scale: 0 }}
+                                            animate={{
+                                                opacity: [0, 1, 0],
+                                                scale: [0, 1, 0],
+                                                x: Math.random() * 300 - 150,
+                                                y: Math.random() * 300 - 150
+                                            }}
+                                            transition={{
+                                                duration: 2,
+                                                delay: Math.random() * 2,
+                                                repeat: Infinity
+                                            }}
+                                            className="absolute left-1/2 top-1/2 w-2 h-2 bg-yellow-400 rounded-full"
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Glowing icon */}
+                                <motion.div
+                                    animate={{
+                                        scale: [1, 1.1, 1],
+                                        rotate: [0, 5, -5, 0]
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/50"
+                                >
+                                    <Sparkles className="w-12 h-12 text-white" />
+                                </motion.div>
+
+                                <motion.h2
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="text-3xl font-black bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent mb-3"
+                                >
+                                    🎉 Congratulations! 🎉
+                                </motion.h2>
+
+                                <motion.p
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="text-lg text-gray-600 dark:text-gray-400 mb-4"
+                                >
+                                    You&apos;ve unlocked <span className="font-bold text-amber-600">Glow Status</span> for 24 hours!
+                                </motion.p>
+
+                                <motion.div
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl p-4 mb-6"
+                                >
+                                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                                        ✨ Your dashboard now <strong>glows</strong> with special effects!<br />
+                                        🎨 Colors change every 3 hours!<br />
+                                        💎 Keep spending coins to maintain your status!
+                                    </p>
+                                </motion.div>
+
+                                <motion.button
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: 0.5 }}
+                                    onClick={() => setShowGlowCelebration(false)}
+                                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg shadow-amber-500/30 hover:from-amber-600 hover:to-orange-600 transition-all"
+                                >
+                                    Awesome! 🌟
+                                </motion.button>
                             </div>
                         </motion.div>
                     </motion.div>

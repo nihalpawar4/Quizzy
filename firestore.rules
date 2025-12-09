@@ -106,8 +106,67 @@ service cloud.firestore {
       allow create: if isTeacher();
       // Students can update (to mark as viewed), teachers can also update
       allow update: if isAuthenticated();
-      // Only teachers can delete notifications
+      // Any authenticated user can delete notifications (students can dismiss their own)
+      allow delete: if isAuthenticated();
+    }
+    
+    // ==================== CREDIT ECONOMY COLLECTIONS ====================
+    
+    // Wallets - Each student has one wallet
+    match /wallets/{walletId} {
+      // All authenticated users can read wallets (for leaderboard, etc.)
+      allow read: if isAuthenticated();
+      // Any authenticated user can create/update wallets
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      // Only teachers can delete wallets
       allow delete: if isTeacher();
+    }
+    
+    // Transactions - Read-only audit log
+    match /transactions/{transactionId} {
+      // All authenticated users can read transactions
+      allow read: if isAuthenticated();
+      // Transactions are created by the system
+      allow create: if isAuthenticated();
+      // No updates allowed (audit log)
+      allow update: if false;
+      allow delete: if isTeacher();
+    }
+    
+    // Badges - Global badge definitions
+    match /badges/{badgeId} {
+      allow read: if isAuthenticated();
+      allow create: if isTeacher();
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+    
+    // User Badges - Badges earned by students
+    match /userBadges/{userBadgeId} {
+      // All authenticated users can read badges
+      allow read: if isAuthenticated();
+      // System or teachers can award badges
+      allow create: if isAuthenticated();
+      // No updates allowed
+      allow update: if false;
+      // Teachers can delete badges if needed
+      allow delete: if isTeacher();
+    }
+    
+    // Premium Tests - Special tests that cost coins
+    match /premiumTests/{testId} {
+      allow read: if isAuthenticated();
+      allow create: if isTeacher();
+      allow update: if isAuthenticated(); // Allow students to update attempt counts
+      allow delete: if isTeacher();
+    }
+    
+    // App Settings - Global app configuration
+    match /appSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
     }
   }
 }
+

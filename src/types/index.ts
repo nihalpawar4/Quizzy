@@ -37,6 +37,10 @@ export interface Test {
     // Anti-cheat settings
     enableAntiCheat?: boolean; // Enable anti-cheat mechanisms
     showInstructions?: boolean; // Show instructions screen before test starts
+    // Premium test fields
+    isPremium?: boolean; // If true, this is a premium test that costs coins
+    coinCost?: number; // Cost in coins to attempt this test
+    isMandatory?: boolean; // If true, this is free (no coin cost)
 }
 
 // Question Types - supports multiple formats
@@ -148,7 +152,7 @@ export interface SubjectNote {
 }
 
 // Notification for real-time updates
-export type NotificationType = 'test' | 'note' | 'announcement';
+export type NotificationType = 'test' | 'note' | 'announcement' | 'reward' | 'badge';
 
 export interface Notification {
     id: string;
@@ -165,3 +169,123 @@ export interface Notification {
     // View tracking - map of studentId to timestamp when viewed
     viewedBy?: { [studentId: string]: Date };
 }
+
+// ==================== CREDIT ECONOMY TYPES ====================
+
+// Credit Wallet for each student
+export interface CreditWallet {
+    id: string; // Same as user uid
+    studentId: string;
+    studentName: string;
+    studentClass: number;
+    balance: number; // Current coin balance
+    weeklySpent: number; // Coins spent this week (resets every Monday)
+    weekStartDate: string; // ISO date of current week start (Monday)
+    lastAllowanceDate: string; // ISO date when last allowance was given
+    hasGlowStatus: boolean; // Whether student has glowing profile for this week
+    glowUnlockedUntil?: Date; // When the glow status expires
+    totalEarned: number; // Lifetime coins earned
+    totalSpent: number; // Lifetime coins spent
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// Transaction history
+export type TransactionType = 'allowance' | 'test_attempt' | 'premium_test' | 'bonus' | 'reward' | 'refund';
+
+export interface CreditTransaction {
+    id: string;
+    studentId: string;
+    studentName: string;
+    type: TransactionType;
+    amount: number; // Positive for credit, negative for debit
+    balance: number; // Balance after transaction
+    description: string;
+    testId?: string; // If related to a test
+    testTitle?: string;
+    awardedBy?: string; // Teacher uid if bonus/reward
+    awardedByName?: string;
+    countsForReward: boolean; // Whether this spending counts toward glow status
+    createdAt: Date;
+}
+
+// Badge types
+export type BadgeType =
+    | 'weekly_champion' // Spent >40 coins in a week
+    | 'perfect_score' // 100% on a test
+    | 'streak_master' // 7+ day streak
+    | 'speed_demon' // Completed test in under 5 mins with >80%
+    | 'consistency_king' // Completed tests 3 weeks in a row
+    | 'top_performer' // Ranked #1 in class leaderboard
+    | 'rising_star' // Improved score by 20%+ from last test
+    | 'knowledge_seeker' // Read all notes in a week
+    | 'custom'; // Teacher-awarded custom badge
+
+export interface Badge {
+    id: string;
+    type: BadgeType;
+    name: string;
+    description: string;
+    icon: string; // Emoji or icon name
+    color: string; // Tailwind color class
+    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    isActive: boolean;
+    createdAt: Date;
+}
+
+// Badge awarded to a student
+export interface UserBadge {
+    id: string;
+    studentId: string;
+    studentName: string;
+    badgeType: BadgeType;
+    badgeName: string;
+    badgeIcon: string;
+    badgeColor: string;
+    badgeRarity: 'common' | 'rare' | 'epic' | 'legendary';
+    awardedBy?: string; // Teacher uid (for custom badges)
+    awardedByName?: string;
+    awardReason?: string; // Custom reason for badge
+    earnedAt: Date;
+    weekEarned: string; // ISO date of week start when earned
+}
+
+// Premium Test (separate from regular tests)
+export interface PremiumTest {
+    id: string;
+    testId?: string; // Link to the actual test in TESTS collection (for tests with questions)
+    title: string;
+    subject: string;
+    targetClass: number;
+    description?: string;
+    createdBy: string;
+    createdByName?: string;
+    createdAt: Date;
+    coinCost: number; // How many coins to attempt
+    questionCount: number;
+    duration?: number;
+    isActive: boolean;
+    isMandatory: boolean; // If true, test is free
+    // Stats
+    totalAttempts: number;
+    averageScore?: number;
+}
+
+// Performance history for profile display
+export interface PerformanceWeek {
+    weekStart: string; // ISO date
+    testsCompleted: number;
+    averageScore: number;
+    coinsSpent: number;
+    coinsEarned: number;
+    hadGlowStatus: boolean;
+    badgesEarned: string[]; // Badge names
+}
+
+// Credit economy constants
+export const CREDIT_CONSTANTS = {
+    WEEKLY_ALLOWANCE: 100,
+    DEFAULT_TEST_COST: 10,
+    GLOW_THRESHOLD: 40, // Coins to spend for glow status
+    ALLOWANCE_DAY: 1, // Monday (0 = Sunday, 1 = Monday, etc.)
+} as const;

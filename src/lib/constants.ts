@@ -45,4 +45,12 @@ export const COLLECTIONS = {
     RESULTS: 'results',
     NOTES: 'notes',
     NOTIFICATIONS: 'notifications',
+    // Credit Economy collections
+    WALLETS: 'wallets',
+    TRANSACTIONS: 'transactions',
+    BADGES: 'badges',
+    USER_BADGES: 'userBadges',
+    PREMIUM_TESTS: 'premiumTests',
+    APP_SETTINGS: 'appSettings',
 } as const;
+

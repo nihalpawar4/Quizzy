@@ -33,6 +33,7 @@ import {
     Copy,
     Check,
     ArrowRight,
+    ArrowLeft,
     Mail,
     Ban,
     ShieldCheck,
@@ -44,7 +45,14 @@ import {
     BookMarked,
     Save,
     Bell,
-    Megaphone
+    Megaphone,
+    Coins,
+    Gift,
+    Award,
+    Star,
+    Sparkles,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -70,11 +78,31 @@ import {
     createTestNotification,
     createNoteNotification
 } from '@/lib/services';
+import {
+    getAllWallets,
+    grantBonusCoins,
+    awardBadge,
+    awardCustomBadge,
+    createPremiumTest,
+    getAllPremiumTests,
+    updatePremiumTest,
+    deletePremiumTest,
+    getAllTransactions,
+    getBadgeInfo,
+    getAppSettings,
+    toggleCreditEconomy,
+    deleteAllTransactions,
+    deleteAllStudentTransactions,
+    deleteStudentWalletAndData,
+    getCreditEconomyStats,
+    type AppSettings
+} from '@/lib/creditServices';
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
-import type { Test, TestResult, User, SubjectNote } from '@/types';
+import type { Test, TestResult, User, SubjectNote, CreditWallet, PremiumTest, CreditTransaction, BadgeType, Question } from '@/types';
+import { CREDIT_CONSTANTS } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
@@ -116,7 +144,7 @@ export default function TeacherDashboard() {
     const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<string | null>(null); // uid of student to delete
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes' | 'credits'>('tests');
 
     // Create test states
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -133,6 +161,10 @@ export default function TeacherDashboard() {
         negativeMarksPerQuestion: number;
         enableAntiCheat: boolean;
         showInstructions: boolean;
+        // Credit economy fields
+        coinCost: number;
+        isPremium: boolean;
+        isMandatory: boolean;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -144,7 +176,10 @@ export default function TeacherDashboard() {
         negativeMarking: false,
         negativeMarksPerQuestion: 0.25,
         enableAntiCheat: false,
-        showInstructions: true
+        showInstructions: true,
+        coinCost: 0,
+        isPremium: false,
+        isMandatory: false
     });
 
     // Proctoring report modal state
@@ -243,6 +278,65 @@ export default function TeacherDashboard() {
     const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
     const [announcementSuccess, setAnnouncementSuccess] = useState(false);
 
+    // ==================== CREDIT ECONOMY STATES ====================
+    const [wallets, setWallets] = useState<CreditWallet[]>([]);
+    const [premiumTests, setPremiumTests] = useState<PremiumTest[]>([]);
+    const [recentTransactions, setRecentTransactions] = useState<CreditTransaction[]>([]);
+    const [creditDataLoading, setCreditDataLoading] = useState(false);
+
+    // Bonus coins modal
+    const [showBonusModal, setShowBonusModal] = useState(false);
+    const [selectedStudentForBonus, setSelectedStudentForBonus] = useState<User | null>(null);
+    const [bonusAmount, setBonusAmount] = useState(10);
+    const [bonusReason, setBonusReason] = useState('');
+    const [isSendingBonus, setIsSendingBonus] = useState(false);
+
+    // Award badge modal
+    const [showBadgeModal, setShowBadgeModal] = useState(false);
+    const [selectedStudentForBadge, setSelectedStudentForBadge] = useState<User | null>(null);
+    const [selectedBadgeType, setSelectedBadgeType] = useState<BadgeType>('custom');
+    const [customBadgeName, setCustomBadgeName] = useState('');
+    const [customBadgeIcon, setCustomBadgeIcon] = useState('🏆');
+    const [badgeReason, setBadgeReason] = useState('');
+    const [isAwardingBadge, setIsAwardingBadge] = useState(false);
+
+    // Premium test creation
+    const [showPremiumTestModal, setShowPremiumTestModal] = useState(false);
+    const [newPremiumTest, setNewPremiumTest] = useState<{
+        title: string;
+        subject: typeof SUBJECTS[number];
+        targetClass: number;
+        description: string;
+        coinCost: number;
+        duration: number;
+        questionCount: number;
+        isMandatory: boolean;
+    }>({
+        title: '',
+        subject: SUBJECTS[0],
+        targetClass: 5,
+        description: '',
+        coinCost: 10,
+        duration: 30,
+        questionCount: 10,
+        isMandatory: false
+    });
+    const [isCreatingPremiumTest, setIsCreatingPremiumTest] = useState(false);
+    const [premiumTestJson, setPremiumTestJson] = useState('');
+    const [premiumParsedQuestions, setPremiumParsedQuestions] = useState<Question[]>([]);
+    const [premiumParseError, setPremiumParseError] = useState('');
+    const [premiumCreateStep, setPremiumCreateStep] = useState<1 | 2>(1);
+
+    // Credit economy toggle states
+    const [creditEconomyEnabled, setCreditEconomyEnabled] = useState(true);
+    const [isTogglingCredit, setIsTogglingCredit] = useState(false);
+    const [isDeletingTransactions, setIsDeletingTransactions] = useState(false);
+    const [showDeleteTransactionsConfirm, setShowDeleteTransactionsConfirm] = useState(false);
+
+    // Credit economy stats
+    const [creditStats, setCreditStats] = useState({ studentsWithGlow: 0, totalCoinsSpent: 0, premiumTestsCount: 0 });
+    const [deletingWalletId, setDeletingWalletId] = useState<string | null>(null);
+
     const loadStudents = useCallback(async () => {
         try {
             const studentsData = await getAllStudents();
@@ -251,6 +345,316 @@ export default function TeacherDashboard() {
             console.error('Error loading students:', error);
         }
     }, []);
+
+    // Load credit economy data
+    const loadCreditData = useCallback(async () => {
+        setCreditDataLoading(true);
+        try {
+            const [walletsData, premiumTestsData, transactionsData, statsData] = await Promise.all([
+                getAllWallets(),
+                getAllPremiumTests(),
+                getAllTransactions(50),
+                getCreditEconomyStats()
+            ]);
+            setWallets(walletsData);
+            setPremiumTests(premiumTestsData);
+            setRecentTransactions(transactionsData);
+            setCreditStats({
+                studentsWithGlow: statsData.studentsWithGlow,
+                totalCoinsSpent: statsData.totalCoinsSpent,
+                premiumTestsCount: statsData.premiumTestsCount
+            });
+        } catch (error) {
+            console.error('Error loading credit data:', error);
+        } finally {
+            setCreditDataLoading(false);
+        }
+    }, []);
+
+    // Handle credit economy toggle
+    const handleToggleCreditEconomy = async () => {
+        if (!user) return;
+        setIsTogglingCredit(true);
+        try {
+            const newState = !creditEconomyEnabled;
+            await toggleCreditEconomy(newState, user.uid);
+            setCreditEconomyEnabled(newState);
+        } catch (error) {
+            console.error('Error toggling credit economy:', error);
+            alert('Failed to toggle credit economy. Please try again.');
+        } finally {
+            setIsTogglingCredit(false);
+        }
+    };
+
+    // Handle delete all transactions
+    const handleDeleteAllTransactions = async () => {
+        setIsDeletingTransactions(true);
+        try {
+            const deleted = await deleteAllTransactions();
+            alert(`Successfully deleted ${deleted} transactions.`);
+            setShowDeleteTransactionsConfirm(false);
+            // Reload transactions
+            const txData = await getAllTransactions(50);
+            setRecentTransactions(txData);
+        } catch (error) {
+            console.error('Error deleting transactions:', error);
+            alert('Failed to delete transactions. Please try again.');
+        } finally {
+            setIsDeletingTransactions(false);
+        }
+    };
+
+    // Handle delete wallet and all related data
+    const handleDeleteWallet = async (studentId: string, studentName: string) => {
+        if (!confirm(`Delete wallet and all credit economy data for ${studentName}? This action cannot be undone.`)) {
+            return;
+        }
+
+        setDeletingWalletId(studentId);
+        try {
+            const result = await deleteStudentWalletAndData(studentId);
+            alert(`Deleted: Wallet (${result.wallet ? 'yes' : 'no'}), ${result.transactions} transactions, ${result.badges} badges`);
+            // Reload credit data
+            loadCreditData();
+        } catch (error) {
+            console.error('Error deleting wallet:', error);
+            alert('Failed to delete wallet. Please try again.');
+        } finally {
+            setDeletingWalletId(null);
+        }
+    };
+
+
+    // Handle granting bonus coins
+    const handleGrantBonus = async () => {
+        if (!selectedStudentForBonus || !user || bonusAmount <= 0 || !bonusReason.trim()) {
+            return;
+        }
+
+        setIsSendingBonus(true);
+        try {
+            const result = await grantBonusCoins(
+                selectedStudentForBonus.uid,
+                bonusAmount,
+                bonusReason,
+                user.uid,
+                user.name
+            );
+
+            if (result.success) {
+                alert(result.message);
+                setShowBonusModal(false);
+                setSelectedStudentForBonus(null);
+                setBonusAmount(10);
+                setBonusReason('');
+                loadCreditData(); // Refresh data
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error('Error granting bonus:', error);
+            alert('Failed to grant bonus coins.');
+        } finally {
+            setIsSendingBonus(false);
+        }
+    };
+
+    // Handle awarding badge
+    const handleAwardBadge = async () => {
+        if (!selectedStudentForBadge || !user || !badgeReason.trim()) {
+            return;
+        }
+
+        setIsAwardingBadge(true);
+        try {
+            if (selectedBadgeType === 'custom' && customBadgeName.trim()) {
+                await awardCustomBadge(
+                    selectedStudentForBadge.uid,
+                    selectedStudentForBadge.name,
+                    customBadgeName,
+                    customBadgeIcon,
+                    badgeReason,
+                    user.uid,
+                    user.name
+                );
+            } else {
+                await awardBadge(
+                    selectedStudentForBadge.uid,
+                    selectedStudentForBadge.name,
+                    selectedBadgeType,
+                    badgeReason,
+                    user.uid,
+                    user.name
+                );
+            }
+
+            alert(`Badge awarded to ${selectedStudentForBadge.name}!`);
+            setShowBadgeModal(false);
+            setSelectedStudentForBadge(null);
+            setSelectedBadgeType('custom');
+            setCustomBadgeName('');
+            setBadgeReason('');
+        } catch (error) {
+            console.error('Error awarding badge:', error);
+            alert('Failed to award badge.');
+        } finally {
+            setIsAwardingBadge(false);
+        }
+    };
+
+    // Parse premium test JSON
+    const handleParsePremiumJson = () => {
+        setPremiumParseError('');
+        if (!premiumTestJson.trim()) {
+            setPremiumParseError('Please paste your JSON questions');
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(premiumTestJson);
+            const questions: Question[] = [];
+
+            // Handle array of questions or object with questions array
+            const questionsArray = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+
+            if (!Array.isArray(questionsArray) || questionsArray.length === 0) {
+                setPremiumParseError('No questions found in JSON. Please provide an array of questions.');
+                return;
+            }
+
+            questionsArray.forEach((q: { question?: string; text?: string; options?: string[]; correctOption?: number; answer?: number | string; correct?: number | string; type?: string; correctAnswer?: string }, index: number) => {
+                const questionText = q.question || q.text || '';
+                if (!questionText) {
+                    throw new Error(`Question ${index + 1} is missing text`);
+                }
+
+                const options = q.options || [];
+                let correctOption = 0;
+                let correctAnswer = '';
+
+                if (q.correctOption !== undefined) {
+                    correctOption = q.correctOption;
+                } else if (q.answer !== undefined) {
+                    correctOption = typeof q.answer === 'number' ? q.answer : parseInt(q.answer as string) || 0;
+                } else if (q.correct !== undefined) {
+                    correctOption = typeof q.correct === 'number' ? q.correct : parseInt(q.correct as string) || 0;
+                }
+
+                if (q.correctAnswer) {
+                    correctAnswer = q.correctAnswer;
+                }
+
+                questions.push({
+                    id: `premium-q-${index}`,
+                    testId: '',
+                    text: questionText,
+                    options: options,
+                    correctOption: correctOption,
+                    correctAnswer: correctAnswer,
+                    type: (q.type as Question['type']) || 'mcq'
+                });
+            });
+
+            setPremiumParsedQuestions(questions);
+            setNewPremiumTest(prev => ({ ...prev, questionCount: questions.length }));
+            setPremiumCreateStep(2);
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            setPremiumParseError(`Invalid JSON format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    // Reset premium test form
+    const resetPremiumTestForm = () => {
+        setNewPremiumTest({
+            title: '',
+            subject: SUBJECTS[0],
+            targetClass: 5,
+            description: '',
+            coinCost: 10,
+            duration: 30,
+            questionCount: 10,
+            isMandatory: false
+        });
+        setPremiumTestJson('');
+        setPremiumParsedQuestions([]);
+        setPremiumParseError('');
+        setPremiumCreateStep(1);
+    };
+
+    // Handle creating premium test with questions
+    const handleCreatePremiumTest = async () => {
+        if (!user || !newPremiumTest.title.trim() || premiumParsedQuestions.length === 0) {
+            setPremiumParseError('Please provide a title and questions');
+            return;
+        }
+
+        setIsCreatingPremiumTest(true);
+        try {
+            // 1. Create the actual test in TESTS collection
+            const testId = await createTest({
+                title: newPremiumTest.title,
+                subject: newPremiumTest.subject,
+                targetClass: newPremiumTest.targetClass,
+                duration: newPremiumTest.duration,
+                createdBy: user.uid,
+                isActive: true,
+                questionCount: premiumParsedQuestions.length,
+                marksPerQuestion: 1,
+                negativeMarking: false,
+                negativeMarksPerQuestion: 0,
+                enableAntiCheat: true,
+                showInstructions: true,
+                coinCost: newPremiumTest.coinCost,
+                isPremium: true,
+                isMandatory: newPremiumTest.isMandatory
+            });
+
+            // 2. Upload questions to the test
+            await uploadQuestions(testId, premiumParsedQuestions as unknown as ParsedQuestion[]);
+
+            // 3. Create premium test entry for student dashboard
+            await createPremiumTest({
+                testId: testId, // Link to actual test
+                title: newPremiumTest.title,
+                subject: newPremiumTest.subject,
+                targetClass: newPremiumTest.targetClass,
+                description: newPremiumTest.description,
+                coinCost: newPremiumTest.coinCost,
+                questionCount: premiumParsedQuestions.length,
+                duration: newPremiumTest.duration,
+                isActive: true,
+                isMandatory: newPremiumTest.isMandatory,
+                createdBy: user.uid,
+                createdByName: user.name
+            });
+
+            alert('🎉 Premium test created successfully with ' + premiumParsedQuestions.length + ' questions!');
+            setShowPremiumTestModal(false);
+            resetPremiumTestForm();
+            loadCreditData();
+        } catch (error) {
+            console.error('Error creating premium test:', error);
+            alert('Failed to create premium test. Please try again.');
+        } finally {
+            setIsCreatingPremiumTest(false);
+        }
+    };
+
+    // Delete premium test
+    const handleDeletePremiumTest = async (testId: string) => {
+        if (!confirm('Are you sure you want to delete this premium test? This action cannot be undone.')) return;
+
+        try {
+            await deletePremiumTest(testId);
+            loadCreditData(); // Refresh data
+            alert('Premium test deleted successfully!');
+        } catch (error) {
+            console.error('Error deleting premium test:', error);
+            alert('Failed to delete premium test.');
+        }
+    };
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -264,8 +668,25 @@ export default function TeacherDashboard() {
         if (user) {
             // Load students once (they don't change often)
             loadStudents();
+            loadCreditData(); // Load credit economy data
+            // Load app settings
+            getAppSettings().then(settings => {
+                setCreditEconomyEnabled(settings.creditEconomyEnabled);
+            });
         }
-    }, [user, authLoading, router, loadStudents]);
+    }, [user, authLoading, router, loadStudents, loadCreditData]);
+
+    // Real-time listener for app settings
+    useEffect(() => {
+        const settingsRef = doc(db, COLLECTIONS.APP_SETTINGS, 'main');
+        const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                setCreditEconomyEnabled(data.creditEconomyEnabled ?? true);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Real-time listener for tests
     useEffect(() => {
@@ -335,6 +756,29 @@ export default function TeacherDashboard() {
                 } as SubjectNote);
             });
             setNotes(allNotes);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Real-time listener for premium tests (teacher dashboard)
+    useEffect(() => {
+        if (!user) return;
+
+        const premiumTestsRef = collection(db, COLLECTIONS.PREMIUM_TESTS);
+        const q = query(premiumTestsRef, orderBy('createdAt', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const tests: PremiumTest[] = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                tests.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate() || new Date()
+                } as PremiumTest);
+            });
+            setPremiumTests(tests);
         });
 
         return () => unsubscribe();
@@ -451,10 +895,32 @@ export default function TeacherDashboard() {
                 negativeMarksPerQuestion: newTest.negativeMarksPerQuestion,
                 enableAntiCheat: newTest.enableAntiCheat,
                 showInstructions: newTest.showInstructions,
+                // Credit economy fields
+                coinCost: newTest.coinCost,
+                isPremium: newTest.isPremium,
+                isMandatory: newTest.isMandatory,
                 ...(newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
             });
 
             await uploadQuestions(testId, questions);
+
+            // If this is a premium test, also create a premium test entry for student dashboard
+            if (newTest.isPremium) {
+                await createPremiumTest({
+                    testId: testId, // Link to the actual test
+                    title: newTest.title,
+                    subject: newTest.subject,
+                    targetClass: newTest.targetClass,
+                    description: `Premium test: ${newTest.title}`,
+                    coinCost: newTest.coinCost,
+                    questionCount: questions.length,
+                    duration: newTest.duration,
+                    isActive: true,
+                    isMandatory: newTest.isMandatory,
+                    createdBy: user!.uid,
+                    createdByName: user!.name
+                });
+            }
 
             setCreateSuccess(true);
             // Data updates automatically via real-time listener
@@ -484,7 +950,10 @@ export default function TeacherDashboard() {
             negativeMarking: false,
             negativeMarksPerQuestion: 0.25,
             enableAntiCheat: false,
-            showInstructions: true
+            showInstructions: true,
+            coinCost: 0,
+            isPremium: false,
+            isMandatory: false
         });
         setCsvFile(null);
         setJsonInput('');
@@ -579,9 +1048,13 @@ export default function TeacherDashboard() {
     const handleDeleteStudent = async (uid: string) => {
         setStudentActionLoading(uid);
         try {
+            // First delete credit economy data
+            await deleteStudentWalletAndData(uid);
+            // Then delete the student account
             await deleteStudent(uid);
             setConfirmDeleteStudent(null);
             await loadStudents(); // Refresh students list
+            loadCreditData(); // Refresh credit data
         } catch (error) {
             console.error('Error deleting student:', error);
         } finally {
@@ -911,6 +1384,28 @@ export default function TeacherDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Credit Economy Toggle */}
+                        <button
+                            onClick={handleToggleCreditEconomy}
+                            disabled={isTogglingCredit}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${creditEconomyEnabled
+                                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                }`}
+                            title={creditEconomyEnabled ? 'Credit Economy: ON - Click to disable' : 'Credit Economy: OFF - Click to enable'}
+                        >
+                            {isTogglingCredit ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : creditEconomyEnabled ? (
+                                <ToggleRight className="w-5 h-5" />
+                            ) : (
+                                <ToggleLeft className="w-5 h-5" />
+                            )}
+                            <span className="hidden sm:inline text-sm font-medium">
+                                {creditEconomyEnabled ? 'Credits' : 'Credits Off'}
+                            </span>
+                        </button>
+
                         <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group" title="Profile Settings">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
@@ -929,7 +1424,15 @@ export default function TeacherDashboard() {
 
             <main className="max-w-7xl mx-auto px-6 py-8">
                 {/* Welcome Section */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-2xl">
+                            {new Date().getHours() < 12 ? '🌅' : new Date().getHours() < 17 ? '☀️' : '🌙'}
+                        </span>
+                        <p className="text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
+                            {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
+                        </p>
+                    </div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                         Welcome, {user.name}! 👋
                     </h2>
@@ -938,9 +1441,48 @@ export default function TeacherDashboard() {
                     </p>
                 </motion.div>
 
+                {/* Tabs - Moved below greeting */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-6">
+                    <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                        {[
+                            { id: 'tests', label: 'My Tests', icon: BookOpen },
+                            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+                            { id: 'notes', label: 'Subject Notes', icon: BookMarked },
+                            ...(creditEconomyEnabled ? [{ id: 'credits', label: 'Credit Economy', icon: Coins }] : []),
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === tab.id
+                                    ? tab.id === 'credits'
+                                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-sm'
+                                        : 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                    }`}
+                            >
+                                <tab.icon className="w-4 h-4" />
+                                {tab.label}
+                                {tab.id === 'notes' && notes.length > 0 && (
+                                    <span className="bg-[#1650EB]/20 text-[#1650EB] dark:bg-[#6095DB]/20 dark:text-[#6095DB] text-xs px-1.5 py-0.5 rounded-full">
+                                        {notes.length}
+                                    </span>
+                                )}
+                                {tab.id === 'credits' && wallets.length > 0 && (
+                                    <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs px-1.5 py-0.5 rounded-full">
+                                        {wallets.length}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </motion.div>
+
                 {/* Stats Cards - Clickable */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
-                    <button onClick={() => setShowTestsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] hover:shadow-lg transition-all text-left group">
+                    <button
+                        onClick={() => { setActiveTab('tests'); setShowTestsModal(true); }}
+                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'tests' ? 'border-[#1650EB] dark:border-[#6095DB] ring-2 ring-[#1650EB]/20' : 'border-gray-200 dark:border-gray-800'}`}
+                    >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <BookOpen className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
@@ -952,7 +1494,10 @@ export default function TeacherDashboard() {
                         </div>
                         <p className="text-xs text-[#1650EB] dark:text-[#6095DB] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all tests →</p>
                     </button>
-                    <button onClick={() => setShowStudentsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all text-left group">
+                    <button
+                        onClick={() => { setActiveTab('credits'); setShowStudentsModal(true); }}
+                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'credits' ? 'border-green-500 dark:border-green-400 ring-2 ring-green-500/20' : 'border-gray-200 dark:border-gray-800'}`}
+                    >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -964,7 +1509,10 @@ export default function TeacherDashboard() {
                         </div>
                         <p className="text-xs text-green-600 dark:text-green-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all students →</p>
                     </button>
-                    <button onClick={() => setShowSubmissionsModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg transition-all text-left group">
+                    <button
+                        onClick={() => { setActiveTab('analytics'); setShowSubmissionsModal(true); }}
+                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'analytics' ? 'border-purple-500 dark:border-purple-400 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-800'}`}
+                    >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <Trophy className="w-6 h-6 text-[#1650EB] dark:text-purple-400" />
@@ -976,7 +1524,10 @@ export default function TeacherDashboard() {
                         </div>
                         <p className="text-xs text-[#1650EB] dark:text-purple-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all submissions →</p>
                     </button>
-                    <button onClick={() => setShowScoreModal(true)} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 hover:shadow-lg transition-all text-left group">
+                    <button
+                        onClick={() => { setActiveTab('analytics'); setShowScoreModal(true); }}
+                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group border-gray-200 dark:border-gray-800`}
+                    >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <Target className="w-6 h-6 text-orange-600 dark:text-orange-400" />
@@ -988,34 +1539,6 @@ export default function TeacherDashboard() {
                         </div>
                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view breakdown →</p>
                     </button>
-                </motion.div>
-
-                {/* Tabs */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-6">
-                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
-                        {[
-                            { id: 'tests', label: 'My Tests', icon: BookOpen },
-                            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                            { id: 'notes', label: 'Subject Notes', icon: BookMarked },
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
-                                {tab.id === 'notes' && notes.length > 0 && (
-                                    <span className="bg-[#1650EB]/20 text-[#1650EB] dark:bg-[#6095DB]/20 dark:text-[#6095DB] text-xs px-1.5 py-0.5 rounded-full">
-                                        {notes.length}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
                 </motion.div>
 
                 {/* Tests Tab */}
@@ -1445,6 +1968,306 @@ export default function TeacherDashboard() {
                         )}
                     </motion.div>
                 )}
+
+                {/* Credit Economy Tab */}
+                {activeTab === 'credits' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Coins className="w-5 h-5 text-amber-500" /> Credit Economy
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Manage student coins, award badges, and create premium tests
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        resetPremiumTestForm();
+                                        setShowPremiumTestModal(true);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 transition-colors"
+                                >
+                                    <Star className="w-5 h-5" />
+                                    Create Premium Test
+                                </button>
+                                <button
+                                    onClick={loadCreditData}
+                                    disabled={creditDataLoading}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    {creditDataLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+                            <div className="bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl p-6 text-white">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                        <Coins className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-3xl font-bold">{wallets.reduce((acc, w) => acc + w.balance, 0)}</p>
+                                        <p className="text-white/80 text-sm">Total Coins in Circulation</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
+                                        <Sparkles className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{wallets.filter(w => w.hasGlowStatus).length}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Students with Glow</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
+                                        <Star className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{premiumTests.length}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Premium Tests</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center">
+                                        <Gift className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{wallets.reduce((acc, w) => acc + w.totalSpent, 0)}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Coins Spent</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Premium Tests Section */}
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-8">
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <Star className="w-4 h-4 text-amber-500" /> Premium Tests
+                            </h4>
+                            {premiumTests.length === 0 ? (
+                                <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                    <Star className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                    <p className="text-gray-500 dark:text-gray-400">No premium tests created yet</p>
+                                    <button
+                                        onClick={() => setShowPremiumTestModal(true)}
+                                        className="mt-4 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 transition-colors"
+                                    >
+                                        Create First Premium Test
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {premiumTests.map((test) => (
+                                        <div key={test.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h5 className="font-medium text-gray-900 dark:text-white">{test.title}</h5>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{test.subject} • Class {test.targetClass}</p>
+                                                </div>
+                                                <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded-full">
+                                                    <Coins className="w-3 h-3" /> {test.isMandatory ? 'FREE' : test.coinCost}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                <span>{test.questionCount} questions</span>
+                                                <span>{test.totalAttempts} attempts</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-xs ${test.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                                                    {test.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                                                <button
+                                                    onClick={async () => {
+                                                        await updatePremiumTest(test.id, { isActive: !test.isActive });
+                                                        loadCreditData();
+                                                    }}
+                                                    className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${test.isActive ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200'}`}
+                                                >
+                                                    {test.isActive ? 'Deactivate' : 'Activate'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeletePremiumTest(test.id)}
+                                                    className="px-3 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Student Wallets Section */}
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-8">
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <Users className="w-4 h-4" /> Student Wallets
+                            </h4>
+                            {wallets.length === 0 ? (
+                                <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                    <Coins className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                    <p className="text-gray-500 dark:text-gray-400">No student wallets yet. Wallets are created when students log in.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Balance</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Weekly Spent</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                                            {wallets.map((wallet) => {
+                                                const student = students.find(s => s.uid === wallet.studentId);
+                                                return (
+                                                    <tr key={wallet.id}>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${wallet.hasGlowStatus ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                                                                    {wallet.hasGlowStatus ? <Sparkles className="w-4 h-4 text-white" /> : <UserIcon className="w-4 h-4 text-gray-500" />}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium text-gray-900 dark:text-white">{wallet.studentName}</p>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">Class {wallet.studentClass}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="font-bold text-amber-600 dark:text-amber-400">{wallet.balance}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-600 dark:text-gray-400">{wallet.weeklySpent}/40</span>
+                                                                <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-amber-500"
+                                                                        style={{ width: `${Math.min(100, (wallet.weeklySpent / 40) * 100)}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {wallet.hasGlowStatus ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-medium rounded-full">
+                                                                    <Sparkles className="w-3 h-3" /> Glowing
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-400 text-xs">Normal</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedStudentForBonus(student || null);
+                                                                        setShowBonusModal(true);
+                                                                    }}
+                                                                    className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                                                                    title="Grant Bonus Coins"
+                                                                >
+                                                                    <Gift className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedStudentForBadge(student || null);
+                                                                        setShowBadgeModal(true);
+                                                                    }}
+                                                                    className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                                                                    title="Award Badge"
+                                                                >
+                                                                    <Award className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteWallet(wallet.studentId, wallet.studentName)}
+                                                                    disabled={deletingWalletId === wallet.studentId}
+                                                                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                                                    title="Delete Wallet & Data"
+                                                                >
+                                                                    {deletingWalletId === wallet.studentId ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recent Transactions */}
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Clock className="w-4 h-4" /> Recent Transactions
+                                </h4>
+                                {recentTransactions.length > 0 && (
+                                    <button
+                                        onClick={() => setShowDeleteTransactionsConfirm(true)}
+                                        className="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
+                            </div>
+                            {recentTransactions.length === 0 ? (
+                                <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                    <Clock className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                    <p className="text-gray-500 dark:text-gray-400">No transactions yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                                    {recentTransactions.slice(0, 20).map((tx) => (
+                                        <div key={tx.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === 'allowance' ? 'bg-green-100 dark:bg-green-900/50' :
+                                                tx.type === 'bonus' ? 'bg-amber-100 dark:bg-amber-900/50' :
+                                                    tx.type === 'test_attempt' ? 'bg-blue-100 dark:bg-blue-900/50' :
+                                                        'bg-purple-100 dark:bg-purple-900/50'
+                                                }`}>
+                                                {tx.type === 'allowance' ? <Gift className="w-4 h-4 text-green-600" /> :
+                                                    tx.type === 'bonus' ? <Sparkles className="w-4 h-4 text-amber-600" /> :
+                                                        tx.type === 'test_attempt' ? <Target className="w-4 h-4 text-blue-600" /> :
+                                                            <Star className="w-4 h-4 text-purple-600" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{tx.studentName}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+                                            </div>
+                                            <div className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {tx.amount > 0 ? '+' : ''}{tx.amount}
+                                            </div>
+                                            <div className="text-xs text-gray-400">
+                                                {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </main>
 
             {/* Create Test Modal */}
@@ -1567,6 +2390,79 @@ export default function TeacherDashboard() {
                                                             </div>
                                                         )}
                                                     </div>
+                                                </div>
+
+                                                {/* Credit Economy Settings Section */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                                                            <Coins className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Credit Economy Settings</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set coin cost for taking this test (counts toward student glow rewards)</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                <Coins className="w-4 h-4 inline mr-1" />
+                                                                Coin Cost
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                value={newTest.coinCost}
+                                                                onChange={(e) => setNewTest({ ...newTest, coinCost: Number(e.target.value) })}
+                                                                min={0}
+                                                                max={100}
+                                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                            />
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                Set to 0 for free tests
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setNewTest({ ...newTest, isMandatory: !newTest.isMandatory, coinCost: newTest.isMandatory ? newTest.coinCost : 0 })}
+                                                                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all w-full ${newTest.isMandatory ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'}`}
+                                                            >
+                                                                <div className={`w-5 h-5 rounded flex items-center justify-center ${newTest.isMandatory ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                                                    {newTest.isMandatory && <Check className="w-3 h-3 text-white" />}
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <p className="font-medium text-gray-900 dark:text-white text-sm">Free / Mandatory</p>
+                                                                    <p className="text-xs text-gray-500">No coin cost</p>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex items-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setNewTest({ ...newTest, isPremium: !newTest.isPremium })}
+                                                                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all w-full ${newTest.isPremium ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-700'}`}
+                                                            >
+                                                                <div className={`w-5 h-5 rounded flex items-center justify-center ${newTest.isPremium ? 'bg-amber-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                                                    {newTest.isPremium && <Star className="w-3 h-3 text-white" />}
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <p className="font-medium text-gray-900 dark:text-white text-sm">Premium Test</p>
+                                                                    <p className="text-xs text-gray-500">Show premium badge</p>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    {newTest.coinCost > 0 && !newTest.isMandatory && (
+                                                        <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                                            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                                                                <Coins className="w-4 h-4" />
+                                                                <span className="font-medium">Students will spend {newTest.coinCost} coins to take this test</span>
+                                                            </div>
+                                                            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                                                                This spending will count toward their weekly glow status goal of 40 coins.
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Marking Settings Section */}
@@ -3029,6 +3925,502 @@ export default function TeacherDashboard() {
                                     </div>
                                 </>
                             )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Grant Bonus Coins Modal */}
+            <AnimatePresence>
+                {showBonusModal && selectedStudentForBonus && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowBonusModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center">
+                                        <Gift className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Grant Bonus Coins</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">To {selectedStudentForBonus.name}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Amount
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                        {[5, 10, 25, 50].map((amount) => (
+                                            <button
+                                                key={amount}
+                                                onClick={() => setBonusAmount(amount)}
+                                                className={`flex-1 py-2 rounded-xl font-medium transition-colors ${bonusAmount === amount
+                                                    ? 'bg-amber-500 text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                    }`}
+                                            >
+                                                {amount}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <input
+                                        type="number"
+                                        value={bonusAmount}
+                                        onChange={(e) => setBonusAmount(Math.max(1, parseInt(e.target.value) || 0))}
+                                        min="1"
+                                        className="mt-3 w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                        placeholder="Or enter custom amount..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Reason
+                                    </label>
+                                    <textarea
+                                        value={bonusReason}
+                                        onChange={(e) => setBonusReason(e.target.value)}
+                                        placeholder="Why are you giving this bonus? e.g., Great performance, extra effort..."
+                                        rows={3}
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowBonusModal(false)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleGrantBonus}
+                                    disabled={isSendingBonus || bonusAmount <= 0 || !bonusReason.trim()}
+                                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isSendingBonus ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+                                    ) : (
+                                        <><Coins className="w-4 h-4" /> Send {bonusAmount} Coins</>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Award Badge Modal */}
+            <AnimatePresence>
+                {showBadgeModal && selectedStudentForBadge && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowBadgeModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-violet-500 rounded-xl flex items-center justify-center">
+                                        <Award className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Award Badge</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">To {selectedStudentForBadge.name}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Custom Badge Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customBadgeName}
+                                        onChange={(e) => setCustomBadgeName(e.target.value)}
+                                        placeholder="e.g., Star Performer, Quiz Champion..."
+                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Badge Icon
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['🏆', '⭐', '🎯', '🔥', '💎', '👑', '🌟', '🎖️', '🥇', '✨'].map((icon) => (
+                                            <button
+                                                key={icon}
+                                                onClick={() => setCustomBadgeIcon(icon)}
+                                                className={`w-10 h-10 text-xl rounded-xl transition-all ${customBadgeIcon === icon
+                                                    ? 'bg-purple-500 ring-2 ring-purple-300 scale-110'
+                                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                    }`}
+                                            >
+                                                {icon}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Reason for Award
+                                    </label>
+                                    <textarea
+                                        value={badgeReason}
+                                        onChange={(e) => setBadgeReason(e.target.value)}
+                                        placeholder="Why is this student receiving this badge?"
+                                        rows={3}
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowBadgeModal(false)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAwardBadge}
+                                    disabled={isAwardingBadge || !customBadgeName.trim() || !badgeReason.trim()}
+                                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-400 to-violet-500 text-white rounded-xl font-medium hover:from-purple-500 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isAwardingBadge ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Awarding...</>
+                                    ) : (
+                                        <><Award className="w-4 h-4" /> Award Badge</>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Create Premium Test Modal - 2 Step Process */}
+            <AnimatePresence>
+                {showPremiumTestModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => { setShowPremiumTestModal(false); resetPremiumTestForm(); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-amber-400 to-yellow-500">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                        <Star className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div className="text-white">
+                                        <h3 className="text-xl font-bold">Create Premium Test</h3>
+                                        <p className="text-amber-100">Step {premiumCreateStep} of 2 - {premiumCreateStep === 1 ? 'Upload Questions (JSON)' : 'Test Details'}</p>
+                                    </div>
+                                </div>
+                                {/* Progress Bar */}
+                                <div className="mt-4 flex gap-2">
+                                    <div className={`h-1 flex-1 rounded-full ${premiumCreateStep >= 1 ? 'bg-white' : 'bg-white/30'}`} />
+                                    <div className={`h-1 flex-1 rounded-full ${premiumCreateStep >= 2 ? 'bg-white' : 'bg-white/30'}`} />
+                                </div>
+                            </div>
+
+                            {/* Step 1: JSON Input */}
+                            {premiumCreateStep === 1 && (
+                                <div className="p-6 space-y-4">
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                                        <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">📝 JSON Format Guide</h4>
+                                        <pre className="text-xs text-amber-700 dark:text-amber-400 overflow-x-auto bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                            {`[
+  {
+    "question": "What is 2 + 2?",
+    "options": ["3", "4", "5", "6"],
+    "correctOption": 1,
+    "type": "mcq"
+  },
+  {
+    "question": "The sun rises in the east.",
+    "options": ["True", "False"],
+    "correctOption": 0,
+    "type": "true_false"
+  }
+]`}
+                                        </pre>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Paste Your Questions JSON
+                                        </label>
+                                        <textarea
+                                            value={premiumTestJson}
+                                            onChange={(e) => { setPremiumTestJson(e.target.value); setPremiumParseError(''); }}
+                                            placeholder='[{"question":"Your question here","options":["A","B","C","D"],"correctOption":0}]'
+                                            rows={10}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none resize-none font-mono text-sm"
+                                        />
+                                    </div>
+
+                                    {premiumParseError && (
+                                        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                            <p className="text-sm text-red-600 dark:text-red-400">{premiumParseError}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Step 2: Test Details */}
+                            {premiumCreateStep === 2 && (
+                                <div className="p-6 space-y-4">
+                                    {/* Questions Parsed Success */}
+                                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800 flex items-center gap-3">
+                                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-green-700 dark:text-green-300">
+                                                ✓ {premiumParsedQuestions.length} questions parsed successfully!
+                                            </p>
+                                            <p className="text-sm text-green-600 dark:text-green-400">Now fill in the test details below</p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Test Title *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newPremiumTest.title}
+                                            onChange={(e) => setNewPremiumTest({ ...newPremiumTest, title: e.target.value })}
+                                            placeholder="e.g., Advanced Math Challenge 🔥"
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Subject
+                                            </label>
+                                            <select
+                                                value={newPremiumTest.subject}
+                                                onChange={(e) => setNewPremiumTest({ ...newPremiumTest, subject: e.target.value as typeof SUBJECTS[number] })}
+                                                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            >
+                                                {SUBJECTS.map((s) => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Target Class
+                                            </label>
+                                            <select
+                                                value={newPremiumTest.targetClass}
+                                                onChange={(e) => setNewPremiumTest({ ...newPremiumTest, targetClass: Number(e.target.value) })}
+                                                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            >
+                                                {CLASS_OPTIONS.map((c) => (
+                                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Description
+                                        </label>
+                                        <textarea
+                                            value={newPremiumTest.description}
+                                            onChange={(e) => setNewPremiumTest({ ...newPremiumTest, description: e.target.value })}
+                                            placeholder="Brief description of this premium test..."
+                                            rows={2}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                💰 Coin Cost
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={newPremiumTest.coinCost}
+                                                onChange={(e) => setNewPremiumTest({ ...newPremiumTest, coinCost: parseInt(e.target.value) || 0 })}
+                                                min="0"
+                                                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                ⏱️ Duration (min)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={newPremiumTest.duration}
+                                                onChange={(e) => setNewPremiumTest({ ...newPremiumTest, duration: parseInt(e.target.value) || 0 })}
+                                                min="1"
+                                                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                                        <input
+                                            type="checkbox"
+                                            id="premiumIsMandatory"
+                                            checked={newPremiumTest.isMandatory}
+                                            onChange={(e) => setNewPremiumTest({ ...newPremiumTest, isMandatory: e.target.checked })}
+                                            className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+                                        />
+                                        <label htmlFor="premiumIsMandatory" className="text-sm text-gray-700 dark:text-gray-300">
+                                            <span className="font-medium">Mark as Mandatory (Free)</span>
+                                            <br />
+                                            <span className="text-gray-500 dark:text-gray-400">Students won't need to spend coins</span>
+                                        </label>
+                                    </div>
+
+                                    {premiumParseError && (
+                                        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                            <p className="text-sm text-red-600 dark:text-red-400">{premiumParseError}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between gap-3">
+                                <button
+                                    onClick={() => { setShowPremiumTestModal(false); resetPremiumTestForm(); }}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+
+                                <div className="flex gap-3">
+                                    {premiumCreateStep === 2 && (
+                                        <button
+                                            onClick={() => setPremiumCreateStep(1)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" /> Back
+                                        </button>
+                                    )}
+
+                                    {premiumCreateStep === 1 ? (
+                                        <button
+                                            onClick={handleParsePremiumJson}
+                                            disabled={!premiumTestJson.trim()}
+                                            className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Parse & Continue <ArrowRight className="w-4 h-4" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleCreatePremiumTest}
+                                            disabled={isCreatingPremiumTest || !newPremiumTest.title.trim()}
+                                            className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isCreatingPremiumTest ? (
+                                                <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
+                                            ) : (
+                                                <><Star className="w-4 h-4" /> Create Premium Test</>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete All Transactions Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteTransactionsConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowDeleteTransactionsConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 className="w-8 h-8 text-red-600 dark:text-red-400" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                    Delete All Transactions?
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                                    This will permanently delete all transaction history for all students. This action cannot be undone.
+                                </p>
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        onClick={() => setShowDeleteTransactionsConfirm(false)}
+                                        className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteAllTransactions}
+                                        disabled={isDeletingTransactions}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        {isDeletingTransactions ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</>
+                                        ) : (
+                                            <><Trash2 className="w-4 h-4" /> Delete All</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
