@@ -1,13 +1,15 @@
 // Firebase Configuration for Quizy App
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'firebase/auth';
+// By Nihal Pawar
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+    getAuth,
+    GoogleAuthProvider,
+    indexedDBLocalPersistence,
+    browserLocalPersistence,
+    initializeAuth
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-
-// Initialize Google Auth Provider
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-    prompt: 'select_account' // Always show account selector
-});
+import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBlCfylXmtdVgloa8eECVLINdsDecQxWoc",
@@ -19,15 +21,103 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (prevent multiple instances in development)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Auth with IndexedDB persistence for PWA
+// IndexedDB persists across browser sessions and app restarts (better than localStorage for PWA)
+import type { Auth } from 'firebase/auth';
+let auth: Auth;
+if (typeof window !== 'undefined') {
+    try {
+        // Use initializeAuth with persistence for better PWA support
+        auth = initializeAuth(app, {
+            persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+        });
+    } catch {
+        // If already initialized, get the existing instance
+        auth = getAuth(app);
+    }
+} else {
+    auth = getAuth(app);
+}
+
+// Initialize Firestore
 const db = getFirestore(app);
 
-// Set persistence to LOCAL for PWA - keeps users signed in even after closing app
-// This ensures the auth state is saved in localStorage/IndexedDB
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-    console.error('[Quizy] Failed to set auth persistence:', error);
+// Initialize Google Auth Provider
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+    prompt: 'select_account' // Always show account selector
 });
 
-export { app, auth, db, googleProvider };
+// Firebase Cloud Messaging for Push Notifications
+let messaging: Messaging | null = null;
+
+// Initialize FCM only in browser and if supported
+const initializeMessaging = async (): Promise<Messaging | null> => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+        const supported = await isSupported();
+        if (supported) {
+            messaging = getMessaging(app);
+            console.log('[Quizy FCM] Messaging initialized');
+            return messaging;
+        }
+    } catch (error) {
+        console.warn('[Quizy FCM] Messaging not supported:', error);
+    }
+    return null;
+};
+
+// Request notification permission and get FCM token
+const requestNotificationPermission = async (): Promise<string | null> => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log('[Quizy FCM] Notification permission denied');
+            return null;
+        }
+
+        const fcm = await initializeMessaging();
+        if (!fcm) return null;
+
+        // Get FCM token - you'll need to add your VAPID key from Firebase Console
+        const token = await getToken(fcm, {
+            vapidKey: 'YOUR_VAPID_KEY_HERE' // TODO: Replace with actual VAPID key from Firebase Console
+        });
+
+        console.log('[Quizy FCM] Token obtained:', token?.substring(0, 20) + '...');
+        return token;
+    } catch (error) {
+        console.error('[Quizy FCM] Error getting token:', error);
+        return null;
+    }
+};
+
+// Listen for foreground messages
+const onForegroundMessage = (callback: (payload: unknown) => void) => {
+    if (!messaging) {
+        initializeMessaging().then((fcm) => {
+            if (fcm) {
+                onMessage(fcm, callback);
+            }
+        });
+    } else {
+        onMessage(messaging, callback);
+    }
+};
+
+export {
+    app,
+    auth,
+    db,
+    googleProvider,
+    initializeMessaging,
+    requestNotificationPermission,
+    onForegroundMessage
+};
+
 

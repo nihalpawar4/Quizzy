@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWARegistration } from "@/components/PWAProvider";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { PushNotificationProvider } from "@/components/PushNotificationProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -101,10 +102,12 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            {children}
-            {/* PWA Components */}
-            <PWARegistration />
-            <InstallPrompt />
+            <PushNotificationProvider>
+              {children}
+              {/* PWA Components */}
+              <PWARegistration />
+              <InstallPrompt />
+            </PushNotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
