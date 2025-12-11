@@ -4,7 +4,7 @@
  * Authentication Context Provider
  * Manages user authentication state across the application
  * Supports Email/Password and Google Sign-In
- * INCLUDES HARD SESSION PERSISTENCE
+ * INCLUDES HARD SESSION PERSISTENCE + COOKIE BACKUP
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -19,12 +19,20 @@ import {
 import { auth, googleProvider, getSessionBackup, clearSessionBackup, initializePersistence } from '@/lib/firebase';
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
+import { saveUserSessionCookie, getUserSessionCookie, deleteUserSessionCookie } from '@/lib/cookieSession';
 import type { User } from '@/types';
+
+// Remembered user info from cookie
+interface RememberedUser {
+    email: string;
+    name: string;
+}
 
 // Extended AuthContextType with Google Sign-In and refreshUser
 interface ExtendedAuthContextType {
     user: User | null;
     loading: boolean;
+    rememberedUser: RememberedUser | null;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, name: string, role: 'student' | 'teacher', studentClass?: number) => Promise<void>;
     signInWithGoogle: (role: 'student' | 'teacher', studentClass?: number) => Promise<{ isNewUser: boolean; needsClassSelection: boolean }>;
@@ -38,6 +46,7 @@ const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [rememberedUser, setRememberedUser] = useState<RememberedUser | null>(null);
 
     // Check if email is admin
     const isAdminEmail = (email: string): boolean => {
@@ -65,6 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('[Quizy Auth] Starting auth initialization...');
         console.log('[Quizy Auth] Session backup exists:', !!sessionBackup);
+
+        // Check for cookie-based remembered user
+        const cookieSession = getUserSessionCookie();
+        if (cookieSession) {
+            console.log('[Quizy Auth] Cookie session found for:', cookieSession.email);
+            setRememberedUser({ email: cookieSession.email, name: cookieSession.name });
+        }
+
         if (sessionBackup) {
             console.log('[Quizy Auth] Backup email:', sessionBackup.email);
         }
@@ -118,7 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const profile = await getUserProfile(firebaseUser.uid);
                 if (profile) {
                     setUser(profile);
+                    setRememberedUser(null); // Clear remembered user since we're logged in
                     console.log('[Quizy Auth] ✅ Profile loaded:', profile.name);
+
+                    // Save to cookie for persistent remember-me
+                    saveUserSessionCookie({
+                        email: profile.email,
+                        name: profile.name,
+                        uid: profile.uid,
+                        role: profile.role
+                    });
+                    console.log('[Quizy Auth] Cookie session saved');
                 } else {
                     // User exists in Auth but not in Firestore
                     console.log('[Quizy Auth] ⚠️ User in Auth but no Firestore profile');
@@ -296,9 +323,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sign out - also clears session backup
+    // Sign out - also clears session backup and cookies
     const signOutUser = useCallback(async (): Promise<void> => {
         clearSessionBackup(); // Clear stored session data
+        deleteUserSessionCookie(); // Clear cookie
+        setRememberedUser(null); // Clear remembered user
         await firebaseSignOut(auth);
         setUser(null);
     }, []);
@@ -306,6 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const value: ExtendedAuthContextType = {
         user,
         loading,
+        rememberedUser,
         signIn,
         signUp,
         signInWithGoogle,

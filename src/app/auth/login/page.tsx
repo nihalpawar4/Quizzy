@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -34,7 +34,7 @@ function LoginForm() {
     const searchParams = useSearchParams();
     const roleParam = searchParams.get('role') as 'student' | 'teacher' | null;
 
-    const { signIn, signInWithGoogle, updateStudentClass, loading } = useAuth();
+    const { signIn, signInWithGoogle, updateStudentClass, loading, rememberedUser } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -43,6 +43,15 @@ function LoginForm() {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [showClassSelector, setShowClassSelector] = useState(false);
     const [selectedClass, setSelectedClass] = useState<number>(5);
+    const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+
+    // Pre-fill email if remembered user exists
+    useEffect(() => {
+        if (rememberedUser && !email) {
+            setEmail(rememberedUser.email);
+            setShowWelcomeBack(true);
+        }
+    }, [rememberedUser, email]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -151,8 +160,8 @@ function LoginForm() {
                                 onClick={() => setSelectedClass(option.value)}
                                 whileTap={{ scale: 0.95 }}
                                 className={`py-3 px-2 rounded-lg text-sm font-semibold transition-all ${selectedClass === option.value
-                                        ? 'bg-[#1650EB] text-white shadow-md'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    ? 'bg-[#1650EB] text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                     }`}
                             >
                                 {option.label}
