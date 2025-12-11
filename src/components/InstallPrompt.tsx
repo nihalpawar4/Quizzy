@@ -23,16 +23,26 @@ export function InstallPrompt() {
     }, [isInstallable, isInstalled]);
 
     useEffect(() => {
-        if (isInstalled) {
+        // Check if we already showed the "App Installed" toast before
+        const alreadyShownInstalled = localStorage.getItem('quizy-app-installed-shown');
+
+        if (isInstalled && !alreadyShownInstalled) {
+            // First time showing after install - show toast and remember
             setJustInstalled(true);
             setShowPrompt(false);
 
-            // Auto-dismiss the success toast after 5 seconds
+            // Remember that we showed this toast (never show again)
+            localStorage.setItem('quizy-app-installed-shown', 'true');
+
+            // Auto-dismiss the success toast after 3 seconds (faster)
             const timer = setTimeout(() => {
                 setJustInstalled(false);
-            }, 5000);
+            }, 3000);
 
             return () => clearTimeout(timer);
+        } else if (isInstalled) {
+            // Already showed toast before, just hide install prompt
+            setShowPrompt(false);
         }
     }, [isInstalled]);
 

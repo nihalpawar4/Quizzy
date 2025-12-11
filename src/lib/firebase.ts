@@ -1,6 +1,6 @@
 // Firebase Configuration for Quizy App
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Initialize Google Auth Provider
@@ -23,4 +23,11 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Set persistence to LOCAL for PWA - keeps users signed in even after closing app
+// This ensures the auth state is saved in localStorage/IndexedDB
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('[Quizy] Failed to set auth persistence:', error);
+});
+
 export { app, auth, db, googleProvider };
+
