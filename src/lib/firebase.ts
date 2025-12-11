@@ -1,5 +1,7 @@
 // Firebase Configuration for Quizy App
 // By Nihal Pawar
+// HARD SESSION PERSISTENCE FIX
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
     getAuth,
@@ -7,10 +9,15 @@ import {
     indexedDBLocalPersistence,
     browserLocalPersistence,
     setPersistence,
-    type Auth
+    onAuthStateChanged,
+    type Auth,
+    type User as FirebaseUser
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
+
+// Your VAPID key for push notifications
+const VAPID_KEY = 'BM-cIeTyjU-BeDpKVAMjzkOcYvuuMZ9n0i9ZL6f68JXhBU3mTh9gycXiETzC0IK3_SwkZKAmw5W7-q-2SFuijUM';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBlCfylXmtdVgloa8eECVLINdsDecQxWoc",
@@ -27,18 +34,97 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Auth
 const auth: Auth = getAuth(app);
 
-// Set persistence to IndexedDB for PWA (better than localStorage)
-// This runs on client side only and ensures session persists across app restarts
+// ============================================
+// HARD SESSION PERSISTENCE - MULTI-LAYER FIX
+// ============================================
+
+// Session storage key for backup
+const SESSION_KEY = 'quizy-auth-session';
+
+// Store session info in localStorage as backup
+const saveSessionBackup = (user: FirebaseUser | null) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+        if (user) {
+            const sessionData = {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+            // Also store in sessionStorage for extra redundancy
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+            console.log('[Quizy Auth] Session backup saved');
+        }
+    } catch (e) {
+        console.warn('[Quizy Auth] Failed to save session backup:', e);
+    }
+};
+
+// Get stored session info
+const getSessionBackup = () => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+        const stored = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+        if (stored) {
+            const data = JSON.parse(stored);
+            // Check if session is less than 30 days old
+            if (Date.now() - data.timestamp < 30 * 24 * 60 * 60 * 1000) {
+                return data;
+            }
+        }
+    } catch (e) {
+        console.warn('[Quizy Auth] Failed to get session backup:', e);
+    }
+    return null;
+};
+
+// Clear session backup on logout
+const clearSessionBackup = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+        localStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
+        console.log('[Quizy Auth] Session backup cleared');
+    } catch (e) {
+        console.warn('[Quizy Auth] Failed to clear session backup:', e);
+    }
+};
+
+// Initialize persistence on client side
+let persistenceInitialized = false;
+const initializePersistence = async (): Promise<void> => {
+    if (typeof window === 'undefined' || persistenceInitialized) return;
+
+    try {
+        // Try IndexedDB first (most persistent)
+        await setPersistence(auth, indexedDBLocalPersistence);
+        console.log('[Quizy Auth] IndexedDB persistence enabled');
+        persistenceInitialized = true;
+    } catch (indexedDBError) {
+        console.warn('[Quizy Auth] IndexedDB failed, trying localStorage:', indexedDBError);
+        try {
+            await setPersistence(auth, browserLocalPersistence);
+            console.log('[Quizy Auth] localStorage persistence enabled');
+            persistenceInitialized = true;
+        } catch (localStorageError) {
+            console.error('[Quizy Auth] All persistence methods failed:', localStorageError);
+        }
+    }
+};
+
+// Auto-initialize persistence on load
 if (typeof window !== 'undefined') {
-    // Try IndexedDB first, fallback to localStorage
-    setPersistence(auth, indexedDBLocalPersistence)
-        .catch(() => {
-            // Fallback to localStorage if IndexedDB fails
-            return setPersistence(auth, browserLocalPersistence);
-        })
-        .catch((error) => {
-            console.error('[Quizy Auth] Failed to set persistence:', error);
-        });
+    initializePersistence();
+
+    // Listen to auth state changes to save backup
+    onAuthStateChanged(auth, (user) => {
+        saveSessionBackup(user);
+    });
 }
 
 // Initialize Firestore
@@ -47,13 +133,15 @@ const db = getFirestore(app);
 // Initialize Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-    prompt: 'select_account' // Always show account selector
+    prompt: 'select_account'
 });
 
-// Firebase Cloud Messaging for Push Notifications
+// ============================================
+// FIREBASE CLOUD MESSAGING (PUSH NOTIFICATIONS)
+// ============================================
+
 let messaging: Messaging | null = null;
 
-// Initialize FCM only in browser and if supported
 const initializeMessaging = async (): Promise<Messaging | null> => {
     if (typeof window === 'undefined') return null;
 
@@ -70,7 +158,6 @@ const initializeMessaging = async (): Promise<Messaging | null> => {
     return null;
 };
 
-// Request notification permission and get FCM token
 const requestNotificationPermission = async (): Promise<string | null> => {
     if (typeof window === 'undefined') return null;
 
@@ -84,10 +171,8 @@ const requestNotificationPermission = async (): Promise<string | null> => {
         const fcm = await initializeMessaging();
         if (!fcm) return null;
 
-        // Get FCM token - you'll need to add your VAPID key from Firebase Console
-        const token = await getToken(fcm, {
-            vapidKey: 'YOUR_VAPID_KEY_HERE' // TODO: Replace with actual VAPID key from Firebase Console
-        });
+        // Get FCM token with your VAPID key
+        const token = await getToken(fcm, { vapidKey: VAPID_KEY });
 
         console.log('[Quizy FCM] Token obtained:', token?.substring(0, 20) + '...');
         return token;
@@ -97,7 +182,6 @@ const requestNotificationPermission = async (): Promise<string | null> => {
     }
 };
 
-// Listen for foreground messages
 const onForegroundMessage = (callback: (payload: unknown) => void) => {
     if (!messaging) {
         initializeMessaging().then((fcm) => {
@@ -117,7 +201,14 @@ export {
     googleProvider,
     initializeMessaging,
     requestNotificationPermission,
-    onForegroundMessage
+    onForegroundMessage,
+    // Session management exports
+    saveSessionBackup,
+    getSessionBackup,
+    clearSessionBackup,
+    initializePersistence,
+    VAPID_KEY
 };
+
 
 

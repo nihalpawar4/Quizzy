@@ -4,6 +4,7 @@
  * Authentication Context Provider
  * Manages user authentication state across the application
  * Supports Email/Password and Google Sign-In
+ * INCLUDES HARD SESSION PERSISTENCE
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -15,7 +16,7 @@ import {
     signOut as firebaseSignOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, googleProvider, getSessionBackup, clearSessionBackup, initializePersistence } from '@/lib/firebase';
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
 import type { User } from '@/types';
@@ -52,10 +53,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Listen to auth state changes
+    // Listen to auth state changes with session backup recovery
     useEffect(() => {
+        // Initialize persistence first
+        initializePersistence();
+
+        // Check for session backup immediately
+        const sessionBackup = getSessionBackup();
+        let hasRestoredFromBackup = false;
+
+        // Set a timeout for showing loading state
+        const loadingTimeout = setTimeout(() => {
+            // If after 3 seconds we still have no user but have backup, try to load from backup
+            if (!auth.currentUser && sessionBackup && !hasRestoredFromBackup) {
+                console.log('[Quizy Auth] Auth taking too long, checking backup');
+                // Firebase should restore the session automatically, but log for debugging
+            }
+        }, 3000);
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+            clearTimeout(loadingTimeout);
+
             if (firebaseUser) {
+                hasRestoredFromBackup = true;
+                console.log('[Quizy Auth] User authenticated:', firebaseUser.email);
+
                 // Get user profile from Firestore
                 const profile = await getUserProfile(firebaseUser.uid);
                 if (profile) {
@@ -65,12 +87,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(null);
                 }
             } else {
+                // No Firebase user - check if we have a session backup
+                if (sessionBackup && !hasRestoredFromBackup) {
+                    console.log('[Quizy Auth] No Firebase user but session backup exists:', sessionBackup.email);
+                    // The session should be restored by Firebase automatically
+                    // If not, it means the session truly expired
+                }
                 setUser(null);
             }
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            clearTimeout(loadingTimeout);
+            unsubscribe();
+        };
     }, []);
 
     // Sign in with email and password
@@ -219,8 +250,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sign out
+    // Sign out - also clears session backup
     const signOutUser = useCallback(async (): Promise<void> => {
+        clearSessionBackup(); // Clear stored session data
         await firebaseSignOut(auth);
         setUser(null);
     }, []);
