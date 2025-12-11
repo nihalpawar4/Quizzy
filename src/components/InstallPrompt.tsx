@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Smartphone, CheckCircle, Info } from 'lucide-react';
+import { Download, X, Smartphone, CheckCircle } from 'lucide-react';
 import { usePWA } from './PWAProvider';
 
 export function InstallPrompt() {
@@ -10,75 +10,67 @@ export function InstallPrompt() {
     const [showPrompt, setShowPrompt] = useState(false);
     const [installing, setInstalling] = useState(false);
     const [justInstalled, setJustInstalled] = useState(false);
-    const [showManualInstructions, setShowManualInstructions] = useState(false);
 
     useEffect(() => {
-        // Debug logging
-        console.log('[Quizy Install] isInstallable:', isInstallable);
-        console.log('[Quizy Install] isInstalled:', isInstalled);
-
-        // Show prompt after 3 seconds if installable and not dismissed before
-        if (isInstallable && !isInstalled) {
-            const dismissed = localStorage.getItem('quizy-install-dismissed');
-            console.log('[Quizy Install] Was dismissed before:', !!dismissed);
-
-            if (!dismissed) {
-                const timer = setTimeout(() => {
-                    console.log('[Quizy Install] Showing install prompt');
-                    setShowPrompt(true);
-                }, 3000);
-                return () => clearTimeout(timer);
-            }
-        }
-
-        // If not installable but not installed, show manual instructions after 10 seconds
-        if (!isInstallable && !isInstalled) {
-            const alreadyShownManual = localStorage.getItem('quizy-manual-install-shown');
-            if (!alreadyShownManual) {
-                const timer = setTimeout(() => {
-                    console.log('[Quizy Install] Showing manual install instructions');
-                    setShowManualInstructions(true);
-                }, 10000);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [isInstallable, isInstalled]);
-
-    useEffect(() => {
-        // Check if we already showed the "App Installed" toast before
-        const alreadyShownInstalled = localStorage.getItem('quizy-app-installed-shown');
-
-        if (isInstalled && !alreadyShownInstalled) {
-            setJustInstalled(true);
+        // Check if already installed
+        if (isInstalled) {
             setShowPrompt(false);
-            localStorage.setItem('quizy-app-installed-shown', 'true');
+            return;
+        }
 
-            const timer = setTimeout(() => {
-                setJustInstalled(false);
-            }, 3000);
+        const dismissed = localStorage.getItem('quizy-install-dismissed');
+        const alreadyInstalled = localStorage.getItem('quizy-app-installed-shown');
 
-            return () => clearTimeout(timer);
-        } else if (isInstalled) {
+        if (dismissed || alreadyInstalled) {
+            return;
+        }
+
+        // Always show the install prompt after 3 seconds
+        const timer = setTimeout(() => {
+            console.log('[Quizy Install] Showing install prompt');
+            setShowPrompt(true);
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [isInstalled]);
+
+    useEffect(() => {
+        if (isInstalled) {
+            const alreadyShownInstalled = localStorage.getItem('quizy-app-installed-shown');
+            if (!alreadyShownInstalled) {
+                setJustInstalled(true);
+                setShowPrompt(false);
+                localStorage.setItem('quizy-app-installed-shown', 'true');
+
+                const timer = setTimeout(() => {
+                    setJustInstalled(false);
+                }, 3000);
+
+                return () => clearTimeout(timer);
+            }
             setShowPrompt(false);
         }
     }, [isInstalled]);
 
     const handleInstall = async () => {
-        setInstalling(true);
-        const success = await installApp();
-        setInstalling(false);
-        if (success) {
-            setShowPrompt(false);
+        if (isInstallable) {
+            // Browser supports automatic install
+            setInstalling(true);
+            const success = await installApp();
+            setInstalling(false);
+            if (success) {
+                setShowPrompt(false);
+            }
+        } else {
+            // Show instructions alert for browsers without beforeinstallprompt
+            alert('To install Quizy:\n\n1. Tap the ⋮ menu in Chrome\n2. Select "Add to Home screen"\n3. Tap "Add"\n\nThe app will appear on your home screen!');
+            handleDismiss();
         }
     };
 
     const handleDismiss = () => {
         setShowPrompt(false);
-        // Remember dismissal for 7 days
         localStorage.setItem('quizy-install-dismissed', Date.now().toString());
-        setTimeout(() => {
-            localStorage.removeItem('quizy-install-dismissed');
-        }, 7 * 24 * 60 * 60 * 1000);
     };
 
     return (
@@ -195,76 +187,6 @@ export function InstallPrompt() {
                         >
                             <X className="w-5 h-5" />
                         </button>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Manual Install Instructions (for browsers that don't support beforeinstallprompt) */}
-            {showManualInstructions && (
-                <motion.div
-                    initial={{ opacity: 0, y: 100, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 100, scale: 0.9 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50"
-                >
-                    <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700" />
-                        <div className="p-5">
-                            <div className="flex items-start gap-4 mb-4">
-                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg flex-shrink-0">
-                                    <Info className="w-7 h-7 text-white" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
-                                        Install Quizy
-                                    </h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        By Nihal Pawar
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setShowManualInstructions(false);
-                                        localStorage.setItem('quizy-manual-install-shown', 'true');
-                                    }}
-                                    className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                >
-                                    <X className="w-5 h-5 text-gray-400" />
-                                </button>
-                            </div>
-
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                To install Quizy on your device:
-                            </p>
-
-                            <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mb-4">
-                                <li className="flex items-start gap-2">
-                                    <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                                    <span>Tap the <strong>menu (⋮)</strong> in Chrome</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                                    <span>Select <strong>"Add to Home screen"</strong></span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                                    <span>Tap <strong>"Add"</strong> to confirm</span>
-                                </li>
-                            </ol>
-
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => {
-                                    setShowManualInstructions(false);
-                                    localStorage.setItem('quizy-manual-install-shown', 'true');
-                                }}
-                                className="w-full btn btn-primary"
-                            >
-                                Got it!
-                            </motion.button>
-                        </div>
                     </div>
                 </motion.div>
             )}
