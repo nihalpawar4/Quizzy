@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, CheckCircle } from 'lucide-react';
 import { usePWA } from './PWAProvider';
@@ -10,49 +10,59 @@ export function InstallPrompt() {
     const [showPrompt, setShowPrompt] = useState(false);
     const [installing, setInstalling] = useState(false);
     const [justInstalled, setJustInstalled] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
+    // Handle mount state
     useEffect(() => {
-        // Check if already installed
+        setMounted(true);
+    }, []);
+
+    // Show install prompt after 3 seconds - ALWAYS (unless already installed/dismissed)
+    useEffect(() => {
+        if (!mounted) return;
+
+        // Don't show if already running as installed PWA
         if (isInstalled) {
-            setShowPrompt(false);
             return;
         }
 
+        // Check localStorage only after mounted (client-side)
         const dismissed = localStorage.getItem('quizy-install-dismissed');
         const alreadyInstalled = localStorage.getItem('quizy-app-installed-shown');
 
         if (dismissed || alreadyInstalled) {
+            console.log('[Quizy Install] Already dismissed or installed, not showing');
             return;
         }
 
-        // Always show the install prompt after 3 seconds
+        // Show the install prompt after 3 seconds - GUARANTEED
+        console.log('[Quizy Install] Will show prompt in 3 seconds...');
         const timer = setTimeout(() => {
-            console.log('[Quizy Install] Showing install prompt');
+            console.log('[Quizy Install] Showing install prompt NOW');
             setShowPrompt(true);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [isInstalled]);
+    }, [mounted, isInstalled]);
 
+    // Handle success toast when app is installed
     useEffect(() => {
-        if (isInstalled) {
-            const alreadyShownInstalled = localStorage.getItem('quizy-app-installed-shown');
-            if (!alreadyShownInstalled) {
-                setJustInstalled(true);
-                setShowPrompt(false);
-                localStorage.setItem('quizy-app-installed-shown', 'true');
+        if (!mounted || !isInstalled) return;
 
-                const timer = setTimeout(() => {
-                    setJustInstalled(false);
-                }, 3000);
+        const alreadyShown = localStorage.getItem('quizy-app-installed-shown');
+        if (!alreadyShown) {
+            setJustInstalled(true);
+            localStorage.setItem('quizy-app-installed-shown', 'true');
 
-                return () => clearTimeout(timer);
-            }
-            setShowPrompt(false);
+            const timer = setTimeout(() => {
+                setJustInstalled(false);
+            }, 3000);
+
+            return () => clearTimeout(timer);
         }
-    }, [isInstalled]);
+    }, [mounted, isInstalled]);
 
-    const handleInstall = async () => {
+    const handleInstall = useCallback(async () => {
         if (isInstallable) {
             // Browser supports automatic install
             setInstalling(true);
@@ -64,14 +74,18 @@ export function InstallPrompt() {
         } else {
             // Show instructions alert for browsers without beforeinstallprompt
             alert('To install Quizy:\n\n1. Tap the ⋮ menu in Chrome\n2. Select "Add to Home screen"\n3. Tap "Add"\n\nThe app will appear on your home screen!');
-            handleDismiss();
+            setShowPrompt(false);
+            localStorage.setItem('quizy-install-dismissed', Date.now().toString());
         }
-    };
+    }, [isInstallable, installApp]);
 
-    const handleDismiss = () => {
+    const handleDismiss = useCallback(() => {
         setShowPrompt(false);
         localStorage.setItem('quizy-install-dismissed', Date.now().toString());
-    };
+    }, []);
+
+    // Don't render anything on server
+    if (!mounted) return null;
 
     return (
         <AnimatePresence>
