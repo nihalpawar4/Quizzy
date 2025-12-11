@@ -53,53 +53,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Listen to auth state changes with session backup recovery
+    // Listen to auth state changes with extended recovery time
     useEffect(() => {
         // Initialize persistence first
         initializePersistence();
 
         // Check for session backup immediately
         const sessionBackup = getSessionBackup();
-        let hasRestoredFromBackup = false;
+        let authResolved = false;
+        let hasTriedRecovery = false;
 
-        // Set a timeout for showing loading state
-        const loadingTimeout = setTimeout(() => {
-            // If after 3 seconds we still have no user but have backup, try to load from backup
-            if (!auth.currentUser && sessionBackup && !hasRestoredFromBackup) {
-                console.log('[Quizy Auth] Auth taking too long, checking backup');
-                // Firebase should restore the session automatically, but log for debugging
+        console.log('[Quizy Auth] Starting auth initialization...');
+        console.log('[Quizy Auth] Session backup exists:', !!sessionBackup);
+        if (sessionBackup) {
+            console.log('[Quizy Auth] Backup email:', sessionBackup.email);
+        }
+
+        // Wait for Firebase to restore the session (up to 5 seconds)
+        // This is critical for Android Chrome after app kill
+        const waitForAuth = async () => {
+            // Wait a bit for IndexedDB to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Check if Firebase already has a user
+            if (auth.currentUser) {
+                console.log('[Quizy Auth] Auth already has user:', auth.currentUser.email);
+                return true;
             }
-        }, 3000);
+
+            // Wait more time for IndexedDB restoration
+            for (let i = 0; i < 10; i++) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                if (auth.currentUser) {
+                    console.log('[Quizy Auth] Auth restored after', (i + 1) * 500, 'ms');
+                    return true;
+                }
+            }
+
+            console.log('[Quizy Auth] Auth not restored after 5 seconds');
+            return false;
+        };
+
+        // Start waiting for auth
+        waitForAuth().then(restored => {
+            if (!restored && !authResolved) {
+                console.log('[Quizy Auth] Session not restored, checking backup...');
+                hasTriedRecovery = true;
+
+                if (sessionBackup) {
+                    console.log('[Quizy Auth] Have backup but Firebase failed to restore');
+                    // Firebase failed to restore - the session is truly gone
+                    // User needs to login again
+                }
+            }
+        });
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-            clearTimeout(loadingTimeout);
+            authResolved = true;
 
             if (firebaseUser) {
-                hasRestoredFromBackup = true;
-                console.log('[Quizy Auth] User authenticated:', firebaseUser.email);
+                console.log('[Quizy Auth] ✅ User authenticated:', firebaseUser.email);
 
                 // Get user profile from Firestore
                 const profile = await getUserProfile(firebaseUser.uid);
                 if (profile) {
                     setUser(profile);
+                    console.log('[Quizy Auth] ✅ Profile loaded:', profile.name);
                 } else {
-                    // User exists in Auth but not in Firestore (edge case - new Google user)
+                    // User exists in Auth but not in Firestore
+                    console.log('[Quizy Auth] ⚠️ User in Auth but no Firestore profile');
                     setUser(null);
                 }
             } else {
-                // No Firebase user - check if we have a session backup
-                if (sessionBackup && !hasRestoredFromBackup) {
-                    console.log('[Quizy Auth] No Firebase user but session backup exists:', sessionBackup.email);
-                    // The session should be restored by Firebase automatically
-                    // If not, it means the session truly expired
+                console.log('[Quizy Auth] ❌ No authenticated user');
+
+                if (sessionBackup && !hasTriedRecovery) {
+                    console.log('[Quizy Auth] Backup exists, waiting for Firebase...');
+                    // Give Firebase more time
+                    setTimeout(() => {
+                        if (!auth.currentUser) {
+                            console.log('[Quizy Auth] Firebase did not restore session');
+                            setUser(null);
+                            setLoading(false);
+                        }
+                    }, 2000);
+                    return; // Don't set loading false yet
                 }
+
                 setUser(null);
             }
             setLoading(false);
         });
 
         return () => {
-            clearTimeout(loadingTimeout);
             unsubscribe();
         };
     }, []);
