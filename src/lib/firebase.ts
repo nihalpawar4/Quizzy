@@ -6,7 +6,8 @@ import {
     GoogleAuthProvider,
     indexedDBLocalPersistence,
     browserLocalPersistence,
-    initializeAuth
+    setPersistence,
+    type Auth
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
@@ -23,22 +24,21 @@ const firebaseConfig = {
 // Initialize Firebase (prevent multiple instances in development)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth with IndexedDB persistence for PWA
-// IndexedDB persists across browser sessions and app restarts (better than localStorage for PWA)
-import type { Auth } from 'firebase/auth';
-let auth: Auth;
+// Initialize Auth
+const auth: Auth = getAuth(app);
+
+// Set persistence to IndexedDB for PWA (better than localStorage)
+// This runs on client side only and ensures session persists across app restarts
 if (typeof window !== 'undefined') {
-    try {
-        // Use initializeAuth with persistence for better PWA support
-        auth = initializeAuth(app, {
-            persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+    // Try IndexedDB first, fallback to localStorage
+    setPersistence(auth, indexedDBLocalPersistence)
+        .catch(() => {
+            // Fallback to localStorage if IndexedDB fails
+            return setPersistence(auth, browserLocalPersistence);
+        })
+        .catch((error) => {
+            console.error('[Quizy Auth] Failed to set persistence:', error);
         });
-    } catch {
-        // If already initialized, get the existing instance
-        auth = getAuth(app);
-    }
-} else {
-    auth = getAuth(app);
 }
 
 // Initialize Firestore
