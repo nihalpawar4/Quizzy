@@ -26,6 +26,13 @@ export function InstallPrompt() {
         if (isInstalled) {
             setJustInstalled(true);
             setShowPrompt(false);
+
+            // Auto-dismiss the success toast after 5 seconds
+            const timer = setTimeout(() => {
+                setJustInstalled(false);
+            }, 5000);
+
+            return () => clearTimeout(timer);
         }
     }, [isInstalled]);
 
@@ -149,11 +156,18 @@ export function InstallPrompt() {
                     className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50"
                 >
                     <div className="bg-green-500 text-white rounded-xl px-4 py-3 shadow-lg flex items-center gap-3">
-                        <CheckCircle className="w-6 h-6" />
-                        <div>
+                        <CheckCircle className="w-6 h-6 flex-shrink-0" />
+                        <div className="flex-1">
                             <p className="font-medium">App Installed!</p>
                             <p className="text-sm text-green-100">Quizy is now on your device</p>
                         </div>
+                        <button
+                            onClick={() => setJustInstalled(false)}
+                            className="p-1 rounded-full hover:bg-green-600 transition-colors flex-shrink-0"
+                            aria-label="Dismiss notification"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                 </motion.div>
             )}
