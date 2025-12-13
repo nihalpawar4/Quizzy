@@ -323,14 +323,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sign out - also clears session backup and cookies
+    // Sign out - set offline, clear session backup and cookies
     const signOutUser = useCallback(async (): Promise<void> => {
+        // Set user offline BEFORE signing out (while we still have permissions)
+        if (user?.uid) {
+            try {
+                const { setUserOffline } = await import('@/lib/chatServices');
+                await setUserOffline(user.uid);
+            } catch (error) {
+                console.log('Could not set user offline:', error);
+            }
+        }
+
         clearSessionBackup(); // Clear stored session data
         deleteUserSessionCookie(); // Clear cookie
         setRememberedUser(null); // Clear remembered user
+        setUser(null); // Clear user state first
         await firebaseSignOut(auth);
-        setUser(null);
-    }, []);
+    }, [user?.uid]);
 
     const value: ExtendedAuthContextType = {
         user,

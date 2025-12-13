@@ -25,23 +25,35 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 
-// FAQ Data
+// FAQ Data - Updated with all features
 const faqData = [
   {
     question: "What is Quizy?",
-    answer: "Quizy is a modern academic testing platform designed for students of Classes 5-10. It provides interactive tests, instant feedback, and progress tracking to help students excel in their studies."
+    answer: "Quizy is a modern academic testing platform designed for students of Classes 5-10. It provides interactive tests, instant feedback, real-time chat with teachers, progress tracking, and a gamified learning experience with credits and achievements."
   },
   {
     question: "How do I start taking tests?",
-    answer: "Simply create a free student account, select your class level, and you'll see all available tests for your grade. Click 'Start Test' on any test to begin practicing!"
+    answer: "Simply create a free student account, select your class level, and you'll see all available tests for your grade. Click 'Start Test' on any test to begin practicing! Your scores are saved automatically."
   },
   {
     question: "Is Quizy free to use?",
-    answer: "Yes! Quizy is completely free for students. Our mission is to make quality education accessible to everyone."
+    answer: "Yes! Quizy is completely free for students and teachers. All features including tests, chat, profile pictures, and analytics are available at no cost."
+  },
+  {
+    question: "What are the chat features?",
+    answer: "Quizy includes WhatsApp-like real-time messaging! Students can chat with teachers, share emojis, see online status, get typing indicators, and message read receipts (single/double ticks). You can also customize chat backgrounds!"
+  },
+  {
+    question: "Can I add a profile picture?",
+    answer: "Yes! Go to Profile Settings and upload your photo. Your picture will appear in the chat, dashboard, and everywhere in the app. It updates in real-time for everyone!"
+  },
+  {
+    question: "What is the Credit Economy?",
+    answer: "Teachers can enable a fun Credit Economy where students earn credits for completing tests and activities. It's a gamified way to motivate learning! Teachers can track and manage student credits."
   },
   {
     question: "Can I retake tests?",
-    answer: "Currently, each test can be taken once to maintain result integrity. However, new tests are added regularly, giving you plenty of opportunities to practice."
+    answer: "Currently, each test can be taken once to maintain result integrity. However, new tests are added regularly by teachers, giving you plenty of opportunities to practice."
   },
   {
     question: "How are teachers verified?",
@@ -49,7 +61,19 @@ const faqData = [
   },
   {
     question: "What subjects are available?",
-    answer: "We offer tests in Mathematics, Science, English, Hindi, Social Studies, Computer Science, and General Knowledge. More subjects are being added soon!"
+    answer: "We offer tests in Mathematics, Science, English, Hindi, Social Studies, Computer Science, and General Knowledge. Teachers can create tests for any subject!"
+  },
+  {
+    question: "Can teachers track student progress?",
+    answer: "Absolutely! Teachers have access to detailed analytics showing student performance, test completion rates, class rankings, and can export data as CSV for analysis."
+  },
+  {
+    question: "Do I get notifications?",
+    answer: "Yes! You'll receive real-time notifications for new messages, test results, and important updates. The app badge shows unread counts so you never miss anything."
+  },
+  {
+    question: "Is there dark mode?",
+    answer: "Yes! Quizy supports Light, Dark, and System themes. Change your preference anytime from Profile Settings - your eyes will thank you during late-night study sessions!"
   }
 ];
 
@@ -701,23 +725,38 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto mt-20"
+          className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto mt-20"
         >
           {[
             {
               icon: BookOpen,
               title: 'Subject Tests',
-              description: 'Practice tests for all major subjects tailored to your class level.',
+              description: 'Practice tests for all major subjects tailored to your class level with instant results.',
+            },
+            {
+              icon: MessageCircle,
+              title: 'Real-Time Chat',
+              description: 'WhatsApp-like messaging with teachers - emojis, read receipts, typing indicators!',
             },
             {
               icon: Trophy,
-              title: 'Instant Results',
-              description: 'Get immediate feedback and see exactly where you need improvement.',
+              title: 'Credit Economy',
+              description: 'Earn credits for completing tests and activities. A fun, gamified learning experience!',
+            },
+            {
+              icon: User,
+              title: 'Profile Pictures',
+              description: 'Upload your photo and see it everywhere - in chat, dashboard, and with classmates!',
             },
             {
               icon: GraduationCap,
               title: 'Track Progress',
               description: 'Monitor your growth with detailed analytics and performance reports.',
+            },
+            {
+              icon: Sparkles,
+              title: 'Dark/Light Theme',
+              description: 'Study comfortably any time with beautiful dark mode support across the app.',
             },
           ].map((feature, index) => (
             <motion.div

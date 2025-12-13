@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import { PWARegistration } from "@/components/PWAProvider";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushNotificationProvider } from "@/components/PushNotificationProvider";
@@ -102,12 +103,14 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <PushNotificationProvider>
-              {children}
-              {/* PWA Components */}
-              <PWARegistration />
-              <InstallPrompt />
-            </PushNotificationProvider>
+            <ChatProvider>
+              <PushNotificationProvider>
+                {children}
+                {/* PWA Components */}
+                <PWARegistration />
+                <InstallPrompt />
+              </PushNotificationProvider>
+            </ChatProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

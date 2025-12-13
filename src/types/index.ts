@@ -10,6 +10,8 @@ export interface User {
     role: 'student' | 'teacher';
     studentClass?: number; // 5-10, only for students
     createdAt: Date;
+    // Profile picture
+    photoURL?: string | null;
     // Streak tracking
     currentStreak?: number; // Current consecutive days
     longestStreak?: number; // All-time longest streak
@@ -281,6 +283,119 @@ export interface PerformanceWeek {
     hadGlowStatus: boolean;
     badgesEarned: string[]; // Badge names
 }
+
+// ==================== REAL-TIME CHAT TYPES ====================
+
+// Message status enum
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'seen';
+
+// Chat conversation between student and teacher
+export interface Chat {
+    id: string;
+    participants: string[]; // [studentId, teacherId]
+    studentId: string;
+    teacherId: string;
+    studentName: string;
+    teacherName: string;
+    studentClass: number;
+    lastMessage?: {
+        text: string;
+        senderId: string;
+        timestamp: Date;
+        status: MessageStatus;
+    };
+    unreadCount: {
+        [userId: string]: number;
+    };
+    createdAt: Date;
+    updatedAt: Date;
+    // Profile photos
+    participantPhotoURLs?: {
+        [userId: string]: string;
+    };
+    // Deletion tracking
+    deletedFor?: string[]; // User IDs who deleted this chat
+    deletedAt?: {
+        [userId: string]: Date;
+    };
+}
+
+// Individual message in a chat
+export interface Message {
+    id: string;
+    chatId: string;
+    senderId: string;
+    senderName: string;
+    senderRole: 'student' | 'teacher';
+    text: string;
+    timestamp: Date;
+    status: MessageStatus;
+    deliveredAt?: Date;
+    seenAt?: Date;
+    // For deletion
+    deletedFor?: string[]; // User IDs who deleted this message
+}
+
+// User presence/online status
+export interface UserPresence {
+    userId: string;
+    isOnline: boolean;
+    lastSeen: Date;
+    typing?: {
+        chatId: string | null;
+        timestamp: Date;
+    };
+    // Device info for multiple device support
+    deviceId?: string;
+    platform?: 'web' | 'mobile';
+}
+
+// Typing indicator data
+export interface TypingStatus {
+    isTyping: boolean;
+    userId: string;
+    userName: string;
+    chatId: string;
+    timestamp: Date;
+}
+
+// Chat notification for push notifications
+export interface ChatNotification {
+    id: string;
+    type: 'new_message';
+    chatId: string;
+    senderId: string;
+    senderName: string;
+    messagePreview: string;
+    recipientId: string;
+    createdAt: Date;
+    isRead: boolean;
+}
+
+// Chat list item for display
+export interface ChatListItem {
+    id: string;
+    participantId: string; // The other person in the chat
+    participantName: string;
+    participantRole: 'student' | 'teacher';
+    participantClass?: number;
+    lastMessage?: string;
+    lastMessageTime?: Date;
+    lastMessageSenderId?: string;
+    unreadCount: number;
+    isOnline: boolean;
+    lastSeen?: Date;
+    isTyping?: boolean;
+}
+
+// Chat constants
+export const CHAT_CONSTANTS = {
+    MESSAGE_RETENTION_DAYS: 30, // Delete messages after 30 days
+    TYPING_TIMEOUT_MS: 3000, // Typing indicator timeout
+    PRESENCE_HEARTBEAT_MS: 30000, // Update presence every 30 seconds
+    MAX_MESSAGE_LENGTH: 2000, // Maximum message length
+    MESSAGES_PER_PAGE: 50, // Messages to load per page
+} as const;
 
 // Credit economy constants
 export const CREDIT_CONSTANTS = {

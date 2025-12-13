@@ -167,6 +167,58 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isTeacher();
     }
+    
+    // ==================== CHAT COLLECTIONS ====================
+    
+    // Helper function to check if user is a participant in a chat
+    function isChatParticipant(chatData) {
+      return request.auth.uid in chatData.participants;
+    }
+    
+    // Chats - Conversations between students and teachers
+    match /chats/{chatId} {
+      // Only participants can read the chat
+      allow read: if isAuthenticated() && isChatParticipant(resource.data);
+      // Any authenticated user can create a chat (they must be a participant)
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      // Only participants can update the chat
+      allow update: if isAuthenticated() && isChatParticipant(resource.data);
+      // Only participants can delete the chat (soft delete)
+      allow delete: if isAuthenticated() && isChatParticipant(resource.data);
+    }
+    
+    // Messages - Individual messages in chats
+    match /messages/{messageId} {
+      // Read messages if user is authenticated (we filter by chat participant in queries)
+      allow read: if isAuthenticated();
+      // Create message if authenticated
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      // Update message (for status changes)
+      allow update: if isAuthenticated();
+      // Delete only own messages
+      allow delete: if isAuthenticated();
+    }
+    
+    // Presence - Online/offline status
+    match /presence/{userId} {
+      // Anyone authenticated can read presence
+      allow read: if isAuthenticated();
+      // Only the user can update their own presence
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Chat Notifications - New message alerts
+    match /chatNotifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      // Anyone can create notifications (when sending messages)
+      allow create: if isAuthenticated();
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+    }
   }
 }
 

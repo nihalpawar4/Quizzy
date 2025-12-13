@@ -52,5 +52,10 @@ export const COLLECTIONS = {
     USER_BADGES: 'userBadges',
     PREMIUM_TESTS: 'premiumTests',
     APP_SETTINGS: 'appSettings',
+    // Chat collections
+    CHATS: 'chats',
+    MESSAGES: 'messages',
+    PRESENCE: 'presence',
+    CHAT_NOTIFICATIONS: 'chatNotifications',
 } as const;
 

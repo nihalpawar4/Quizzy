@@ -27,7 +27,6 @@ import {
     XCircle,
     AlertCircle,
     Download,
-    Flame,
     Timer,
     BookMarked,
     ExternalLink,
@@ -40,7 +39,7 @@ import {
     Star
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getResultsByStudent, hasStudentTakenTest, canClaimStreakToday, claimDailyStreak, markNotificationAsViewed, deleteNotification } from '@/lib/services';
+import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
 import {
     getOrCreateWallet,
     getStudentTransactions,
@@ -65,9 +64,11 @@ import {
     RewardPopup,
     GlowStatusIndicator
 } from '@/components/CreditEconomy';
+import { useChat } from '@/contexts/ChatContext';
 
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
+    const { totalUnreadCount } = useChat();
     const router = useRouter();
 
     const [tests, setTests] = useState<Test[]>([]);
@@ -94,9 +95,7 @@ export default function StudentDashboard() {
     const [notes, setNotes] = useState<SubjectNote[]>([]);
     const [selectedNote, setSelectedNote] = useState<SubjectNote | null>(null);
 
-    // Streak state
-    const [streakLoading, setStreakLoading] = useState(false);
-    const [streakMessage, setStreakMessage] = useState<string | null>(null);
+
 
     // Notification state
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -302,33 +301,7 @@ export default function StudentDashboard() {
         URL.revokeObjectURL(url);
     };
 
-    // Handle streak claim - no page refresh needed
-    const handleClaimStreak = async () => {
-        if (!user || streakLoading) return;
 
-        if (!canClaimStreakToday(user)) {
-            setStreakMessage('Already claimed today! Come back tomorrow. 🌟');
-            setTimeout(() => setStreakMessage(null), 3000);
-            return;
-        }
-
-        setStreakLoading(true);
-        try {
-            const result = await claimDailyStreak(user.uid, user);
-            if (result) {
-                setStreakMessage(result.message);
-                // Refresh user data without page reload
-                await refreshUser();
-                setTimeout(() => setStreakMessage(null), 3000);
-            }
-        } catch (error) {
-            console.error('Error claiming streak:', error);
-            setStreakMessage('Failed to claim streak. Try again!');
-            setTimeout(() => setStreakMessage(null), 3000);
-        } finally {
-            setStreakLoading(false);
-        }
-    };
 
 
     const loadData = useCallback(async (testsData?: Test[]) => {
@@ -763,7 +736,7 @@ export default function StudentDashboard() {
     const quickActions = [
         { icon: Target, label: 'Practice Mode', color: 'bg-green-100 dark:bg-green-900/50', iconColor: 'text-green-600 dark:text-green-400', comingSoon: true },
         { icon: Calendar, label: 'Study Planner', color: 'bg-blue-100 dark:bg-blue-900/50', iconColor: 'text-blue-600 dark:text-blue-400', comingSoon: true },
-        { icon: MessageSquare, label: 'Ask Doubts', color: 'bg-pink-100 dark:bg-pink-900/50', iconColor: 'text-pink-600 dark:text-pink-400', comingSoon: true },
+        { icon: MessageSquare, label: 'Chat', color: 'bg-pink-100 dark:bg-pink-900/50', iconColor: 'text-pink-600 dark:text-pink-400', comingSoon: false, href: '/chat' },
         { icon: HelpCircle, label: 'Help Center', color: 'bg-orange-100 dark:bg-orange-900/50', iconColor: 'text-orange-600 dark:text-orange-400', comingSoon: true },
     ];
 
@@ -1017,48 +990,40 @@ export default function StudentDashboard() {
                             />
                         )}
 
-                        {/* Daily Streak in Navbar */}
-                        <div className="relative">
-                            <button
-                                onClick={handleClaimStreak}
-                                disabled={!canClaimStreakToday(user) || streakLoading}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${canClaimStreakToday(user)
-                                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-md hover:shadow-lg animate-pulse'
-                                    : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                                    }`}
-                                title={canClaimStreakToday(user) ? 'Click to claim today\'s streak!' : `${user.currentStreak || 0} day streak`}
-                            >
-                                {streakLoading ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Flame className="w-4 h-4" />
+
+
+                        <Link
+                            href="/chat"
+                            className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
+                            title="Chat with Teacher"
+                        >
+                            <div className="relative">
+                                <MessageSquare className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                {totalUnreadCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
+                                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                                    </span>
                                 )}
-                                <span className="font-bold text-sm">{user.currentStreak || 0}</span>
-                                {canClaimStreakToday(user) && <span className="text-xs">Claim!</span>}
-                            </button>
-                            {/* Streak Message Toast */}
-                            <AnimatePresence>
-                                {streakMessage && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10, scale: 0.9 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                                        className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg whitespace-nowrap z-50"
-                                    >
-                                        <p className="font-bold text-sm">{streakMessage}</p>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                            </div>
+                            <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
+                        </Link>
 
                         <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group" title="Profile Settings">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Class {user.studentClass}</p>
                             </div>
-                            <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                            </div>
+                            {user.photoURL ? (
+                                <img
+                                    src={user.photoURL}
+                                    alt={user.name}
+                                    className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                    <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                </div>
+                            )}
                         </Link>
                         <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Sign Out">
                             <LogOut className="w-5 h-5" />
@@ -1086,38 +1051,22 @@ export default function StudentDashboard() {
                                 </p>
                             </div>
                             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                                {/* First-time user: no lastStreakDate or no results */}
-                                {!user.lastStreakDate && results.length === 0 ? (
+                                {/* First-time user: no results */}
+                                {results.length === 0 ? (
                                     <>Welcome, <span className="bg-gradient-to-r from-[#1650EB] to-[#6095DB] bg-clip-text text-transparent">{user.name}</span>! 🎉</>
                                 ) : (
                                     <>Welcome back, <span className="bg-gradient-to-r from-[#1650EB] to-[#6095DB] bg-clip-text text-transparent">{user.name}</span>! 👋</>
                                 )}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-400 mt-2">
-                                {!user.lastStreakDate && results.length === 0 ? (
+                                {results.length === 0 ? (
                                     "Let's get started with your first test! Pick one below."
-                                ) : results.length === 0 ? (
-                                    "Ready to challenge yourself? Pick a test below."
                                 ) : (
-                                    `You&apos;ve completed ${results.length} test${results.length > 1 ? 's' : ''}. Keep up the great work!`
+                                    `You've completed ${results.length} test${results.length > 1 ? 's' : ''}. Keep up the great work!`
                                 )}
                             </p>
                         </div>
-                        {/* Quick motivation badge */}
-                        {user.currentStreak && user.currentStreak >= 3 && (
-                            <motion.div
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 rounded-2xl border border-orange-200 dark:border-orange-800"
-                            >
-                                <span className="text-2xl">🔥</span>
-                                <div>
-                                    <p className="text-sm font-bold text-orange-700 dark:text-orange-300">{user.currentStreak} Day Streak!</p>
-                                    <p className="text-xs text-orange-600 dark:text-orange-400">You&apos;re on fire!</p>
-                                </div>
-                            </motion.div>
-                        )}
+
                     </div>
                 </motion.div>
 
@@ -1519,22 +1468,40 @@ export default function StudentDashboard() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {quickActions.map((action, index) => (
-                            <motion.button
+                            <motion.div
                                 key={action.label}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 + index * 0.05 }}
-                                onClick={() => handleComingSoon(action.label)}
-                                className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
                             >
-                                <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                    <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
-                                    {action.comingSoon && <p className="text-xs text-gray-400">Coming Soon</p>}
-                                </div>
-                            </motion.button>
+                                {action.href ? (
+                                    <Link
+                                        href={action.href}
+                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
+                                    >
+                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                            <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleComingSoon(action.label)}
+                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
+                                    >
+                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                            <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
+                                            {action.comingSoon && <p className="text-xs text-gray-400">Coming Soon</p>}
+                                        </div>
+                                    </button>
+                                )}
+                            </motion.div>
                         ))}
                     </div>
                 </motion.div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,7 +24,8 @@ import {
     Download,
     Trash2,
     X,
-    Sparkles
+    Sparkles,
+    Camera
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext'
@@ -34,11 +35,13 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, delete
 import { auth, db } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { getGlowProgress } from '@/lib/creditServices';
+import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePictureService';
 
 export default function ProfilePage() {
-    const { user, loading: authLoading, signOut } = useAuth();
+    const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { theme, setTheme } = useTheme();
     const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [studentClass, setStudentClass] = useState<number>(5);
     const [currentPassword, setCurrentPassword] = useState('');
@@ -56,6 +59,11 @@ export default function ProfilePage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // Profile picture states
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [photoError, setPhotoError] = useState<string | null>(null);
+    const [photoSuccess, setPhotoSuccess] = useState(false);
 
     // Glow status
     const [glowProgress, setGlowProgress] = useState({ spent: 0, threshold: 40, percentage: 0, hasGlow: false });
@@ -176,6 +184,51 @@ export default function ProfilePage() {
         URL.revokeObjectURL(url);
     };
 
+    // Handle profile picture upload
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user || !e.target.files?.length) return;
+
+        const file = e.target.files[0];
+        setIsUploadingPhoto(true);
+        setPhotoError(null);
+        setPhotoSuccess(false);
+
+        try {
+            await uploadProfilePicture(user.uid, file);
+            await refreshUser(); // Refresh user data to get new photoURL
+            setPhotoSuccess(true);
+            setTimeout(() => setPhotoSuccess(false), 3000);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                setPhotoError(error.message);
+            } else {
+                setPhotoError('Failed to upload photo. Please try again.');
+            }
+        } finally {
+            setIsUploadingPhoto(false);
+            if (e.target) e.target.value = ''; // Reset input
+        }
+    };
+
+    // Handle profile picture delete
+    const handlePhotoDelete = async () => {
+        if (!user || !user.photoURL) return;
+
+        setIsUploadingPhoto(true);
+        setPhotoError(null);
+
+        try {
+            await deleteProfilePicture(user.uid);
+            await refreshUser();
+            setPhotoSuccess(true);
+            setTimeout(() => setPhotoSuccess(false), 3000);
+        } catch (error) {
+            setPhotoError('Failed to delete photo. Please try again.');
+        } finally {
+            setIsUploadingPhoto(false);
+        }
+    };
+
     const handleSignOut = async () => {
         await signOut();
         router.push('/');
@@ -228,17 +281,88 @@ export default function ProfilePage() {
             <main className="max-w-4xl mx-auto px-6 py-8">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-full flex items-center justify-center">
-                            <User className="w-8 h-8 text-white" />
+                        {/* Profile Picture with Upload */}
+                        <div className="relative group">
+                            {user.photoURL ? (
+                                <img
+                                    src={user.photoURL}
+                                    alt={user.name}
+                                    className="w-20 h-20 rounded-full object-cover border-4 border-[#1650EB]/20"
+                                />
+                            ) : (
+                                <div className="w-20 h-20 bg-gradient-to-br from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center border-4 border-[#1650EB]/20">
+                                    <User className="w-10 h-10 text-white" />
+                                </div>
+                            )}
+
+                            {/* Upload Overlay */}
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploadingPhoto}
+                                className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                            >
+                                {isUploadingPhoto ? (
+                                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                ) : (
+                                    <Camera className="w-6 h-6 text-white" />
+                                )}
+                            </button>
+
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="hidden"
+                            />
                         </div>
-                        <div>
+
+                        <div className="flex-1">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
                             <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
                             <span className="inline-block mt-1 px-2 py-0.5 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
                                 {user.role === 'teacher' ? 'Teacher' : `Class ${user.studentClass} Student`}
                             </span>
+
+                            {/* Photo Actions */}
+                            <div className="flex items-center gap-2 mt-3">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploadingPhoto}
+                                    className="text-xs text-[#1650EB] hover:underline disabled:opacity-50"
+                                >
+                                    {user.photoURL ? 'Change Photo' : 'Add Photo'}
+                                </button>
+                                {user.photoURL && (
+                                    <>
+                                        <span className="text-gray-300 dark:text-gray-600">•</span>
+                                        <button
+                                            onClick={handlePhotoDelete}
+                                            disabled={isUploadingPhoto}
+                                            className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                                        >
+                                            Remove
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+                    {/* Photo Status Messages */}
+                    {photoError && (
+                        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                            <p className="text-sm text-red-700 dark:text-red-400">{photoError}</p>
+                        </div>
+                    )}
+                    {photoSuccess && (
+                        <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <p className="text-sm text-green-700 dark:text-green-400">Photo updated successfully!</p>
+                        </div>
+                    )}
                 </motion.div>
 
                 <div className="grid gap-6">

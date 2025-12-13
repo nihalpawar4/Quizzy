@@ -52,7 +52,8 @@ import {
     Star,
     Sparkles,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -105,6 +106,7 @@ import { CREDIT_CONSTANTS } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useChat } from '@/contexts/ChatContext';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
 
@@ -126,6 +128,7 @@ const QUESTION_TYPES: QuestionTypeOption[] = [
 
 export default function TeacherDashboard() {
     const { user, loading: authLoading, signOut } = useAuth();
+    const { totalUnreadCount } = useChat();
     const router = useRouter();
 
     // Data states
@@ -1425,14 +1428,38 @@ export default function TeacherDashboard() {
                             </span>
                         </button>
 
+                        <Link
+                            href="/chat"
+                            className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
+                            title="Chat with Students"
+                        >
+                            <div className="relative">
+                                <MessageCircle className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                {totalUnreadCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
+                                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
+                        </Link>
+
                         <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group" title="Profile Settings">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Teacher</p>
                             </div>
-                            <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                <UserIcon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                            </div>
+                            {user.photoURL ? (
+                                <img
+                                    src={user.photoURL}
+                                    alt={user.name}
+                                    className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                    <UserIcon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                </div>
+                            )}
                         </Link>
                         <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Sign Out">
                             <LogOut className="w-5 h-5" />
