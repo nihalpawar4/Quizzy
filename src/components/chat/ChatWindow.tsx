@@ -164,9 +164,9 @@ export default function ChatWindow({
     };
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-gray-950">
-            {/* Header - Quizy Theme */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-[#1650EB] to-[#6095DB]">
+        <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+            {/* Header - Fixed at top */}
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-[#1650EB] to-[#6095DB]">
                 <div className="flex items-center gap-3">
                     {/* Back Button - Always visible */}
                     <button
@@ -433,14 +433,16 @@ export default function ChatWindow({
                 )}
             </div>
 
-            {/* Input */}
-            <ChatInput
-                onSend={onSendMessage}
-                onTyping={onTyping}
-                onStopTyping={onStopTyping}
-                disabled={false}
-                placeholder={`Message ${participant.name}...`}
-            />
+            {/* Input - Fixed at bottom */}
+            <div className="flex-shrink-0">
+                <ChatInput
+                    onSend={onSendMessage}
+                    onTyping={onTyping}
+                    onStopTyping={onStopTyping}
+                    disabled={false}
+                    placeholder={`Message ${participant.name}...`}
+                />
+            </div>
 
             {/* Clear History Confirmation Modal */}
             {showClearConfirm && (

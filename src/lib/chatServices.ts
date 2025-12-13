@@ -136,7 +136,18 @@ export function subscribeToMultiplePresence(
 
 // Cache for user photo URLs to avoid repeated fetches
 const userPhotoCache: { [userId: string]: { url: string | null; fetchedAt: number } } = {};
-const PHOTO_CACHE_TTL = 60000; // 1 minute cache
+const PHOTO_CACHE_TTL = 5000; // 5 seconds cache for faster real-time updates
+
+/**
+ * Clear photo cache for a user (call when profile picture is updated)
+ */
+export function clearUserPhotoCache(userId?: string): void {
+    if (userId) {
+        delete userPhotoCache[userId];
+    } else {
+        Object.keys(userPhotoCache).forEach(key => delete userPhotoCache[key]);
+    }
+}
 
 /**
  * Get user's photo URL

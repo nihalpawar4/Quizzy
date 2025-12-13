@@ -7,6 +7,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { COLLECTIONS } from './constants';
+import { clearUserPhotoCache } from './chatServices';
 
 /**
  * Convert image file to base64 string
@@ -101,6 +102,8 @@ export async function uploadProfilePicture(
             photoURL: smallerBase64,
             updatedAt: new Date()
         });
+        // Clear cache so others see update immediately
+        clearUserPhotoCache(userId);
         return smallerBase64;
     }
 
@@ -110,6 +113,9 @@ export async function uploadProfilePicture(
         photoURL: resizedBase64,
         updatedAt: new Date()
     });
+
+    // Clear cache so others see update immediately
+    clearUserPhotoCache(userId);
 
     return resizedBase64;
 }
@@ -124,6 +130,8 @@ export async function deleteProfilePicture(userId: string): Promise<void> {
         photoURL: null,
         updatedAt: new Date()
     });
+    // Clear cache so others see update immediately
+    clearUserPhotoCache(userId);
 }
 
 /**
