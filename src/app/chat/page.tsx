@@ -99,7 +99,10 @@ export default function ChatPage() {
     // Mobile: Show only chat window when a chat is selected
     if (isMobileView && currentChat) {
         return (
-            <div className="h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden fixed inset-0">
+            <div
+                className="bg-gray-50 dark:bg-gray-950 fixed inset-0 flex flex-col"
+                style={{ height: '100dvh' }}
+            >
                 <ChatWindow
                     chat={currentChat}
                     messages={messages}

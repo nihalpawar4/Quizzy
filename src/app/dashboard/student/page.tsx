@@ -1477,10 +1477,16 @@ export default function StudentDashboard() {
                                 {action.href ? (
                                     <Link
                                         href={action.href}
-                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
+                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3 relative"
                                     >
-                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform relative`}>
                                             <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+                                            {/* Chat notification badge */}
+                                            {action.label === 'Chat' && totalUnreadCount > 0 && (
+                                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
+                                                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-left">
                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>

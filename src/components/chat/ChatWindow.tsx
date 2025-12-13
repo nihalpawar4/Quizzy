@@ -164,7 +164,7 @@ export default function ChatWindow({
     };
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+        <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950">
             {/* Header - Fixed at top */}
             <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-[#1650EB] to-[#6095DB]">
                 <div className="flex items-center gap-3">
@@ -374,9 +374,9 @@ export default function ChatWindow({
                 </div>
             )}
 
-            {/* Messages Area */}
+            {/* Messages Area - Scrollable */}
             <div
-                className={`flex-1 overflow-y-auto p-4 space-y-4 ${bgColor.startsWith('custom-') ? '' : bgColor}`}
+                className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${bgColor.startsWith('custom-') ? '' : bgColor}`}
                 style={bgColor.startsWith('custom-') && customBgColor ? { backgroundColor: customBgColor } : undefined}
             >
                 {messages.length === 0 ? (
