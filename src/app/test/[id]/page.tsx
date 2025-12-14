@@ -148,6 +148,9 @@ export default function TestPage() {
     const [userBalance, setUserBalance] = useState<number>(0);
     const [isPayingCoins, setIsPayingCoins] = useState(false);
 
+    // Review modal state
+    const [showReviewModal, setShowReviewModal] = useState(false);
+
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Determine question type - use stored type if available, otherwise infer from options
@@ -322,7 +325,7 @@ export default function TestPage() {
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev === null || prev <= 1) {
-                    handleSubmit();
+                    handleFinalSubmit();
                     return 0;
                 }
                 return prev - 1;
@@ -497,9 +500,16 @@ export default function TestPage() {
         return normalizedUser === normalizedCorrect;
     };
 
-    const handleSubmit = async () => {
+    // Show review modal before final submit
+    const handleSubmitClick = () => {
+        setShowReviewModal(true);
+    };
+
+    // Final submit after review confirmation
+    const handleFinalSubmit = async () => {
         if (!user || !test || isSubmitting) return;
 
+        setShowReviewModal(false);
         setIsSubmitting(true);
         const endTime = new Date();
         setTestEndTime(endTime);
@@ -961,6 +971,136 @@ export default function TestPage() {
 
     return (
         <div ref={containerRef} className="min-h-screen bg-gray-50 dark:bg-gray-950 zen-mode">
+            {/* Review Modal */}
+            <AnimatePresence>
+                {showReviewModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                        onClick={() => setShowReviewModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            {/* Header */}
+                            <div className="sticky top-0 bg-gradient-to-r from-[#1650EB] to-indigo-600 p-6 text-white">
+                                <h2 className="text-2xl font-bold mb-1">Review Your Test</h2>
+                                <p className="text-indigo-100">Check your answers before final submission</p>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 space-y-6">
+                                {/* Stats Summary */}
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center border border-green-200 dark:border-green-800">
+                                        <p className="text-3xl font-bold text-green-600 dark:text-green-400">{answeredCount}</p>
+                                        <p className="text-sm text-green-700 dark:text-green-400 mt-1">Attempted</p>
+                                    </div>
+                                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 text-center border border-orange-200 dark:border-orange-800">
+                                        <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{questions.length - answeredCount}</p>
+                                        <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">Unattempted</p>
+                                    </div>
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-800">
+                                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{questions.length}</p>
+                                        <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">Total</p>
+                                    </div>
+                                </div>
+
+                                {/* Time Remaining */}
+                                {timeLeft !== null && (
+                                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-purple-700 dark:text-purple-400 font-medium">Time Remaining:</span>
+                                            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">
+                                                {formatTime(timeLeft)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Question Grid */}
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Questions Overview</h3>
+                                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                                        {questions.map((_, index) => {
+                                            const isAnswered = answers[index] !== null && answers[index] !== '';
+                                            const isCurrent = index === currentIndex;
+                                            return (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => {
+                                                        setCurrentIndex(index);
+                                                        setShowReviewModal(false);
+                                                    }}
+                                                    className={`aspect-square rounded-lg font-medium text-sm transition-all ${isCurrent
+                                                            ? 'bg-[#1650EB] text-white ring-2 ring-[#1650EB] ring-offset-2 dark:ring-offset-gray-900'
+                                                            : isAnswered
+                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-300 dark:border-green-700'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-700'
+                                                        } hover:scale-110`}
+                                                >
+                                                    {index + 1}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Warning if unattempted */}
+                                {answeredCount < questions.length && (
+                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
+                                        <div className="flex items-start gap-3">
+                                            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                                            <div>
+                                                <p className="font-medium text-yellow-800 dark:text-yellow-400">
+                                                    {questions.length - answeredCount} question(s) unattempted
+                                                </p>
+                                                <p className="text-sm text-yellow-700 dark:text-yellow-500 mt-1">
+                                                    You can go back and answer them before submitting.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800/50 p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+                                <button
+                                    onClick={() => setShowReviewModal(false)}
+                                    className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    Go Back
+                                </button>
+                                <button
+                                    onClick={handleFinalSubmit}
+                                    disabled={isSubmitting}
+                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Flag className="w-5 h-5" />
+                                            Submit Test
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Anti-Cheat Warning Toast */}
             <AnimatePresence>
                 {showAntiCheatWarning && (
@@ -968,8 +1108,7 @@ export default function TestPage() {
                         initial={{ opacity: 0, y: -50 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -50 }}
-                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3"
-                    >
+                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
                         <AlertTriangle className="w-5 h-5" />
                         <span className="font-medium">{warningMessage}</span>
                     </motion.div>
@@ -1012,7 +1151,7 @@ export default function TestPage() {
                         )}
                         {/* Submit Button with Stats */}
                         <button
-                            onClick={handleSubmit}
+                            onClick={handleSubmitClick}
                             disabled={isSubmitting}
                             className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -1144,7 +1283,7 @@ export default function TestPage() {
                     </button>
 
                     {currentIndex === questions.length - 1 ? (
-                        <button onClick={handleSubmit} disabled={isSubmitting} className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <button onClick={handleSubmitClick} disabled={isSubmitting} className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             {isSubmitting ? (<><Loader2 className="w-5 h-5 animate-spin" />Submitting...</>) : (<><Flag className="w-5 h-5" />Finish Test</>)}
                         </button>
                     ) : (
