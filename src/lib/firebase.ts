@@ -9,10 +9,12 @@ import {
     GoogleAuthProvider,
     indexedDBLocalPersistence,
     browserLocalPersistence,
+    browserPopupRedirectResolver,
     onAuthStateChanged,
     type Auth,
     type User as FirebaseUser
 } from 'firebase/auth';
+
 import { getFirestore } from 'firebase/firestore';
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 
@@ -42,8 +44,10 @@ if (typeof window !== 'undefined') {
     try {
         // Initialize with IndexedDB persistence (survives browser close)
         // Falls back to localStorage if IndexedDB is not available
+        // NOTE: popupRedirectResolver is REQUIRED for signInWithPopup to work
         auth = initializeAuth(app, {
-            persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+            persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+            popupRedirectResolver: browserPopupRedirectResolver
         });
         console.log('[Quizy Auth] ✅ Auth initialized with IndexedDB + localStorage persistence');
     } catch (error) {
