@@ -219,6 +219,23 @@ service cloud.firestore {
       // Users can delete their own notifications
       allow delete: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
     }
+    
+    // ==================== WEBRTC CALLS COLLECTION ====================
+    
+    // Calls - WebRTC call signaling documents
+    match /calls/{callId} {
+      // Only caller or callee can read the call
+      allow read: if isAuthenticated() && 
+        (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+      // Authenticated users can create calls (must be the caller)
+      allow create: if isAuthenticated() && request.resource.data.callerId == request.auth.uid;
+      // Only caller or callee can update the call (for SDP/ICE exchange)
+      allow update: if isAuthenticated() && 
+        (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+      // Only caller or callee can delete the call
+      allow delete: if isAuthenticated() && 
+        (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+    }
   }
 }
 

@@ -4,9 +4,11 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { CallProvider } from "@/contexts/CallContext";
 import { PWARegistration } from "@/components/PWAProvider";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushNotificationProvider } from "@/components/PushNotificationProvider";
+import { IncomingCallModal, CallScreen } from "@/components/call";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -104,12 +106,17 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <ChatProvider>
-              <PushNotificationProvider>
-                {children}
-                {/* PWA Components */}
-                <PWARegistration />
-                <InstallPrompt />
-              </PushNotificationProvider>
+              <CallProvider>
+                <PushNotificationProvider>
+                  {children}
+                  {/* PWA Components */}
+                  <PWARegistration />
+                  <InstallPrompt />
+                  {/* Call Components (global) */}
+                  <IncomingCallModal />
+                  <CallScreen />
+                </PushNotificationProvider>
+              </CallProvider>
             </ChatProvider>
           </AuthProvider>
         </ThemeProvider>
@@ -117,4 +124,3 @@ export default function RootLayout({
     </html>
   );
 }
-

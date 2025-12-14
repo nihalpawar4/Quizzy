@@ -57,5 +57,7 @@ export const COLLECTIONS = {
     MESSAGES: 'messages',
     PRESENCE: 'presence',
     CHAT_NOTIFICATIONS: 'chatNotifications',
+    // WebRTC Call collections
+    CALLS: 'calls',
 } as const;
 

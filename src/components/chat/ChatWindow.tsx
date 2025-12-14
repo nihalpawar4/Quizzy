@@ -6,13 +6,14 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MoreVertical, Trash2, X, Palette, Check, Search, Volume2, VolumeX, Star, Copy, Info, Ban } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Trash2, X, Palette, Check, Search, Volume2, VolumeX, Star, Copy, Info, Phone, Video } from 'lucide-react';
 import type { Chat, Message, UserPresence } from '@/types';
 import { groupMessagesByDate } from '@/lib/chatServices';
 import OnlineStatus from './OnlineStatus';
 import MessageBubble, { DateSeparator, SystemMessage } from './MessageBubble';
 import ChatInput from './ChatInput';
 import { TypingBubble } from './TypingIndicator';
+import { useCall } from '@/contexts/CallContext';
 
 interface ChatWindowProps {
     chat: Chat;
@@ -80,6 +81,10 @@ export default function ChatWindow({
     const [searchQuery, setSearchQuery] = useState('');
     const [showContactInfo, setShowContactInfo] = useState(false);
     const [customBgColor, setCustomBgColor] = useState<string | null>(null);
+    const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+
+    // Call hook
+    const { initiateCall, isInCall } = useCall();
 
     // Get the other participant
     const participant = currentUserRole === 'student'
@@ -227,6 +232,66 @@ export default function ChatWindow({
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
+                    {/* Audio Call Button */}
+                    <button
+                        onClick={async () => {
+                            if (isInCall || isInitiatingCall) return;
+                            setIsInitiatingCall(true);
+                            try {
+                                await initiateCall(
+                                    participant.id,
+                                    participant.name,
+                                    chat.participantPhotoURLs?.[participant.id],
+                                    chat.id,
+                                    'audio'
+                                );
+                            } catch (error) {
+                                console.error('Failed to initiate audio call:', error);
+                                alert('Failed to start call. Please check your microphone permissions.');
+                            } finally {
+                                setIsInitiatingCall(false);
+                            }
+                        }}
+                        disabled={isInCall || isInitiatingCall}
+                        className={`p-2 rounded-full transition-all duration-200 ${isInCall || isInitiatingCall
+                                ? 'text-white/40 cursor-not-allowed'
+                                : 'text-white/80 hover:text-white hover:bg-white/10'
+                            }`}
+                        title="Audio Call"
+                    >
+                        <Phone className="w-5 h-5" />
+                    </button>
+
+                    {/* Video Call Button */}
+                    <button
+                        onClick={async () => {
+                            if (isInCall || isInitiatingCall) return;
+                            setIsInitiatingCall(true);
+                            try {
+                                await initiateCall(
+                                    participant.id,
+                                    participant.name,
+                                    chat.participantPhotoURLs?.[participant.id],
+                                    chat.id,
+                                    'video'
+                                );
+                            } catch (error) {
+                                console.error('Failed to initiate video call:', error);
+                                alert('Failed to start call. Please check your camera/microphone permissions.');
+                            } finally {
+                                setIsInitiatingCall(false);
+                            }
+                        }}
+                        disabled={isInCall || isInitiatingCall}
+                        className={`p-2 rounded-full transition-all duration-200 ${isInCall || isInitiatingCall
+                                ? 'text-white/40 cursor-not-allowed'
+                                : 'text-white/80 hover:text-white hover:bg-white/10'
+                            }`}
+                        title="Video Call"
+                    >
+                        <Video className="w-5 h-5" />
+                    </button>
+
                     {/* Search in chat */}
                     <button
                         onClick={() => setShowSearchMessages(!showSearchMessages)}

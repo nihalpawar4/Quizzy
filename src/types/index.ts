@@ -404,3 +404,44 @@ export const CREDIT_CONSTANTS = {
     GLOW_THRESHOLD: 40, // Coins to spend for glow status
     ALLOWANCE_DAY: 1, // Monday (0 = Sunday, 1 = Monday, etc.)
 } as const;
+
+// ==================== WEBRTC CALL TYPES ====================
+
+// Call status
+export type CallStatus = 'ringing' | 'connecting' | 'connected' | 'ended' | 'rejected' | 'missed' | 'busy';
+
+// Call type
+export type CallType = 'audio' | 'video';
+
+// Call document stored in Firestore
+export interface Call {
+    id: string;
+    callerId: string;
+    callerName: string;
+    callerPhotoURL?: string;
+    calleeId: string;
+    calleeName: string;
+    calleePhotoURL?: string;
+    chatId: string; // Reference to the chat
+    type: CallType;
+    status: CallStatus;
+    // WebRTC signaling data
+    offer?: RTCSessionDescriptionInit;
+    answer?: RTCSessionDescriptionInit;
+    // ICE candidates stored as subcollection or array
+    callerCandidates?: RTCIceCandidateInit[];
+    calleeCandidates?: RTCIceCandidateInit[];
+    // Timestamps
+    createdAt: Date;
+    answeredAt?: Date;
+    endedAt?: Date;
+    // Duration in seconds (calculated when call ends)
+    duration?: number;
+}
+
+// Call constants
+export const CALL_CONSTANTS = {
+    RING_TIMEOUT_MS: 45000, // 45 seconds before call is marked as missed
+    ICE_GATHERING_TIMEOUT_MS: 5000, // Wait 5 seconds for ICE gathering
+} as const;
+
