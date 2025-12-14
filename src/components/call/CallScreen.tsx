@@ -46,12 +46,13 @@ export default function CallScreen() {
     const remoteAudioRef = useRef<HTMLAudioElement>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
+    const [audioBlocked, setAudioBlocked] = useState(false);
 
     // Set up LOCAL video element when local stream changes
     useEffect(() => {
         if (localVideoRef.current && localStream) {
             localVideoRef.current.srcObject = localStream;
-            console.log('Local stream attached to video element');
+            console.log('[CallScreen] Local stream attached to video element');
         }
     }, [localStream]);
 
@@ -59,10 +60,10 @@ export default function CallScreen() {
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream && currentCall?.type === 'video') {
             remoteVideoRef.current.srcObject = remoteStream;
-            console.log('Remote stream attached to video element');
+            console.log('[CallScreen] Remote stream attached to video element');
             // Ensure video plays
             remoteVideoRef.current.play().catch(err => {
-                console.log('Video autoplay blocked:', err);
+                console.log('[CallScreen] Video autoplay blocked:', err);
             });
         }
     }, [remoteStream, currentCall?.type]);
@@ -73,7 +74,8 @@ export default function CallScreen() {
         const audioElement = remoteAudioRef.current;
         if (!audioElement || !remoteStream) return;
 
-        console.log('[CallScreen] Setting up remote audio, call type:', currentCall?.type);
+        const callType = currentCall?.type || 'unknown';
+        console.log(`[CallScreen] 🔊 Setting up REMOTE AUDIO for ${callType.toUpperCase()} call`);
         console.log('[CallScreen] Remote stream tracks:', remoteStream.getTracks().map(t => `${t.kind}:${t.enabled}`));
 
         // Set the stream
@@ -92,11 +94,12 @@ export default function CallScreen() {
 
         const playAudio = async () => {
             try {
-                console.log('[CallScreen] Attempting to play remote audio, attempt:', retryCount + 1);
+                console.log(`[CallScreen] 🎵 Attempting to play remote audio for ${callType}, attempt:`, retryCount + 1);
                 await audioElement.play();
-                console.log('[CallScreen] ✅ Remote audio is playing! Paused:', audioElement.paused, 'ReadyState:', audioElement.readyState);
+                console.log(`[CallScreen] ✅ Remote audio is PLAYING for ${callType}! Paused:`, audioElement.paused, 'ReadyState:', audioElement.readyState);
+                setAudioBlocked(false);
             } catch (err) {
-                console.error('[CallScreen] ❌ Audio play failed, attempt', retryCount + 1, ':', err);
+                console.error(`[CallScreen] ❌ Audio play failed for ${callType}, attempt`, retryCount + 1, ':', err);
 
                 if (retryCount < maxRetries) {
                     retryCount++;
@@ -104,7 +107,11 @@ export default function CallScreen() {
                     console.log('[CallScreen] Retrying in', delay, 'ms...');
                     setTimeout(() => playAudio(), delay);
                 } else {
-                    console.error('[CallScreen] CRITICAL: Failed to play audio after', maxRetries, 'attempts');
+                    console.error(`[CallScreen] CRITICAL: Failed to play ${callType} audio after`, maxRetries, 'attempts');
+                    // Show blocked indicator for audio calls only
+                    if (callType === 'audio') {
+                        setAudioBlocked(true);
+                    }
                     // Try one last time by reloading the stream
                     audioElement.load();
                     setTimeout(() => {
@@ -119,14 +126,18 @@ export default function CallScreen() {
 
         // Also listen for stream changes
         const handleTrackEnabled = () => {
-            console.log('[CallScreen] Remote track enabled/disabled, attempting play');
+            console.log(`[CallScreen] Remote track enabled/disabled for ${callType}, attempting play`);
             audioElement.play().catch(e => console.log('[CallScreen] Track change play failed:', e));
         };
 
         remoteStream.getTracks().forEach(track => {
             track.addEventListener('enabled', handleTrackEnabled);
-            track.addEventListener('mute', () => console.log('[CallScreen] Remote track muted:', track.kind));
-            track.addEventListener('unmute', () => console.log('[CallScreen] Remote track unmuted:', track.kind));
+            track.addEventListener('mute', () => console.log(`[CallScreen] Remote ${track.kind} track muted`));
+            track.addEventListener('unmute', () => {
+                console.log(`[CallScreen] Remote ${track.kind} track unmuted`);
+                // Try to play again when unmuted
+                audioElement.play().catch(e => console.log('[CallScreen] Unmute play failed:', e));
+            });
         });
 
         return () => {
@@ -425,10 +436,36 @@ export default function CallScreen() {
                         <h2 className="text-3xl font-bold text-white mb-2">{participantName}</h2>
 
                         {/* Call Status */}
-                        <p className="text-gray-400 text-lg mb-12">{getStatusText()}</p>
+                        <p className="text-gray-400 text-lg mb-4">{getStatusText()}</p>
+
+                        {/* Audio Blocked Warning - Click to unmute */}
+                        {audioBlocked && callStatus === 'connected' && (
+                            <motion.button
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                    console.log('[CallScreen] User clicked to unmute blocked audio');
+                                    const audioElement = remoteAudioRef.current;
+                                    if (audioElement) {
+                                        audioElement.play()
+                                            .then(() => {
+                                                console.log('[CallScreen] ✅ Audio playing after user interaction');
+                                                setAudioBlocked(false);
+                                            })
+                                            .catch(e => console.error('[CallScreen] Failed to play after click:', e));
+                                    }
+                                }}
+                                className="mb-8 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg flex items-center gap-2"
+                            >
+                                <Volume2 className="w-5 h-5" />
+                                Tap to enable audio
+                            </motion.button>
+                        )}
 
                         {/* Audio Visualization (placeholder) */}
-                        {callStatus === 'connected' && (
+                        {callStatus === 'connected' && !audioBlocked && (
                             <div className="flex items-center gap-1 mb-12">
                                 {[...Array(5)].map((_, i) => (
                                     <motion.div
