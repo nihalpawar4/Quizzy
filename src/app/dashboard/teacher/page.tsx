@@ -1683,16 +1683,16 @@ export default function TeacherDashboard() {
                 {activeTab === 'tests' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {/* Create Test Button */}
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Tests</h3>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                                 {announcements.length > 0 && (
                                     <button
                                         onClick={() => setShowManageAnnouncementsModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <Megaphone className="w-4 h-4" />
-                                        <span>Manage</span>
+                                        <span className="hidden xs:inline">Manage</span>
                                         <span className="px-1.5 py-0.5 bg-amber-500 text-white text-xs rounded-full">
                                             {announcements.length}
                                         </span>
@@ -1700,17 +1700,17 @@ export default function TeacherDashboard() {
                                 )}
                                 <button
                                     onClick={() => setShowAnnouncementModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-colors"
+                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
                                 >
-                                    <Megaphone className="w-5 h-5" />
-                                    Announce
+                                    <Megaphone className="w-4 h-4" />
+                                    <span>Announce</span>
                                 </button>
                                 <button
                                     onClick={() => setShowCreateModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] transition-colors"
                                 >
-                                    <Plus className="w-5 h-5" />
-                                    Create Test
+                                    <Plus className="w-4 h-4" />
+                                    <span>Create Test</span>
                                 </button>
                             </div>
                         </div>
