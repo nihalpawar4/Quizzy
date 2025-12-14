@@ -1460,12 +1460,12 @@ export default function TeacherDashboard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         {/* Credit Economy Toggle */}
                         <button
                             onClick={handleToggleCreditEconomy}
                             disabled={isTogglingCredit}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${creditEconomyEnabled
+                            className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl transition-all ${creditEconomyEnabled
                                 ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                 }`}
@@ -1474,38 +1474,38 @@ export default function TeacherDashboard() {
                             {isTogglingCredit ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : creditEconomyEnabled ? (
-                                <ToggleRight className="w-5 h-5" />
+                                <ToggleRight className="w-4 h-4 sm:w-5 sm:h-5" />
                             ) : (
-                                <ToggleLeft className="w-5 h-5" />
+                                <ToggleLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                             )}
-                            <span className="hidden sm:inline text-sm font-medium">
+                            <span className="hidden md:inline text-sm font-medium">
                                 {creditEconomyEnabled ? 'Credits' : 'Credits Off'}
                             </span>
                         </button>
 
                         <Link
                             href="/chat"
-                            className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
+                            className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
                             title="Chat with Students"
                         >
                             <div className="relative">
-                                <MessageCircle className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                 {totalUnreadCount > 0 && (
                                     <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
                                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                                     </span>
                                 )}
                             </div>
-                            <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
+                            <span className="hidden md:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
                         </Link>
 
                         <div className="relative">
                             <button
                                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
                                 title="Profile Menu"
                             >
-                                <div className="text-right hidden sm:block">
+                                <div className="text-right hidden lg:block">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">Teacher</p>
                                 </div>
@@ -1513,14 +1513,15 @@ export default function TeacherDashboard() {
                                     <img
                                         src={user.photoURL}
                                         alt={user.name}
-                                        className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
+                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
                                     />
                                 ) : (
-                                    <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                        <UserIcon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                        <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                     </div>
-                                )}
-                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 hidden sm:block" />
+                                )
+                                }
+                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 hidden lg:block" />
                             </button>
 
                             {/* Profile Dropdown */}
@@ -1558,7 +1559,7 @@ export default function TeacherDashboard() {
                         </div>
                     </div>
                 </div>
-            </header>
+            </header >
 
             <main className="max-w-7xl mx-auto px-6 py-8">
                 {/* Welcome Section */}
@@ -2123,33 +2124,36 @@ export default function TeacherDashboard() {
                 {activeTab === 'credits' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {/* Header */}
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Coins className="w-5 h-5 text-amber-500" /> Credit Economy
-                                </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Manage student coins, award badges, and create premium tests
-                                </p>
+                        <div className="mb-6">
+                            <div className="flex items-start gap-2 mb-3">
+                                <Coins className="w-5 h-5 text-amber-500 mt-0.5" />
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        Credit Economy
+                                    </h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Manage student coins, award badges, and create premium tests
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 flex-wrap mt-4">
                                 <button
                                     onClick={() => {
                                         resetPremiumTestForm();
                                         setShowPremiumTestModal(true);
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-500 hover:to-yellow-600 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-lg text-sm font-medium hover:from-amber-500 hover:to-yellow-600 transition-colors"
                                 >
-                                    <Star className="w-5 h-5" />
-                                    Create Premium Test
+                                    <Star className="w-4 h-4" />
+                                    <span>Create Premium Test</span>
                                 </button>
                                 <button
                                     onClick={loadCreditData}
                                     disabled={creditDataLoading}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     {creditDataLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-                                    Refresh
+                                    <span>Refresh</span>
                                 </button>
                             </div>
                         </div>
