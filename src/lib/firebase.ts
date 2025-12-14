@@ -95,30 +95,58 @@ const clearSessionBackup = () => {
     }
 };
 
-// Initialize persistence on client side
-let persistenceInitialized = false;
-const initializePersistence = async (): Promise<void> => {
-    if (typeof window === 'undefined' || persistenceInitialized) return;
+// Initialize persistence on client side - PROMISE-BASED for proper awaiting
+let persistencePromise: Promise<void> | null = null;
 
-    try {
-        // Try IndexedDB first (most persistent)
-        await setPersistence(auth, indexedDBLocalPersistence);
-        console.log('[Quizy Auth] IndexedDB persistence enabled');
-        persistenceInitialized = true;
-    } catch (indexedDBError) {
-        console.warn('[Quizy Auth] IndexedDB failed, trying localStorage:', indexedDBError);
-        try {
-            await setPersistence(auth, browserLocalPersistence);
-            console.log('[Quizy Auth] localStorage persistence enabled');
-            persistenceInitialized = true;
-        } catch (localStorageError) {
-            console.error('[Quizy Auth] All persistence methods failed:', localStorageError);
-        }
+/**
+ * Initialize Firebase Auth persistence.
+ * Returns a promise that resolves when persistence is configured.
+ * This MUST complete before any auth operations to ensure sessions persist.
+ */
+const initializePersistence = (): Promise<void> => {
+    // Return existing promise if already initializing/initialized
+    if (persistencePromise) {
+        return persistencePromise;
     }
+
+    // On server-side, resolve immediately
+    if (typeof window === 'undefined') {
+        persistencePromise = Promise.resolve();
+        return persistencePromise;
+    }
+
+    persistencePromise = (async () => {
+        try {
+            // Try IndexedDB first (most persistent, survives browser close)
+            await setPersistence(auth, indexedDBLocalPersistence);
+            console.log('[Quizy Auth] ✅ IndexedDB persistence enabled');
+        } catch (indexedDBError) {
+            console.warn('[Quizy Auth] IndexedDB failed, trying localStorage:', indexedDBError);
+            try {
+                // Fall back to localStorage (also persistent across browser close)
+                await setPersistence(auth, browserLocalPersistence);
+                console.log('[Quizy Auth] ✅ localStorage persistence enabled');
+            } catch (localStorageError) {
+                console.error('[Quizy Auth] ❌ All persistence methods failed:', localStorageError);
+                // Auth will still work but sessions won't persist
+            }
+        }
+    })();
+
+    return persistencePromise;
 };
 
-// Auto-initialize persistence on load
+/**
+ * Ensure persistence is initialized before any auth operation.
+ * MUST be awaited before signIn, signUp, signInWithPopup, etc.
+ */
+const ensurePersistence = (): Promise<void> => {
+    return initializePersistence();
+};
+
+// Auto-initialize persistence on client-side load
 if (typeof window !== 'undefined') {
+    // Start initialization immediately (but auth operations should still await ensurePersistence)
     initializePersistence();
 
     // Listen to auth state changes to save backup
@@ -126,6 +154,7 @@ if (typeof window !== 'undefined') {
         saveSessionBackup(user);
     });
 }
+
 
 // Initialize Firestore
 const db = getFirestore(app);
@@ -207,8 +236,10 @@ export {
     getSessionBackup,
     clearSessionBackup,
     initializePersistence,
+    ensurePersistence,
     VAPID_KEY
 };
+
 
 
 

@@ -16,7 +16,7 @@ import {
     signOut as firebaseSignOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { auth, googleProvider, getSessionBackup, clearSessionBackup, initializePersistence } from '@/lib/firebase';
+import { auth, googleProvider, getSessionBackup, clearSessionBackup, ensurePersistence } from '@/lib/firebase';
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
 import { saveUserSessionCookie, getUserSessionCookie, deleteUserSessionCookie } from '@/lib/cookieSession';
@@ -62,125 +62,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Listen to auth state changes with extended recovery time
+    // Listen to auth state changes - AWAIT PERSISTENCE FIRST
     useEffect(() => {
-        // Initialize persistence first
-        initializePersistence();
+        let unsubscribe: (() => void) | null = null;
 
-        // Check for session backup immediately
-        const sessionBackup = getSessionBackup();
-        let authResolved = false;
-        let hasTriedRecovery = false;
+        const initAuth = async () => {
+            // CRITICAL: Await persistence before subscribing to auth state
+            console.log('[Quizy Auth] ⏳ Waiting for persistence...');
+            await ensurePersistence();
+            console.log('[Quizy Auth] ✅ Persistence ready');
 
-        console.log('[Quizy Auth] Starting auth initialization...');
-        console.log('[Quizy Auth] Session backup exists:', !!sessionBackup);
-
-        // Check for cookie-based remembered user
-        const cookieSession = getUserSessionCookie();
-        if (cookieSession) {
-            console.log('[Quizy Auth] Cookie session found for:', cookieSession.email);
-            setRememberedUser({ email: cookieSession.email, name: cookieSession.name });
-        }
-
-        if (sessionBackup) {
-            console.log('[Quizy Auth] Backup email:', sessionBackup.email);
-        }
-
-        // Wait for Firebase to restore the session (up to 5 seconds)
-        // This is critical for Android Chrome after app kill
-        const waitForAuth = async () => {
-            // Wait a bit for IndexedDB to be ready
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Check if Firebase already has a user
-            if (auth.currentUser) {
-                console.log('[Quizy Auth] Auth already has user:', auth.currentUser.email);
-                return true;
+            // Check for cookie-based remembered user
+            const cookieSession = getUserSessionCookie();
+            if (cookieSession) {
+                console.log('[Quizy Auth] Cookie session found for:', cookieSession.email);
+                setRememberedUser({ email: cookieSession.email, name: cookieSession.name });
             }
 
-            // Wait more time for IndexedDB restoration
-            for (let i = 0; i < 10; i++) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                if (auth.currentUser) {
-                    console.log('[Quizy Auth] Auth restored after', (i + 1) * 500, 'ms');
-                    return true;
-                }
+            // Check for session backup
+            const sessionBackup = getSessionBackup();
+            if (sessionBackup) {
+                console.log('[Quizy Auth] Session backup exists for:', sessionBackup.email);
             }
 
-            console.log('[Quizy Auth] Auth not restored after 5 seconds');
-            return false;
-        };
+            // Now subscribe to auth state changes
+            unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+                if (firebaseUser) {
+                    console.log('[Quizy Auth] ✅ User authenticated:', firebaseUser.email);
 
-        // Start waiting for auth
-        waitForAuth().then(restored => {
-            if (!restored && !authResolved) {
-                console.log('[Quizy Auth] Session not restored, checking backup...');
-                hasTriedRecovery = true;
+                    // Get user profile from Firestore
+                    const profile = await getUserProfile(firebaseUser.uid);
+                    if (profile) {
+                        setUser(profile);
+                        setRememberedUser(null); // Clear remembered user since we're logged in
+                        console.log('[Quizy Auth] ✅ Profile loaded:', profile.name);
 
-                if (sessionBackup) {
-                    console.log('[Quizy Auth] Have backup but Firebase failed to restore');
-                    // Firebase failed to restore - the session is truly gone
-                    // User needs to login again
-                }
-            }
-        });
-
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-            authResolved = true;
-
-            if (firebaseUser) {
-                console.log('[Quizy Auth] ✅ User authenticated:', firebaseUser.email);
-
-                // Get user profile from Firestore
-                const profile = await getUserProfile(firebaseUser.uid);
-                if (profile) {
-                    setUser(profile);
-                    setRememberedUser(null); // Clear remembered user since we're logged in
-                    console.log('[Quizy Auth] ✅ Profile loaded:', profile.name);
-
-                    // Save to cookie for persistent remember-me
-                    saveUserSessionCookie({
-                        email: profile.email,
-                        name: profile.name,
-                        uid: profile.uid,
-                        role: profile.role
-                    });
-                    console.log('[Quizy Auth] Cookie session saved');
+                        // Save to cookie for persistent remember-me
+                        saveUserSessionCookie({
+                            email: profile.email,
+                            name: profile.name,
+                            uid: profile.uid,
+                            role: profile.role
+                        });
+                        console.log('[Quizy Auth] Cookie session saved');
+                    } else {
+                        // User exists in Auth but not in Firestore
+                        console.log('[Quizy Auth] ⚠️ User in Auth but no Firestore profile');
+                        setUser(null);
+                    }
                 } else {
-                    // User exists in Auth but not in Firestore
-                    console.log('[Quizy Auth] ⚠️ User in Auth but no Firestore profile');
+                    console.log('[Quizy Auth] ❌ No authenticated user');
                     setUser(null);
                 }
-            } else {
-                console.log('[Quizy Auth] ❌ No authenticated user');
+                setLoading(false);
+            });
+        };
 
-                if (sessionBackup && !hasTriedRecovery) {
-                    console.log('[Quizy Auth] Backup exists, waiting for Firebase...');
-                    // Give Firebase more time
-                    setTimeout(() => {
-                        if (!auth.currentUser) {
-                            console.log('[Quizy Auth] Firebase did not restore session');
-                            setUser(null);
-                            setLoading(false);
-                        }
-                    }, 2000);
-                    return; // Don't set loading false yet
-                }
-
-                setUser(null);
-            }
-            setLoading(false);
-        });
+        initAuth();
 
         return () => {
-            unsubscribe();
+            if (unsubscribe) {
+                unsubscribe();
+            }
         };
     }, []);
+
 
     // Sign in with email and password
     const signIn = useCallback(async (email: string, password: string): Promise<void> => {
         setLoading(true);
         try {
+            // CRITICAL: Ensure persistence is ready before login
+            await ensurePersistence();
             const result = await signInWithEmailAndPassword(auth, email, password);
             const profile = await getUserProfile(result.user.uid);
             if (profile) {
@@ -212,6 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 throw new Error('This email is not authorized for teacher access');
             }
 
+            // CRITICAL: Ensure persistence is ready before signup
+            await ensurePersistence();
             const result = await createUserWithEmailAndPassword(auth, email, password);
 
             // Create user profile in Firestore
@@ -241,6 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ): Promise<{ isNewUser: boolean; needsClassSelection: boolean }> => {
         setLoading(true);
         try {
+            // CRITICAL: Ensure persistence is ready before Google sign-in
+            await ensurePersistence();
             const result = await signInWithPopup(auth, googleProvider);
             const firebaseUser = result.user;
             const email = firebaseUser.email?.toLowerCase() || '';
