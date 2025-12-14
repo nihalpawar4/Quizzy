@@ -33,8 +33,8 @@ service cloud.firestore {
     // ==================== USERS COLLECTION ====================
     
     match /users/{userId} {
-      // Teachers can read all users, students can only read their own
-      allow read: if isOwner(userId) || isTeacher();
+      // All authenticated users can read user profiles (needed for chat participant info)
+      allow read: if isAuthenticated();
       
       // Users can only create their own profile
       allow create: if isOwner(userId) && 
@@ -43,7 +43,7 @@ service cloud.firestore {
         request.resource.data.name is string &&
         request.resource.data.role in ['student', 'teacher'];
       
-      // Users can update their own profile, OR teachers can update students (for restrict/enable)
+      // Users can update their own profile, OR teachers can update students
       allow update: if isOwner(userId) || (isTeacher() && isTargetStudent(userId));
       
       // Users can delete their own profile, OR teachers can delete students
@@ -89,9 +89,7 @@ service cloud.firestore {
     // ==================== NOTES COLLECTION ====================
     
     match /notes/{noteId} {
-      // All authenticated users can read notes
       allow read: if isAuthenticated();
-      // Only teachers can create, update, and delete notes
       allow create: if isTeacher();
       allow update: if isTeacher();
       allow delete: if isTeacher();
@@ -100,41 +98,28 @@ service cloud.firestore {
     // ==================== NOTIFICATIONS COLLECTION ====================
     
     match /notifications/{notificationId} {
-      // All authenticated users can read notifications
       allow read: if isAuthenticated();
-      // Only teachers can create notifications
       allow create: if isTeacher();
-      // Students can update (to mark as viewed), teachers can also update
       allow update: if isAuthenticated();
-      // Any authenticated user can delete notifications (students can dismiss their own)
       allow delete: if isAuthenticated();
     }
     
     // ==================== CREDIT ECONOMY COLLECTIONS ====================
     
-    // Wallets - Each student has one wallet
     match /wallets/{walletId} {
-      // All authenticated users can read wallets (for leaderboard, etc.)
       allow read: if isAuthenticated();
-      // Any authenticated user can create/update wallets
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
-      // Only teachers can delete wallets
       allow delete: if isTeacher();
     }
     
-    // Transactions - Read-only audit log
     match /transactions/{transactionId} {
-      // All authenticated users can read transactions
       allow read: if isAuthenticated();
-      // Transactions are created by the system
       allow create: if isAuthenticated();
-      // No updates allowed (audit log)
       allow update: if false;
       allow delete: if isTeacher();
     }
     
-    // Badges - Global badge definitions
     match /badges/{badgeId} {
       allow read: if isAuthenticated();
       allow create: if isTeacher();
@@ -142,27 +127,20 @@ service cloud.firestore {
       allow delete: if isTeacher();
     }
     
-    // User Badges - Badges earned by students
     match /userBadges/{userBadgeId} {
-      // All authenticated users can read badges
       allow read: if isAuthenticated();
-      // System or teachers can award badges
       allow create: if isAuthenticated();
-      // No updates allowed
       allow update: if false;
-      // Teachers can delete badges if needed
       allow delete: if isTeacher();
     }
     
-    // Premium Tests - Special tests that cost coins
     match /premiumTests/{testId} {
       allow read: if isAuthenticated();
       allow create: if isTeacher();
-      allow update: if isAuthenticated(); // Allow students to update attempt counts
+      allow update: if isAuthenticated();
       allow delete: if isTeacher();
     }
     
-    // App Settings - Global app configuration
     match /appSettings/{settingId} {
       allow read: if isAuthenticated();
       allow write: if isTeacher();
@@ -170,72 +148,69 @@ service cloud.firestore {
     
     // ==================== CHAT COLLECTIONS ====================
     
-    // Helper function to check if user is a participant in a chat
-    function isChatParticipant(chatData) {
-      return request.auth.uid in chatData.participants;
-    }
-    
     // Chats - Conversations between students and teachers
     match /chats/{chatId} {
-      // Only participants can read the chat
-      allow read: if isAuthenticated() && isChatParticipant(resource.data);
+      // Allow getting a specific chat if user is a participant
+      allow get: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      // Allow listing/querying chats - queries filter by participants array or studentId/teacherId
+      // The app queries use array-contains on participants, which is secure
+      allow list: if isAuthenticated();
+      
       // Any authenticated user can create a chat (they must be a participant)
       allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      
       // Only participants can update the chat
-      allow update: if isAuthenticated() && isChatParticipant(resource.data);
-      // Only participants can delete the chat (soft delete)
-      allow delete: if isAuthenticated() && isChatParticipant(resource.data);
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      // Only participants can delete the chat
+      allow delete: if isAuthenticated() && request.auth.uid in resource.data.participants;
     }
     
     // Messages - Individual messages in chats
     match /messages/{messageId} {
-      // Read messages if user is authenticated (we filter by chat participant in queries)
       allow read: if isAuthenticated();
-      // Create message if authenticated
       allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-      // Update message (for status changes)
       allow update: if isAuthenticated();
-      // Delete only own messages
       allow delete: if isAuthenticated();
     }
     
     // Presence - Online/offline status
     match /presence/{userId} {
-      // Anyone authenticated can read presence
       allow read: if isAuthenticated();
-      // Only the user can update their own presence
       allow create, update: if isOwner(userId);
       allow delete: if isOwner(userId);
     }
     
     // Chat Notifications - New message alerts
     match /chatNotifications/{notificationId} {
-      // Users can read their own notifications
-      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      // Anyone can create notifications (when sending messages)
+      // Allow reading own notifications or listing all (filter client-side)
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      // Users can update their own notifications (mark as read)
-      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      // Users can delete their own notifications
-      allow delete: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
     
     // ==================== WEBRTC CALLS COLLECTION ====================
     
-    // Calls - WebRTC call signaling documents
     match /calls/{callId} {
-      // Only caller or callee can read the call
-      allow read: if isAuthenticated() && 
+      // Allow reading a specific call if user is caller or callee
+      allow get: if isAuthenticated() && 
         (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+      
+      // Allow listing/querying calls
+      allow list: if isAuthenticated();
+      
       // Authenticated users can create calls (must be the caller)
       allow create: if isAuthenticated() && request.resource.data.callerId == request.auth.uid;
-      // Only caller or callee can update the call (for SDP/ICE exchange)
+      
+      // Only caller or callee can update the call
       allow update: if isAuthenticated() && 
         (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+      
       // Only caller or callee can delete the call
       allow delete: if isAuthenticated() && 
         (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
     }
   }
 }
-

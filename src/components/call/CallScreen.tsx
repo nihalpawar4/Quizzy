@@ -43,21 +43,60 @@ export default function CallScreen() {
 
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteAudioRef = useRef<HTMLAudioElement>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
 
-    // Set up video elements when streams change
+    // Set up LOCAL video element when local stream changes
     useEffect(() => {
         if (localVideoRef.current && localStream) {
             localVideoRef.current.srcObject = localStream;
+            console.log('Local stream attached to video element');
         }
     }, [localStream]);
 
+    // Set up REMOTE video element when remote stream changes (for video calls)
     useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) {
+        if (remoteVideoRef.current && remoteStream && currentCall?.type === 'video') {
             remoteVideoRef.current.srcObject = remoteStream;
+            console.log('Remote stream attached to video element');
+            // Ensure video plays
+            remoteVideoRef.current.play().catch(err => {
+                console.log('Video autoplay blocked:', err);
+            });
         }
-    }, [remoteStream]);
+    }, [remoteStream, currentCall?.type]);
+
+    // ALWAYS set up REMOTE audio element when remote stream changes
+    // This works for BOTH audio and video calls - ensures audio always plays
+    useEffect(() => {
+        const audioElement = remoteAudioRef.current;
+        if (audioElement && remoteStream) {
+            console.log('Attaching remote stream to audio element, call type:', currentCall?.type);
+            audioElement.srcObject = remoteStream;
+
+            // Force the audio to play
+            const playAudio = async () => {
+                try {
+                    await audioElement.play();
+                    console.log('Remote audio playing successfully');
+                } catch (err) {
+                    console.log('Audio autoplay blocked, retrying...', err);
+                    // Try again after a short delay
+                    setTimeout(async () => {
+                        try {
+                            await audioElement.play();
+                            console.log('Remote audio playing on retry');
+                        } catch (retryErr) {
+                            console.error('Failed to play audio:', retryErr);
+                        }
+                    }, 500);
+                }
+            };
+
+            playAudio();
+        }
+    }, [remoteStream, currentCall?.type]);
 
     // Auto-hide controls after 5 seconds
     useEffect(() => {
@@ -87,13 +126,17 @@ export default function CallScreen() {
         }
     };
 
-    // Get participant info
-    const participantName = currentCall?.callerId === currentCall?.callerId
-        ? currentCall?.calleeName
-        : currentCall?.callerName;
-    const participantPhoto = currentCall?.callerId === currentCall?.callerId
-        ? currentCall?.calleePhotoURL
-        : currentCall?.callerPhotoURL;
+    // Get participant info - determine who the OTHER person is
+    const getOtherParticipant = () => {
+        if (!currentCall) return { name: 'Unknown', photo: undefined };
+
+        return {
+            name: currentCall.calleeName || currentCall.callerName || 'Unknown',
+            photo: currentCall.calleePhotoURL || currentCall.callerPhotoURL
+        };
+    };
+
+    const { name: participantName, photo: participantPhoto } = getOtherParticipant();
 
     // Get status text
     const getStatusText = () => {
@@ -122,6 +165,14 @@ export default function CallScreen() {
                 className="fixed inset-0 z-[100] bg-gray-950"
                 onClick={() => isVideoCall && setShowControls(!showControls)}
             >
+                {/* Hidden audio element for remote audio - ALWAYS RENDERED */}
+                <audio
+                    ref={remoteAudioRef}
+                    autoPlay
+                    playsInline
+                    style={{ display: 'none' }}
+                />
+
                 {/* Video Call UI */}
                 {isVideoCall ? (
                     <div className="relative w-full h-full">
@@ -279,13 +330,6 @@ export default function CallScreen() {
                 ) : (
                     /* Audio Call UI */
                     <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 via-gray-950 to-black p-8">
-                        {/* Hidden audio element for remote stream */}
-                        <audio
-                            ref={remoteVideoRef as unknown as React.RefObject<HTMLAudioElement>}
-                            autoPlay
-                            playsInline
-                        />
-
                         {/* Participant Avatar */}
                         <motion.div
                             animate={{

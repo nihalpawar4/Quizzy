@@ -14,6 +14,9 @@ import {
     updateDoc,
     deleteDoc,
     onSnapshot,
+    query,
+    where,
+    arrayUnion,
     Timestamp,
     type Unsubscribe
 } from 'firebase/firestore';
@@ -73,6 +76,7 @@ export async function createCall(
     };
 
     await setDoc(callRef, callData);
+    console.log('[CallService] Created call:', callId);
     return callId;
 }
 
@@ -109,6 +113,7 @@ export async function setCallOffer(
             sdp: offer.sdp,
         },
     });
+    console.log('[CallService] Set offer for call:', callId);
 }
 
 /**
@@ -127,42 +132,43 @@ export async function setCallAnswer(
         status: 'connecting',
         answeredAt: Timestamp.now(),
     });
+    console.log('[CallService] Set answer for call:', callId);
 }
 
 /**
- * Add ICE candidate from caller
+ * Add ICE candidate from caller (using arrayUnion for atomic update)
  */
 export async function addCallerCandidate(
     callId: string,
     candidate: RTCIceCandidateInit
 ): Promise<void> {
     const callRef = doc(db, COLLECTIONS.CALLS, callId);
-    const callSnap = await getDoc(callRef);
-
-    if (!callSnap.exists()) return;
-
-    const currentCandidates = callSnap.data().callerCandidates || [];
-    await updateDoc(callRef, {
-        callerCandidates: [...currentCandidates, candidate],
-    });
+    try {
+        await updateDoc(callRef, {
+            callerCandidates: arrayUnion(candidate),
+        });
+        console.log('[CallService] Added caller ICE candidate');
+    } catch (error) {
+        console.error('[CallService] Error adding caller candidate:', error);
+    }
 }
 
 /**
- * Add ICE candidate from callee
+ * Add ICE candidate from callee (using arrayUnion for atomic update)
  */
 export async function addCalleeCandidate(
     callId: string,
     candidate: RTCIceCandidateInit
 ): Promise<void> {
     const callRef = doc(db, COLLECTIONS.CALLS, callId);
-    const callSnap = await getDoc(callRef);
-
-    if (!callSnap.exists()) return;
-
-    const currentCandidates = callSnap.data().calleeCandidates || [];
-    await updateDoc(callRef, {
-        calleeCandidates: [...currentCandidates, candidate],
-    });
+    try {
+        await updateDoc(callRef, {
+            calleeCandidates: arrayUnion(candidate),
+        });
+        console.log('[CallService] Added callee ICE candidate');
+    } catch (error) {
+        console.error('[CallService] Error adding callee candidate:', error);
+    }
 }
 
 /**
@@ -182,6 +188,7 @@ export async function updateCallStatus(
     }
 
     await updateDoc(callRef, updates);
+    console.log('[CallService] Updated call status:', status);
 }
 
 /**
@@ -203,6 +210,7 @@ export async function endCall(callId: string): Promise<void> {
         endedAt: Timestamp.now(),
         duration,
     });
+    console.log('[CallService] Ended call with duration:', duration);
 }
 
 /**
@@ -241,31 +249,52 @@ export function subscribeToCall(
 
 /**
  * Subscribe to incoming calls for a user
+ * Uses a proper query to filter by calleeId and status for security rules compliance
  */
 export function subscribeToIncomingCalls(
     userId: string,
     callback: (call: Call | null) => void
 ): Unsubscribe {
-    // We'll use a query on the calls collection
-    // For simplicity, we store the current incoming call in the user's presence
     const callsRef = collection(db, COLLECTIONS.CALLS);
 
-    // Listen to all calls where this user is the callee and status is ringing
-    return onSnapshot(callsRef, (snapshot) => {
-        let incomingCall: Call | null = null;
+    const q = query(
+        callsRef,
+        where('calleeId', '==', userId),
+        where('status', '==', 'ringing')
+    );
 
-        snapshot.docs.forEach((doc) => {
-            const data = doc.data();
-            if (data.calleeId === userId && data.status === 'ringing') {
-                incomingCall = {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate() || new Date(),
-                } as Call;
-            }
-        });
+    return onSnapshot(q, (snapshot) => {
+        if (snapshot.empty) {
+            callback(null);
+            return;
+        }
 
-        callback(incomingCall);
+        const docSnap = snapshot.docs[0];
+        const data = docSnap.data();
+
+        callback({
+            id: docSnap.id,
+            callerId: data.callerId,
+            callerName: data.callerName,
+            callerPhotoURL: data.callerPhotoURL,
+            calleeId: data.calleeId,
+            calleeName: data.calleeName,
+            calleePhotoURL: data.calleePhotoURL,
+            chatId: data.chatId,
+            type: data.type,
+            status: data.status,
+            offer: data.offer,
+            answer: data.answer,
+            callerCandidates: data.callerCandidates,
+            calleeCandidates: data.calleeCandidates,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            answeredAt: data.answeredAt?.toDate(),
+            endedAt: data.endedAt?.toDate(),
+            duration: data.duration,
+        } as Call);
+    }, (error) => {
+        console.error('[CallService] Error subscribing to incoming calls:', error);
+        callback(null);
     });
 }
 
@@ -285,7 +314,11 @@ export async function getUserMedia(
     callType: CallType
 ): Promise<MediaStream> {
     const constraints: MediaStreamConstraints = {
-        audio: true,
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        },
         video: callType === 'video' ? {
             width: { ideal: 1280 },
             height: { ideal: 720 },
@@ -293,7 +326,10 @@ export async function getUserMedia(
         } : false,
     };
 
-    return navigator.mediaDevices.getUserMedia(constraints);
+    console.log('[CallService] Getting user media with constraints:', constraints);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log('[CallService] Got user media, tracks:', stream.getTracks().map(t => `${t.kind}:${t.enabled}`));
+    return stream;
 }
 
 /**
@@ -314,6 +350,7 @@ export function toggleMute(stream: MediaStream): boolean {
     const audioTrack = stream.getAudioTracks()[0];
     if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
+        console.log('[CallService] Toggled mute, audio enabled:', audioTrack.enabled);
         return !audioTrack.enabled; // Returns true if muted
     }
     return false;
@@ -326,6 +363,7 @@ export function toggleCamera(stream: MediaStream): boolean {
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
+        console.log('[CallService] Toggled camera, video enabled:', videoTrack.enabled);
         return !videoTrack.enabled; // Returns true if camera is off
     }
     return true;
@@ -353,7 +391,7 @@ export class CallManager {
     private callId: string | null = null;
     private isCaller: boolean = false;
     private unsubscribeCall: Unsubscribe | null = null;
-    private iceCandidatesQueue: RTCIceCandidateInit[] = [];
+    private addedCandidates: Set<string> = new Set(); // Track added candidates by their candidate string
     private hasRemoteDescription: boolean = false;
 
     // Callbacks
@@ -376,6 +414,7 @@ export class CallManager {
         callType: CallType
     ): Promise<string> {
         this.isCaller = true;
+        console.log('[CallManager] Initiating call as CALLER');
 
         try {
             // 1. Get local media stream
@@ -399,12 +438,14 @@ export class CallManager {
 
             // 4. Add local tracks to peer connection
             this.localStream.getTracks().forEach((track) => {
+                console.log('[CallManager] Adding local track:', track.kind);
                 this.peerConnection!.addTrack(track, this.localStream!);
             });
 
             // 5. Create and set local offer
             const offer = await this.peerConnection.createOffer();
             await this.peerConnection.setLocalDescription(offer);
+            console.log('[CallManager] Created and set local offer');
 
             // 6. Save offer to Firebase
             await setCallOffer(this.callId, offer);
@@ -419,6 +460,7 @@ export class CallManager {
 
             return this.callId;
         } catch (error) {
+            console.error('[CallManager] Failed to initiate call:', error);
             this.cleanup();
             throw error;
         }
@@ -430,6 +472,7 @@ export class CallManager {
     async answerCall(callId: string, callType: CallType): Promise<void> {
         this.isCaller = false;
         this.callId = callId;
+        console.log('[CallManager] Answering call as CALLEE');
 
         try {
             // 1. Get local media stream
@@ -445,36 +488,44 @@ export class CallManager {
             this.peerConnection = createPeerConnection();
             this.setupPeerConnectionListeners();
 
-            // 4. Add local tracks
+            // 4. Add local tracks BEFORE setting remote description
             this.localStream.getTracks().forEach((track) => {
+                console.log('[CallManager] Adding local track:', track.kind);
                 this.peerConnection!.addTrack(track, this.localStream!);
             });
 
             // 5. Set remote description (offer from caller)
+            console.log('[CallManager] Setting remote description (offer)');
             await this.peerConnection.setRemoteDescription(
                 new RTCSessionDescription(call.offer)
             );
             this.hasRemoteDescription = true;
 
-            // 6. Add any queued ICE candidates from caller
-            if (call.callerCandidates) {
+            // 6. Add any ICE candidates from caller that arrived with the offer
+            if (call.callerCandidates && call.callerCandidates.length > 0) {
+                console.log('[CallManager] Adding', call.callerCandidates.length, 'initial caller candidates');
                 for (const candidate of call.callerCandidates) {
-                    await this.peerConnection.addIceCandidate(
-                        new RTCIceCandidate(candidate)
-                    );
+                    if (candidate.candidate && !this.addedCandidates.has(candidate.candidate)) {
+                        this.addedCandidates.add(candidate.candidate);
+                        await this.peerConnection.addIceCandidate(
+                            new RTCIceCandidate(candidate)
+                        );
+                    }
                 }
             }
 
             // 7. Create and set local answer
             const answer = await this.peerConnection.createAnswer();
             await this.peerConnection.setLocalDescription(answer);
+            console.log('[CallManager] Created and set local answer');
 
             // 8. Save answer to Firebase
             await setCallAnswer(callId, answer);
 
-            // 9. Subscribe to call updates
+            // 9. Subscribe to call updates for new ICE candidates
             this.subscribeToCallUpdates();
         } catch (error) {
+            console.error('[CallManager] Failed to answer call:', error);
             this.cleanup();
             throw error;
         }
@@ -542,6 +593,7 @@ export class CallManager {
         this.peerConnection.onicecandidate = async (event) => {
             if (event.candidate && this.callId) {
                 const candidateInit = event.candidate.toJSON();
+                console.log('[CallManager] Generated ICE candidate, isCaller:', this.isCaller);
                 if (this.isCaller) {
                     await addCallerCandidate(this.callId, candidateInit);
                 } else {
@@ -550,10 +602,13 @@ export class CallManager {
             }
         };
 
-        // Handle remote stream
+        // Handle remote stream - THIS IS CRITICAL FOR TWO-WAY AUDIO
         this.peerConnection.ontrack = (event) => {
+            console.log('[CallManager] Received remote track:', event.track.kind);
             if (event.streams && event.streams[0]) {
                 this.remoteStream = event.streams[0];
+                console.log('[CallManager] Remote stream set, tracks:',
+                    this.remoteStream.getTracks().map(t => `${t.kind}:${t.enabled}`));
                 this.onRemoteStream?.(this.remoteStream);
             }
         };
@@ -561,22 +616,27 @@ export class CallManager {
         // Handle connection state changes
         this.peerConnection.onconnectionstatechange = () => {
             const state = this.peerConnection?.connectionState;
-            console.log('Connection state:', state);
+            console.log('[CallManager] Connection state:', state);
 
             if (state === 'connected') {
                 this.onCallStatusChange?.('connected');
-                // Update Firebase
                 if (this.callId) {
                     updateCallStatus(this.callId, 'connected').catch(console.error);
                 }
             } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                console.log('[CallManager] Connection ended with state:', state);
                 this.endCurrentCall();
             }
         };
 
         // Handle ICE connection state
         this.peerConnection.oniceconnectionstatechange = () => {
-            console.log('ICE connection state:', this.peerConnection?.iceConnectionState);
+            console.log('[CallManager] ICE connection state:', this.peerConnection?.iceConnectionState);
+        };
+
+        // Handle ICE gathering state
+        this.peerConnection.onicegatheringstatechange = () => {
+            console.log('[CallManager] ICE gathering state:', this.peerConnection?.iceGatheringState);
         };
     }
 
@@ -588,7 +648,7 @@ export class CallManager {
 
         this.unsubscribeCall = subscribeToCall(this.callId, async (call) => {
             if (!call) {
-                // Call document deleted
+                console.log('[CallManager] Call document deleted');
                 this.cleanup();
                 this.onCallEnded?.();
                 return;
@@ -599,6 +659,7 @@ export class CallManager {
 
             // Handle call ended/rejected
             if (call.status === 'ended' || call.status === 'rejected' || call.status === 'missed') {
+                console.log('[CallManager] Call ended with status:', call.status);
                 this.cleanup();
                 this.onCallEnded?.();
                 return;
@@ -607,41 +668,46 @@ export class CallManager {
             // If we're the caller and we received an answer
             if (this.isCaller && call.answer && !this.hasRemoteDescription) {
                 try {
+                    console.log('[CallManager] Caller received answer, setting remote description');
                     await this.peerConnection?.setRemoteDescription(
                         new RTCSessionDescription(call.answer)
                     );
                     this.hasRemoteDescription = true;
 
-                    // Add any callee candidates that arrived
-                    if (call.calleeCandidates) {
+                    // Add any callee candidates that arrived with or before the answer
+                    if (call.calleeCandidates && call.calleeCandidates.length > 0) {
+                        console.log('[CallManager] Adding', call.calleeCandidates.length, 'initial callee candidates');
                         for (const candidate of call.calleeCandidates) {
-                            await this.peerConnection?.addIceCandidate(
-                                new RTCIceCandidate(candidate)
-                            );
+                            if (candidate.candidate && !this.addedCandidates.has(candidate.candidate)) {
+                                this.addedCandidates.add(candidate.candidate);
+                                await this.peerConnection?.addIceCandidate(
+                                    new RTCIceCandidate(candidate)
+                                );
+                            }
                         }
                     }
                 } catch (error) {
-                    console.error('Error setting remote description:', error);
+                    console.error('[CallManager] Error setting remote description:', error);
                     this.onError?.(error as Error);
                 }
             }
 
-            // Handle new ICE candidates
+            // Handle new ICE candidates (for both sides)
             if (this.hasRemoteDescription) {
                 const candidates = this.isCaller ? call.calleeCandidates : call.callerCandidates;
-                if (candidates) {
+                const candidateType = this.isCaller ? 'callee' : 'caller';
+
+                if (candidates && candidates.length > 0) {
                     for (const candidate of candidates) {
-                        // Check if we already added this candidate
-                        if (!this.iceCandidatesQueue.some(c =>
-                            c.candidate === candidate.candidate
-                        )) {
-                            this.iceCandidatesQueue.push(candidate);
+                        if (candidate.candidate && !this.addedCandidates.has(candidate.candidate)) {
+                            console.log('[CallManager] Adding new', candidateType, 'ICE candidate');
+                            this.addedCandidates.add(candidate.candidate);
                             try {
                                 await this.peerConnection?.addIceCandidate(
                                     new RTCIceCandidate(candidate)
                                 );
                             } catch (error) {
-                                console.error('Error adding ICE candidate:', error);
+                                console.error('[CallManager] Error adding ICE candidate:', error);
                             }
                         }
                     }
@@ -658,6 +724,7 @@ export class CallManager {
 
         const call = await getCall(this.callId);
         if (call && call.status === 'ringing') {
+            console.log('[CallManager] Call timed out, marking as missed');
             await updateCallStatus(this.callId, 'missed');
             this.cleanup();
             this.onCallEnded?.();
@@ -668,6 +735,8 @@ export class CallManager {
      * Cleanup resources
      */
     cleanup(): void {
+        console.log('[CallManager] Cleaning up');
+
         // Stop local stream
         stopMediaStream(this.localStream);
         this.localStream = null;
@@ -692,6 +761,6 @@ export class CallManager {
         this.callId = null;
         this.isCaller = false;
         this.hasRemoteDescription = false;
-        this.iceCandidatesQueue = [];
+        this.addedCandidates.clear();
     }
 }
