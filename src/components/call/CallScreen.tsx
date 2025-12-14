@@ -71,31 +71,69 @@ export default function CallScreen() {
     // This works for BOTH audio and video calls - ensures audio always plays
     useEffect(() => {
         const audioElement = remoteAudioRef.current;
-        if (audioElement && remoteStream) {
-            console.log('Attaching remote stream to audio element, call type:', currentCall?.type);
-            audioElement.srcObject = remoteStream;
+        if (!audioElement || !remoteStream) return;
 
-            // Force the audio to play
-            const playAudio = async () => {
-                try {
-                    await audioElement.play();
-                    console.log('Remote audio playing successfully');
-                } catch (err) {
-                    console.log('Audio autoplay blocked, retrying...', err);
-                    // Try again after a short delay
-                    setTimeout(async () => {
-                        try {
-                            await audioElement.play();
-                            console.log('Remote audio playing on retry');
-                        } catch (retryErr) {
-                            console.error('Failed to play audio:', retryErr);
-                        }
-                    }, 500);
+        console.log('[CallScreen] Setting up remote audio, call type:', currentCall?.type);
+        console.log('[CallScreen] Remote stream tracks:', remoteStream.getTracks().map(t => `${t.kind}:${t.enabled}`));
+
+        // Set the stream
+        audioElement.srcObject = remoteStream;
+
+        // Ensure audio element is properly configured
+        audioElement.muted = false;
+        audioElement.volume = 1.0;
+        audioElement.autoplay = true;
+
+        console.log('[CallScreen] Audio element config - muted:', audioElement.muted, 'volume:', audioElement.volume);
+
+        // Aggressively try to play with multiple retries
+        let retryCount = 0;
+        const maxRetries = 5;
+
+        const playAudio = async () => {
+            try {
+                console.log('[CallScreen] Attempting to play remote audio, attempt:', retryCount + 1);
+                await audioElement.play();
+                console.log('[CallScreen] ✅ Remote audio is playing! Paused:', audioElement.paused, 'ReadyState:', audioElement.readyState);
+            } catch (err) {
+                console.error('[CallScreen] ❌ Audio play failed, attempt', retryCount + 1, ':', err);
+
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    const delay = retryCount * 500; // Increasing delay
+                    console.log('[CallScreen] Retrying in', delay, 'ms...');
+                    setTimeout(() => playAudio(), delay);
+                } else {
+                    console.error('[CallScreen] CRITICAL: Failed to play audio after', maxRetries, 'attempts');
+                    // Try one last time by reloading the stream
+                    audioElement.load();
+                    setTimeout(() => {
+                        audioElement.play().catch(e => console.error('[CallScreen] Final play attempt failed:', e));
+                    }, 1000);
                 }
-            };
+            }
+        };
 
-            playAudio();
-        }
+        // Start playing
+        playAudio();
+
+        // Also listen for stream changes
+        const handleTrackEnabled = () => {
+            console.log('[CallScreen] Remote track enabled/disabled, attempting play');
+            audioElement.play().catch(e => console.log('[CallScreen] Track change play failed:', e));
+        };
+
+        remoteStream.getTracks().forEach(track => {
+            track.addEventListener('enabled', handleTrackEnabled);
+            track.addEventListener('mute', () => console.log('[CallScreen] Remote track muted:', track.kind));
+            track.addEventListener('unmute', () => console.log('[CallScreen] Remote track unmuted:', track.kind));
+        });
+
+        return () => {
+            remoteStream.getTracks().forEach(track => {
+                track.removeEventListener('enabled', handleTrackEnabled);
+            });
+        };
     }, [remoteStream, currentCall?.type]);
 
     // Auto-hide controls after 5 seconds
@@ -170,6 +208,7 @@ export default function CallScreen() {
                     ref={remoteAudioRef}
                     autoPlay
                     playsInline
+                    muted={false}
                     style={{ display: 'none' }}
                 />
 
