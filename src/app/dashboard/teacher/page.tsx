@@ -1471,6 +1471,28 @@ export default function TeacherDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Credit Economy Toggle */}
+                        <button
+                            onClick={handleToggleCreditEconomy}
+                            disabled={isTogglingCredit}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${creditEconomyEnabled
+                                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                }`}
+                            title={creditEconomyEnabled ? 'Credit Economy: ON - Click to disable' : 'Credit Economy: OFF - Click to enable'}
+                        >
+                            {isTogglingCredit ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : creditEconomyEnabled ? (
+                                <ToggleRight className="w-5 h-5" />
+                            ) : (
+                                <ToggleLeft className="w-5 h-5" />
+                            )}
+                            <span className="hidden sm:inline text-sm font-medium">
+                                {creditEconomyEnabled ? 'Credits' : 'Credits Off'}
+                            </span>
+                        </button>
+
                         <Link
                             href="/chat"
                             className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"

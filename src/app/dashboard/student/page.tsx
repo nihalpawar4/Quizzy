@@ -108,6 +108,16 @@ export default function StudentDashboard() {
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+    // Auto-close profile dropdown after 3 seconds
+    useEffect(() => {
+        if (showProfileDropdown) {
+            const timer = setTimeout(() => {
+                setShowProfileDropdown(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [showProfileDropdown]);
+
     // Read notes tracking (persisted in localStorage)
     const [readNoteIds, setReadNoteIds] = useState<Set<string>>(new Set());
 
@@ -984,18 +994,6 @@ export default function StudentDashboard() {
                                 )}
                             </AnimatePresence>
                         </div>
-
-                        {/* Coin Balance Display */}
-                        {creditEconomyEnabled && (
-                            <WalletDisplay
-                                wallet={wallet}
-                                loading={walletLoading}
-                                compact={true}
-                                onClick={() => setShowWalletModal(true)}
-                            />
-                        )}
-
-
 
                         <Link
                             href="/chat"
