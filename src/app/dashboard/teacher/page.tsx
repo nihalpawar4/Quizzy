@@ -156,6 +156,16 @@ export default function TeacherDashboard() {
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+    // Auto-close profile dropdown after 3 seconds
+    useEffect(() => {
+        if (showProfileDropdown) {
+            const timer = setTimeout(() => {
+                setShowProfileDropdown(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [showProfileDropdown]);
+
     // Create test states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createStep, setCreateStep] = useState<1 | 2 | 3>(1); // Step 1: Details, Step 2: Question Type, Step 3: Upload
@@ -1460,29 +1470,7 @@ export default function TeacherDashboard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {/* Credit Economy Toggle */}
-                        <button
-                            onClick={handleToggleCreditEconomy}
-                            disabled={isTogglingCredit}
-                            className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl transition-all ${creditEconomyEnabled
-                                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                                }`}
-                            title={creditEconomyEnabled ? 'Credit Economy: ON - Click to disable' : 'Credit Economy: OFF - Click to enable'}
-                        >
-                            {isTogglingCredit ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : creditEconomyEnabled ? (
-                                <ToggleRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                            ) : (
-                                <ToggleLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                            )}
-                            <span className="hidden md:inline text-sm font-medium">
-                                {creditEconomyEnabled ? 'Credits' : 'Credits Off'}
-                            </span>
-                        </button>
-
+                    <div className="flex items-center gap-3">
                         <Link
                             href="/chat"
                             className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
@@ -2125,16 +2113,42 @@ export default function TeacherDashboard() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {/* Header */}
                         <div className="mb-6">
-                            <div className="flex items-start gap-2 mb-3">
-                                <Coins className="w-5 h-5 text-amber-500 mt-0.5" />
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                        Credit Economy
-                                    </h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                        Manage student coins, award badges, and create premium tests
-                                    </p>
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                                <div className="flex items-start gap-2">
+                                    <Coins className="w-5 h-5 text-amber-500 mt-0.5" />
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                            Credit Economy
+                                        </h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                            Manage student coins, award badges, and create premium tests
+                                        </p>
+                                    </div>
                                 </div>
+                                {/* Credit Economy Toggle */}
+                                <button
+                                    onClick={handleToggleCreditEconomy}
+                                    disabled={isTogglingCredit}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-medium ${creditEconomyEnabled
+                                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                        }`}
+                                    title={creditEconomyEnabled ? 'Credit Economy: ON - Click to disable' : 'Credit Economy: OFF - Click to enable'}
+                                >
+                                    {isTogglingCredit ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : creditEconomyEnabled ? (
+                                        <>
+                                            <ToggleRight className="w-5 h-5" />
+                                            <span className="hidden sm:inline">Enabled</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ToggleLeft className="w-5 h-5" />
+                                            <span className="hidden sm:inline">Disabled</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap mt-4">
                                 <button
