@@ -1,14 +1,14 @@
 // Firebase Configuration for Quizy App
 // By Nihal Pawar
-// HARD SESSION PERSISTENCE FIX
+// ROBUST SESSION PERSISTENCE FIX - Initialize auth WITH persistence
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
     getAuth,
+    initializeAuth,
     GoogleAuthProvider,
     indexedDBLocalPersistence,
     browserLocalPersistence,
-    setPersistence,
     onAuthStateChanged,
     type Auth,
     type User as FirebaseUser
@@ -31,8 +31,30 @@ const firebaseConfig = {
 // Initialize Firebase (prevent multiple instances in development)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth
-const auth: Auth = getAuth(app);
+// ============================================
+// CRITICAL: Initialize Auth WITH persistence
+// ============================================
+// On client side, use initializeAuth with persistence settings
+// On server side or if already initialized, use getAuth
+let auth: Auth;
+
+if (typeof window !== 'undefined') {
+    try {
+        // Initialize with IndexedDB persistence (survives browser close)
+        // Falls back to localStorage if IndexedDB is not available
+        auth = initializeAuth(app, {
+            persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+        });
+        console.log('[Quizy Auth] ✅ Auth initialized with IndexedDB + localStorage persistence');
+    } catch (error) {
+        // If already initialized (hot reload), just get the existing instance
+        auth = getAuth(app);
+        console.log('[Quizy Auth] Using existing auth instance');
+    }
+} else {
+    auth = getAuth(app);
+}
+
 
 // ============================================
 // HARD SESSION PERSISTENCE - MULTI-LAYER FIX
@@ -95,54 +117,29 @@ const clearSessionBackup = () => {
     }
 };
 
-// Initialize persistence on client side - PROMISE-BASED for proper awaiting
-let persistencePromise: Promise<void> | null = null;
+// Initialize persistence on client side - NOW HANDLED BY initializeAuth
+// This is kept for backwards compatibility with code that calls ensurePersistence
+let persistenceReady = false;
 
 /**
- * Initialize Firebase Auth persistence.
- * Returns a promise that resolves when persistence is configured.
- * This MUST complete before any auth operations to ensure sessions persist.
- */
-const initializePersistence = (): Promise<void> => {
-    // Return existing promise if already initializing/initialized
-    if (persistencePromise) {
-        return persistencePromise;
-    }
-
-    // On server-side, resolve immediately
-    if (typeof window === 'undefined') {
-        persistencePromise = Promise.resolve();
-        return persistencePromise;
-    }
-
-    persistencePromise = (async () => {
-        try {
-            // Try IndexedDB first (most persistent, survives browser close)
-            await setPersistence(auth, indexedDBLocalPersistence);
-            console.log('[Quizy Auth] ✅ IndexedDB persistence enabled');
-        } catch (indexedDBError) {
-            console.warn('[Quizy Auth] IndexedDB failed, trying localStorage:', indexedDBError);
-            try {
-                // Fall back to localStorage (also persistent across browser close)
-                await setPersistence(auth, browserLocalPersistence);
-                console.log('[Quizy Auth] ✅ localStorage persistence enabled');
-            } catch (localStorageError) {
-                console.error('[Quizy Auth] ❌ All persistence methods failed:', localStorageError);
-                // Auth will still work but sessions won't persist
-            }
-        }
-    })();
-
-    return persistencePromise;
-};
-
-/**
- * Ensure persistence is initialized before any auth operation.
- * MUST be awaited before signIn, signUp, signInWithPopup, etc.
+ * Ensure persistence is ready.
+ * Since we now use initializeAuth with persistence, this just confirms it's done.
  */
 const ensurePersistence = (): Promise<void> => {
-    return initializePersistence();
+    // Persistence is already set via initializeAuth, so just resolve immediately
+    if (typeof window === 'undefined') {
+        return Promise.resolve();
+    }
+
+    // Mark as ready and resolve
+    persistenceReady = true;
+    console.log('[Quizy Auth] Persistence confirmed ready');
+    return Promise.resolve();
 };
+
+// Legacy function for backwards compatibility
+const initializePersistence = ensurePersistence;
+
 
 // Auto-initialize persistence on client-side load
 if (typeof window !== 'undefined') {
