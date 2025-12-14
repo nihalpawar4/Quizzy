@@ -84,6 +84,8 @@ export async function updateTypingStatus(
 
 /**
  * Subscribe to user presence changes
+ * Note: We check staleness of the presence to handle cases where users
+ * close the browser abruptly without triggering beforeunload
  */
 export function subscribeToPresence(
     userId: string,
@@ -91,13 +93,24 @@ export function subscribeToPresence(
 ): Unsubscribe {
     const presenceRef = doc(db, COLLECTIONS.PRESENCE, userId);
 
+    // Consider presence stale if lastSeen is older than 2x heartbeat (60 seconds)
+    const PRESENCE_STALE_THRESHOLD_MS = 60000; // 60 seconds
+
     return onSnapshot(presenceRef, (doc) => {
         if (doc.exists()) {
             const data = doc.data();
+            const lastSeen = data.lastSeen?.toDate() || new Date(0);
+            const timeSinceLastSeen = Date.now() - lastSeen.getTime();
+
+            // User is only considered online if:
+            // 1. isOnline flag is true, AND
+            // 2. lastSeen is within the stale threshold
+            const isActuallyOnline = data.isOnline === true && timeSinceLastSeen < PRESENCE_STALE_THRESHOLD_MS;
+
             callback({
                 userId: doc.id,
-                isOnline: data.isOnline || false,
-                lastSeen: data.lastSeen?.toDate() || new Date(),
+                isOnline: isActuallyOnline,
+                lastSeen: lastSeen,
                 typing: data.typing ? {
                     chatId: data.typing.chatId,
                     timestamp: data.typing.timestamp?.toDate() || new Date()

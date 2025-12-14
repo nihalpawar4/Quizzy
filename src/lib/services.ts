@@ -16,7 +16,9 @@ import {
     where,
     orderBy,
     Timestamp,
-    writeBatch
+    writeBatch,
+    onSnapshot,
+    type Unsubscribe
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { COLLECTIONS } from './constants';
@@ -774,4 +776,108 @@ export async function createAnnouncement(announcement: {
         createdBy: announcement.createdBy,
         createdByName: announcement.createdByName
     });
+}
+
+/**
+ * Subscribe to announcements created by a specific teacher (real-time)
+ */
+export function subscribeToTeacherAnnouncements(
+    teacherId: string,
+    callback: (announcements: Notification[]) => void
+): Unsubscribe {
+    const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+    const q = query(
+        notificationsRef,
+        where('createdBy', '==', teacherId),
+        where('type', '==', 'announcement'),
+        orderBy('createdAt', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const announcements: Notification[] = [];
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            announcements.push({
+                id: doc.id,
+                type: data.type as NotificationType,
+                title: data.title,
+                message: data.message,
+                targetClass: data.targetClass,
+                createdBy: data.createdBy,
+                createdByName: data.createdByName,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                viewedBy: data.viewedBy
+            });
+        });
+        callback(announcements);
+    });
+}
+
+/**
+ * Get all announcements created by a specific teacher
+ */
+export async function getAnnouncementsByTeacher(teacherId: string): Promise<Notification[]> {
+    const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+    const q = query(
+        notificationsRef,
+        where('createdBy', '==', teacherId),
+        where('type', '==', 'announcement'),
+        orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            type: data.type as NotificationType,
+            title: data.title,
+            message: data.message,
+            targetClass: data.targetClass,
+            createdBy: data.createdBy,
+            createdByName: data.createdByName,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            viewedBy: data.viewedBy
+        };
+    });
+}
+
+/**
+ * Delete related announcements (same title, message, created at similar time by same teacher)
+ * This is useful when teacher sends announcement to "all classes" and wants to delete all of them
+ */
+export async function deleteRelatedAnnouncements(
+    announcement: Notification
+): Promise<number> {
+    const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+
+    // Find announcements with same title, message, and createdBy
+    const q = query(
+        notificationsRef,
+        where('createdBy', '==', announcement.createdBy),
+        where('type', '==', 'announcement'),
+        where('title', '==', announcement.title),
+        where('message', '==', announcement.message)
+    );
+
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    let deletedCount = 0;
+
+    snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate() || new Date();
+        // Only delete if created within 1 minute of the original announcement
+        const timeDiff = Math.abs(createdAt.getTime() - announcement.createdAt.getTime());
+        if (timeDiff < 60000) { // 1 minute
+            batch.delete(doc.ref);
+            deletedCount++;
+        }
+    });
+
+    if (deletedCount > 0) {
+        await batch.commit();
+    }
+
+    return deletedCount;
 }

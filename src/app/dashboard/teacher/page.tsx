@@ -77,7 +77,10 @@ import {
     updateNoteStatus,
     createAnnouncement,
     createTestNotification,
-    createNoteNotification
+    createNoteNotification,
+    subscribeToTeacherAnnouncements,
+    deleteNotification,
+    deleteRelatedAnnouncements
 } from '@/lib/services';
 import {
     getAllWallets,
@@ -101,7 +104,7 @@ import {
 } from '@/lib/creditServices';
 import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
-import type { Test, TestResult, User, SubjectNote, CreditWallet, PremiumTest, CreditTransaction, BadgeType, Question } from '@/types';
+import type { Test, TestResult, User, SubjectNote, CreditWallet, PremiumTest, CreditTransaction, BadgeType, Question, Notification } from '@/types';
 import { CREDIT_CONSTANTS } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
@@ -281,6 +284,12 @@ export default function TeacherDashboard() {
     });
     const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
     const [announcementSuccess, setAnnouncementSuccess] = useState(false);
+
+    // Announcement management states (for viewing and deleting)
+    const [announcements, setAnnouncements] = useState<Notification[]>([]);
+    const [showManageAnnouncementsModal, setShowManageAnnouncementsModal] = useState(false);
+    const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<string | null>(null);
+    const [selectedAnnouncementForDelete, setSelectedAnnouncementForDelete] = useState<Notification | null>(null);
 
     // ==================== CREDIT ECONOMY STATES ====================
     const [wallets, setWallets] = useState<CreditWallet[]>([]);
@@ -806,6 +815,17 @@ export default function TeacherDashboard() {
         return () => unsubscribe();
     }, [user]);
 
+    // Real-time listener for teacher's announcements
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const unsubscribe = subscribeToTeacherAnnouncements(user.uid, (announcementsList) => {
+            setAnnouncements(announcementsList);
+        });
+
+        return () => unsubscribe();
+    }, [user?.uid]);
+
     // Handle CSV file upload
     const handleCSVUpload = async (file: File) => {
         setCsvFile(file);
@@ -1297,6 +1317,38 @@ export default function TeacherDashboard() {
         }
     };
 
+    // Delete single announcement
+    const handleDeleteAnnouncement = async (announcementId: string) => {
+        setDeletingAnnouncementId(announcementId);
+        try {
+            await deleteNotification(announcementId);
+            // Real-time listener will update the state automatically
+        } catch (error) {
+            console.error('Error deleting announcement:', error);
+            alert('Failed to delete announcement. Please try again.');
+        } finally {
+            setDeletingAnnouncementId(null);
+        }
+    };
+
+    // Delete all related announcements (when sent to all classes)
+    const handleDeleteRelatedAnnouncements = async (announcement: Notification) => {
+        setDeletingAnnouncementId(announcement.id);
+        try {
+            const deletedCount = await deleteRelatedAnnouncements(announcement);
+            setSelectedAnnouncementForDelete(null);
+            if (deletedCount > 1) {
+                alert(`Successfully deleted ${deletedCount} announcements across all classes.`);
+            }
+            // Real-time listener will update the state automatically
+        } catch (error) {
+            console.error('Error deleting related announcements:', error);
+            alert('Failed to delete announcements. Please try again.');
+        } finally {
+            setDeletingAnnouncementId(null);
+        }
+    };
+
     // Reset note form
     const resetNoteForm = () => {
         setNewNote({
@@ -1594,6 +1646,18 @@ export default function TeacherDashboard() {
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Tests</h3>
                             <div className="flex items-center gap-3">
+                                {announcements.length > 0 && (
+                                    <button
+                                        onClick={() => setShowManageAnnouncementsModal(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        <Megaphone className="w-4 h-4" />
+                                        <span>Manage</span>
+                                        <span className="px-1.5 py-0.5 bg-amber-500 text-white text-xs rounded-full">
+                                            {announcements.length}
+                                        </span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setShowAnnouncementModal(true)}
                                     className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-colors"
@@ -3980,6 +4044,188 @@ export default function TeacherDashboard() {
                                     </div>
                                 </>
                             )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Manage Announcements Modal */}
+            <AnimatePresence>
+                {showManageAnnouncementsModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => {
+                            setShowManageAnnouncementsModal(false);
+                            setSelectedAnnouncementForDelete(null);
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                                            <Megaphone className="w-5 h-5 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Manage Announcements</h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{announcements.length} announcement{announcements.length !== 1 ? 's' : ''} sent</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setShowManageAnnouncementsModal(false);
+                                            setSelectedAnnouncementForDelete(null);
+                                        }}
+                                        className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {announcements.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <Megaphone className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                                        <p className="text-gray-500 dark:text-gray-400">No announcements yet</p>
+                                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Create an announcement to notify students</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Group announcements by title+message (to show related ones together) */}
+                                        {announcements.map((announcement) => {
+                                            // Check if this is part of a multi-class announcement
+                                            const relatedAnnouncements = announcements.filter(a =>
+                                                a.title === announcement.title &&
+                                                a.message === announcement.message &&
+                                                Math.abs(a.createdAt.getTime() - announcement.createdAt.getTime()) < 60000
+                                            );
+                                            const isMultiClass = relatedAnnouncements.length > 1;
+
+                                            return (
+                                                <div
+                                                    key={announcement.id}
+                                                    className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+                                                >
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                                                {announcement.title}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                                                {announcement.message}
+                                                            </p>
+                                                            <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                                                                <span className="flex items-center gap-1">
+                                                                    <Users className="w-3 h-3" />
+                                                                    Class {announcement.targetClass}
+                                                                </span>
+                                                                <span>•</span>
+                                                                <span>
+                                                                    {new Date(announcement.createdAt).toLocaleDateString('en-IN', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </span>
+                                                                {announcement.viewedBy && Object.keys(announcement.viewedBy).length > 0 && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                                                            <Eye className="w-3 h-3" />
+                                                                            {Object.keys(announcement.viewedBy).length} viewed
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            {/* Delete options */}
+                                                            {selectedAnnouncementForDelete?.id === announcement.id ? (
+                                                                <div className="flex flex-col gap-2 bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
+                                                                        {isMultiClass ? 'Delete announcement from:' : 'Confirm delete:'}
+                                                                    </p>
+                                                                    {isMultiClass && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteRelatedAnnouncements(announcement)}
+                                                                            disabled={deletingAnnouncementId === announcement.id}
+                                                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                                                        >
+                                                                            {deletingAnnouncementId === announcement.id ? (
+                                                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                                            ) : (
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            )}
+                                                                            All classes ({relatedAnnouncements.length})
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => handleDeleteAnnouncement(announcement.id)}
+                                                                        disabled={deletingAnnouncementId === announcement.id}
+                                                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                                                                    >
+                                                                        {deletingAnnouncementId === announcement.id && !isMultiClass ? (
+                                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                                        ) : (
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        )}
+                                                                        {isMultiClass ? `Only Class ${announcement.targetClass}` : 'Delete'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setSelectedAnnouncementForDelete(null)}
+                                                                        className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setSelectedAnnouncementForDelete(announcement)}
+                                                                    className="flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                    <span className="text-sm">Delete</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        💡 Deleting an announcement removes it from all students' notifications instantly
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setShowManageAnnouncementsModal(false);
+                                            setSelectedAnnouncementForDelete(null);
+                                        }}
+                                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

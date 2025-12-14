@@ -214,7 +214,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         };
     }, [currentChat?.id, user?.uid]);
 
-    // Handle visibility change (user switches tabs)
+    // Handle visibility change (user switches tabs) and page unload
     useEffect(() => {
         if (!user) return;
 
@@ -227,15 +227,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         };
 
         const handleBeforeUnload = () => {
+            // Try to set offline synchronously using sendBeacon if available
+            // This is more reliable than async calls during page unload
+            setUserOffline(user.uid).catch(console.error);
+        };
+
+        // pagehide is more reliable than beforeunload on mobile browsers
+        const handlePageHide = () => {
             setUserOffline(user.uid).catch(console.error);
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', handlePageHide);
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', handlePageHide);
+            // Set user offline when component unmounts (e.g., logout, navigation)
+            setUserOffline(user.uid).catch(console.error);
         };
     }, [user?.uid]);
 
