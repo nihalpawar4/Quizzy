@@ -14,7 +14,7 @@ interface NewChatModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentUserRole: 'student' | 'teacher';
-    availableTeachers: { uid: string; name: string; email: string }[];
+    availableTeachers: { uid: string; name: string; email: string; hideContactInfo?: boolean }[];
     availableStudents: { uid: string; name: string; email: string; studentClass: number }[];
     presenceMap: { [userId: string]: UserPresence };
     onStartChat: (participantId: string, participantName: string, participantClass?: number) => void;
@@ -51,8 +51,17 @@ export default function NewChatModal({
 
     // Filter users
     const filteredUsers = availableUsers.filter(user => {
-        const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase());
+        // For students searching teachers with privacy enabled, always show them in search
+        const displayName = currentUserRole === 'student' && 'hideContactInfo' in user && user.hideContactInfo
+            ? 'Your Teacher'
+            : user.name;
+
+        const displayEmail = currentUserRole === 'student' && 'hideContactInfo' in user && user.hideContactInfo
+            ? ''
+            : user.email;
+
+        const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            displayEmail.toLowerCase().includes(searchQuery.toLowerCase());
 
         if (currentUserRole === 'teacher' && selectedClass) {
             return matchesSearch && 'studentClass' in user && user.studentClass === selectedClass;
@@ -168,6 +177,11 @@ export default function NewChatModal({
                                 const studentClass = 'studentClass' in user ? (user as { studentClass: number }).studentClass : undefined;
                                 const isStartingThis = isStarting === user.uid;
 
+                                // Check if this is a teacher with privacy enabled
+                                const isTeacherWithPrivacy = currentUserRole === 'student' && 'hideContactInfo' in user && user.hideContactInfo;
+                                const displayName = isTeacherWithPrivacy ? 'Your Teacher' : user.name;
+                                const displayEmail = isTeacherWithPrivacy ? 'Contact info hidden' : user.email;
+
                                 return (
                                     <button
                                         key={user.uid}
@@ -178,7 +192,7 @@ export default function NewChatModal({
                                         {/* Avatar */}
                                         <div className="relative flex-shrink-0">
                                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center text-white font-bold text-lg">
-                                                {user.name.charAt(0).toUpperCase()}
+                                                {displayName.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="absolute -bottom-0.5 -right-0.5">
                                                 <OnlineStatus
@@ -192,7 +206,7 @@ export default function NewChatModal({
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                                    {user.name}
+                                                    {displayName}
                                                 </h3>
                                                 {studentClass !== undefined && (
                                                     <span className="px-2 py-0.5 bg-[#1650EB]/10 text-[#1650EB] dark:text-[#6095DB] text-[10px] rounded-full flex-shrink-0">
@@ -200,8 +214,8 @@ export default function NewChatModal({
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                                {user.email}
+                                            <p className={`text-sm truncate ${isTeacherWithPrivacy ? 'text-gray-400 italic' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                {displayEmail}
                                             </p>
                                             <p className="text-xs text-gray-400 dark:text-gray-500">
                                                 {presence?.isOnline ? 'Online' : 'Offline'}

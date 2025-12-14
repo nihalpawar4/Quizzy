@@ -215,6 +215,10 @@ export async function getOrCreateChat(
 ): Promise<Chat> {
     const chatsRef = collection(db, COLLECTIONS.CHATS);
 
+    // Get teacher's privacy setting
+    const teacherDoc = await getDoc(doc(db, COLLECTIONS.USERS, teacherId));
+    const teacherHidesContactInfo = teacherDoc.exists() ? (teacherDoc.data()?.hideContactInfo || false) : false;
+
     // Check if chat already exists
     const q = query(
         chatsRef,
@@ -227,6 +231,12 @@ export async function getOrCreateChat(
     if (!existingChats.empty) {
         const chatDoc = existingChats.docs[0];
         const data = chatDoc.data();
+
+        // Update the existing chat with latest privacy setting
+        await updateDoc(chatDoc.ref, {
+            teacherHidesContactInfo
+        });
+
         return {
             id: chatDoc.id,
             participants: data.participants,
@@ -243,11 +253,12 @@ export async function getOrCreateChat(
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
             deletedFor: data.deletedFor,
-            deletedAt: data.deletedAt
+            deletedAt: data.deletedAt,
+            teacherHidesContactInfo
         };
     }
 
-    // Create new chat
+    // Create new chat with privacy setting
     const newChat = {
         participants: [studentId, teacherId],
         studentId,
@@ -255,6 +266,7 @@ export async function getOrCreateChat(
         studentName,
         teacherName,
         studentClass,
+        teacherHidesContactInfo,
         unreadCount: {
             [studentId]: 0,
             [teacherId]: 0
@@ -379,6 +391,7 @@ export function subscribeToUserChats(
                     updatedAt: data.updatedAt?.toDate() || new Date(),
                     deletedFor: data.deletedFor,
                     deletedAt: data.deletedAt,
+                    teacherHidesContactInfo: data.teacherHidesContactInfo || false,
                     participantPhotoURLs: data.participantPhotoURLs || {}
                 } as Chat;
             })
@@ -918,7 +931,7 @@ export function groupMessagesByDate(messages: Message[]): { date: string; messag
 /**
  * Get all teachers for student to start a chat
  */
-export async function getAllTeachers(): Promise<{ uid: string; name: string; email: string }[]> {
+export async function getAllTeachers(): Promise<{ uid: string; name: string; email: string; hideContactInfo?: boolean }[]> {
     const usersRef = collection(db, COLLECTIONS.USERS);
     const q = query(usersRef, where('role', '==', 'teacher'));
     const snapshot = await getDocs(q);
@@ -926,7 +939,8 @@ export async function getAllTeachers(): Promise<{ uid: string; name: string; ema
     return snapshot.docs.map(doc => ({
         uid: doc.id,
         name: doc.data().name,
-        email: doc.data().email
+        email: doc.data().email,
+        hideContactInfo: doc.data().hideContactInfo || false
     }));
 }
 
@@ -944,4 +958,27 @@ export async function getAllStudentsForChat(): Promise<{ uid: string; name: stri
         email: doc.data().email,
         studentClass: doc.data().studentClass || 5
     }));
+}
+
+/**
+ * Update teacher's privacy setting in all their chats
+ * Call this when teacher toggles hideContactInfo
+ */
+export async function updateTeacherPrivacyInAllChats(
+    teacherId: string,
+    hideContactInfo: boolean
+): Promise<void> {
+    const chatsRef = collection(db, COLLECTIONS.CHATS);
+    const q = query(chatsRef, where('teacherId', '==', teacherId));
+
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+
+    snapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+            teacherHidesContactInfo: hideContactInfo
+        });
+    });
+
+    await batch.commit();
 }

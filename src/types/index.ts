@@ -18,6 +18,8 @@ export interface User {
     lastStreakDate?: string; // ISO date string of last streak claim (YYYY-MM-DD)
     // Account status
     isRestricted?: boolean; // If true, student cannot login
+    // Privacy settings (for teachers)
+    hideContactInfo?: boolean; // If true, hide email from students
 }
 
 // Test Types
@@ -318,6 +320,8 @@ export interface Chat {
     deletedAt?: {
         [userId: string]: Date;
     };
+    // Privacy setting
+    teacherHidesContactInfo?: boolean; // If true, teacher's email is hidden from student
 }
 
 // Individual message in a chat

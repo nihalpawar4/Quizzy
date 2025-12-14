@@ -88,7 +88,10 @@ export default function ChatWindow({
 
     // Get the other participant
     const participant = currentUserRole === 'student'
-        ? { name: chat.teacherName, id: chat.teacherId }
+        ? {
+            name: chat.teacherHidesContactInfo ? 'Your Teacher' : chat.teacherName,
+            id: chat.teacherId
+        }
         : { name: chat.studentName, id: chat.studentId, class: chat.studentClass };
 
     // Group messages by date
@@ -254,8 +257,8 @@ export default function ChatWindow({
                         }}
                         disabled={isInCall || isInitiatingCall}
                         className={`p-2 rounded-full transition-all duration-200 ${isInCall || isInitiatingCall
-                                ? 'text-white/40 cursor-not-allowed'
-                                : 'text-white/80 hover:text-white hover:bg-white/10'
+                            ? 'text-white/40 cursor-not-allowed'
+                            : 'text-white/80 hover:text-white hover:bg-white/10'
                             }`}
                         title="Audio Call"
                     >
@@ -284,8 +287,8 @@ export default function ChatWindow({
                         }}
                         disabled={isInCall || isInitiatingCall}
                         className={`p-2 rounded-full transition-all duration-200 ${isInCall || isInitiatingCall
-                                ? 'text-white/40 cursor-not-allowed'
-                                : 'text-white/80 hover:text-white hover:bg-white/10'
+                            ? 'text-white/40 cursor-not-allowed'
+                            : 'text-white/80 hover:text-white hover:bg-white/10'
                             }`}
                         title="Video Call"
                     >
@@ -594,6 +597,15 @@ export default function ChatWindow({
                                     {new Date(chat.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                             </div>
+                            {/* Privacy Notice for Students viewing Teacher Info */}
+                            {currentUserRole === 'student' && chat.teacherHidesContactInfo && (
+                                <div className="py-3 px-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                    <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                                        <Info className="w-4 h-4" />
+                                        Contact information is hidden for privacy
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Actions */}

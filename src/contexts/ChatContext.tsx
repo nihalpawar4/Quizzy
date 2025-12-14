@@ -55,7 +55,7 @@ interface ChatContextType {
     isUserTyping: (userId: string, chatId: string) => boolean;
 
     // Available users for new chats
-    availableTeachers: { uid: string; name: string; email: string }[];
+    availableTeachers: { uid: string; name: string; email: string; hideContactInfo?: boolean }[];
     availableStudents: { uid: string; name: string; email: string; studentClass: number }[];
     loadAvailableUsers: () => Promise<void>;
 }
@@ -76,7 +76,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [isSending, setIsSending] = useState(false);
 
     // Available users for starting new chats
-    const [availableTeachers, setAvailableTeachers] = useState<{ uid: string; name: string; email: string }[]>([]);
+    const [availableTeachers, setAvailableTeachers] = useState<{ uid: string; name: string; email: string; hideContactInfo?: boolean }[]>([]);
     const [availableStudents, setAvailableStudents] = useState<{ uid: string; name: string; email: string; studentClass: number }[]>([]);
 
     // Refs for cleanup

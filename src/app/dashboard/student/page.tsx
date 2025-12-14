@@ -36,7 +36,9 @@ import {
     ShoppingCart,
     Gift,
     History,
-    Star
+    Star,
+    Settings,
+    ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
@@ -102,6 +104,9 @@ export default function StudentDashboard() {
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
     const [viewedNotificationIds, setViewedNotificationIds] = useState<Set<string>>(new Set());
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+
+    // Profile dropdown state
+    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
     // Read notes tracking (persisted in localStorage)
     const [readNoteIds, setReadNoteIds] = useState<Set<string>>(new Set());
@@ -1008,26 +1013,63 @@ export default function StudentDashboard() {
                             <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
                         </Link>
 
-                        <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group" title="Profile Settings">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Class {user.studentClass}</p>
-                            </div>
-                            {user.photoURL ? (
-                                <img
-                                    src={user.photoURL}
-                                    alt={user.name}
-                                    className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
-                                />
-                            ) : (
-                                <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                    <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                title="Profile Menu"
+                            >
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Class {user.studentClass}</p>
                                 </div>
-                            )}
-                        </Link>
-                        <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Sign Out">
-                            <LogOut className="w-5 h-5" />
-                        </button>
+                                {user.photoURL ? (
+                                    <img
+                                        src={user.photoURL}
+                                        alt={user.name}
+                                        className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
+                                        <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                    </div>
+                                )}
+                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 hidden sm:block" />
+                            </button>
+
+                            {/* Profile Dropdown */}
+                            <AnimatePresence>
+                                {showProfileDropdown && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto top-20 sm:top-full sm:mt-2 sm:w-56 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
+                                    >
+                                        <div className="p-2">
+                                            <Link
+                                                href="/profile"
+                                                onClick={() => setShowProfileDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                            >
+                                                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">Profile Settings</span>
+                                            </Link>
+                                            <button
+                                                onClick={() => {
+                                                    setShowProfileDropdown(false);
+                                                    handleSignOut();
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
+                                            >
+                                                <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-red-600" />
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-red-600">Logout</span>
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </div>
             </header>

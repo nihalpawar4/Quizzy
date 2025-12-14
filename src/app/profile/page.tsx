@@ -33,7 +33,7 @@ import { updateUserClass } from '@/lib/services';
 import { CLASS_OPTIONS } from '@/lib/constants';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getGlowProgress } from '@/lib/creditServices';
 import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePictureService';
 
@@ -444,6 +444,58 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </motion.div>
+
+                    {/* Privacy Settings - Only for teachers */}
+                    {user.role === 'teacher' && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.27 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                                    <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">Privacy Settings</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Control what students can see</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                        <Shield className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                        <div>
+                                            <p className="font-medium text-gray-900 dark:text-white">Hide Contact Information</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Students won't see your email in chat</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!user) return;
+                                            const newValue = !user.hideContactInfo;
+                                            try {
+                                                // Import the function at the top of the file
+                                                const { updateTeacherPrivacyInAllChats } = await import('@/lib/chatServices');
+
+                                                // Update user document
+                                                await updateDoc(doc(db, 'users', user.uid), {
+                                                    hideContactInfo: newValue
+                                                });
+
+                                                // Sync privacy to all chats
+                                                await updateTeacherPrivacyInAllChats(user.uid, newValue);
+
+                                                // Refresh user data
+                                                await refreshUser();
+                                            } catch (error) {
+                                                console.error('Error updating privacy settings:', error);
+                                            }
+                                        }}
+                                        className={`w-12 h-6 rounded-full transition-colors ${user.hideContactInfo ? 'bg-[#1650EB]' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                    >
+                                        <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${user.hideContactInfo ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
                     {/* Password Settings */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">

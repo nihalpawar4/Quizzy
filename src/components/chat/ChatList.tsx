@@ -40,7 +40,9 @@ export default function ChatList({
     // Get the other participant in the chat
     const getOtherParticipant = (chat: Chat) => {
         if (currentUserRole === 'student') {
-            return { name: chat.teacherName, id: chat.teacherId };
+            // If teacher has privacy enabled, show anonymous name
+            const displayName = chat.teacherHidesContactInfo ? 'Your Teacher' : chat.teacherName;
+            return { name: displayName, id: chat.teacherId };
         }
         return { name: chat.studentName, id: chat.studentId, class: chat.studentClass };
     };
