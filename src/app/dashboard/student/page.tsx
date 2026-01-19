@@ -1079,69 +1079,105 @@ export default function StudentDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-6 relative overflow-hidden"
                 >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            {/* Time-based greeting with first-time/returning user detection */}
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-2xl">
+                    {/* Welcome Hero Card */}
+                    <div className="bg-gradient-to-r from-[#1650EB] via-[#3b7dd8] to-[#6095DB] rounded-2xl p-6 text-white relative overflow-hidden">
+                        {/* Decorative elements */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+                        <div className="relative z-10">
+                            {/* Greeting */}
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-3xl">
                                     {new Date().getHours() < 12 ? '🌅' : new Date().getHours() < 17 ? '☀️' : '🌙'}
                                 </span>
-                                <p className="text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
+                                <span className="text-white/80 text-sm font-medium">
                                     {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
-                                </p>
+                                </span>
                             </div>
-                            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                                {/* First-time user: no results */}
+
+                            {/* Name */}
+                            <h2 className="text-2xl md:text-3xl font-bold mb-2">
                                 {results.length === 0 ? (
-                                    <>Welcome, <span className="bg-gradient-to-r from-[#1650EB] to-[#6095DB] bg-clip-text text-transparent">{user.name}</span>! 🎉</>
+                                    <>Welcome, {user.name}! 🎉</>
                                 ) : (
-                                    <>Welcome back, <span className="bg-gradient-to-r from-[#1650EB] to-[#6095DB] bg-clip-text text-transparent">{user.name}</span>! 👋</>
+                                    <>Welcome back, {user.name}! 👋</>
                                 )}
                             </h2>
-                            <p className="text-gray-600 dark:text-gray-400 mt-2">
+
+                            <p className="text-white/80 text-sm md:text-base mb-4">
                                 {results.length === 0 ? (
                                     "Let's get started with your first test! Pick one below."
                                 ) : (
-                                    `You've completed ${results.length} test${results.length > 1 ? 's' : ''}. Keep up the great work!`
+                                    `Class ${user.studentClass} • Keep up the great work!`
                                 )}
                             </p>
-                        </div>
 
+                            {/* Stats Row */}
+                            <div className="flex flex-wrap gap-3">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
+                                    <Trophy className="w-5 h-5 text-yellow-300" />
+                                    <div>
+                                        <p className="text-lg font-bold">{results.length}</p>
+                                        <p className="text-xs text-white/70">Tests Done</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
+                                    <Target className="w-5 h-5 text-green-300" />
+                                    <div>
+                                        <p className="text-lg font-bold">{averageScore}%</p>
+                                        <p className="text-xs text-white/70">Avg Score</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
+                                    <BookOpen className="w-5 h-5 text-blue-200" />
+                                    <div>
+                                        <p className="text-lg font-bold">{tests.length}</p>
+                                        <p className="text-xs text-white/70">Available</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </motion.div>
 
-                {/* Tab Navigation - Moved below greeting */}
+                {/* Tab Navigation */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-6">
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    <div className="flex flex-wrap gap-2 p-1.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
                         <button
                             onClick={() => setActiveTab('tests')}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'tests' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'tests' ? 'bg-gradient-to-r from-[#1650EB] to-[#3b7dd8] text-white shadow-lg shadow-[#1650EB]/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
-                            <BookOpen className="w-4 h-4" /> Available Tests
+                            <BookOpen className="w-5 h-5" />
+                            <span className="hidden sm:inline">Available Tests</span>
+                            <span className="sm:hidden">Tests</span>
                         </button>
                         <button
                             onClick={() => {
                                 setActiveTab('reports');
-                                // Clear the new reports badge when clicked
                                 setNewReportsCount(0);
                                 setLastSeenReportsCount(results.length);
                             }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'reports' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'reports' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
-                            <FileText className="w-4 h-4" /> My Reports
+                            <FileText className="w-5 h-5" />
+                            <span className="hidden sm:inline">My Reports</span>
+                            <span className="sm:hidden">Reports</span>
                             {newReportsCount > 0 && (
-                                <span className="bg-[#1650EB] text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                                <span className="bg-white text-emerald-600 text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">
                                     {newReportsCount}
                                 </span>
                             )}
                         </button>
                         <button
                             onClick={() => setActiveTab('notes')}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'notes' ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'notes' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
-                            <BookMarked className="w-4 h-4" /> Study Notes
+                            <BookMarked className="w-5 h-5" />
+                            <span className="hidden sm:inline">Study Notes</span>
+                            <span className="sm:hidden">Notes</span>
                             {unreadNotesCount > 0 && (
-                                <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                                <span className="bg-white text-purple-600 text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">
                                     {unreadNotesCount}
                                 </span>
                             )}
@@ -1153,9 +1189,11 @@ export default function StudentDashboard() {
                                     setHasNewPremiumTests(false);
                                     setLastSeenPremiumTestCount(premiumTests.length);
                                 }}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'premium' ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-sm' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'premium' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}
                             >
-                                <Star className="w-4 h-4" /> Premium Tests
+                                <Star className="w-5 h-5" />
+                                <span className="hidden sm:inline">Premium</span>
+                                <span className="sm:hidden">⭐</span>
                                 {hasNewPremiumTests && activeTab !== 'premium' && (
                                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
                                         New
@@ -1163,7 +1201,6 @@ export default function StudentDashboard() {
                                 )}
                             </button>
                         )}
-
                     </div>
                 </motion.div>
 
@@ -1200,8 +1237,8 @@ export default function StudentDashboard() {
                                         >
                                             {/* Gradient Header */}
                                             <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
-                                                    isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
-                                                        'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
+                                                isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
+                                                    'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
                                                 }`}>
                                                 {/* Decorative Elements */}
                                                 <div className="absolute inset-0 overflow-hidden">
