@@ -1072,12 +1072,9 @@ export default function StudentDashboard() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-6 py-8">
-                {/* Welcome Section - Redesigned */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6"
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                {/* Welcome Section */}
+                <div className="mb-5"
                 >
                     {/* Welcome Section - Simple & Light */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1119,14 +1116,14 @@ export default function StudentDashboard() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Tab Navigation */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-6">
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                <div className="mb-5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="flex gap-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-max sm:min-w-0">
                         <button
                             onClick={() => setActiveTab('tests')}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'tests' ? 'bg-gradient-to-r from-[#1650EB] to-[#3b7dd8] text-white shadow-lg shadow-[#1650EB]/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'tests' ? 'bg-[#1650EB] text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
                             <BookOpen className="w-5 h-5" />
                             <span className="hidden sm:inline">Available Tests</span>
@@ -1138,7 +1135,7 @@ export default function StudentDashboard() {
                                 setNewReportsCount(0);
                                 setLastSeenReportsCount(results.length);
                             }}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'reports' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'reports' ? 'bg-emerald-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
                             <FileText className="w-5 h-5" />
                             <span className="hidden sm:inline">My Reports</span>
@@ -1151,7 +1148,7 @@ export default function StudentDashboard() {
                         </button>
                         <button
                             onClick={() => setActiveTab('notes')}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'notes' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'notes' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
                             <BookMarked className="w-5 h-5" />
                             <span className="hidden sm:inline">Study Notes</span>
@@ -1169,7 +1166,7 @@ export default function StudentDashboard() {
                                     setHasNewPremiumTests(false);
                                     setLastSeenPremiumTestCount(premiumTests.length);
                                 }}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'premium' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}
+                                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'premium' ? 'bg-amber-500 text-white' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}
                             >
                                 <Star className="w-5 h-5" />
                                 <span className="hidden sm:inline">Premium</span>
@@ -1182,7 +1179,7 @@ export default function StudentDashboard() {
                             </button>
                         )}
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
