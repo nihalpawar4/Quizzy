@@ -318,31 +318,29 @@ export default function StudentDashboard() {
 
 
 
-
     const loadData = useCallback(async (testsData?: Test[]) => {
         if (!user?.studentClass || !user?.uid) return;
 
         try {
-            setLoading(true);
+            // Only show loading on first load, not on updates
+            if (tests.length === 0) setLoading(true);
+
             // If testsData is provided (from real-time update), use it directly
             if (testsData) {
                 setTests(testsData);
             }
             const resultsData = await getResultsByStudent(user.uid);
             setResults(resultsData);
-            const currentTests = testsData || tests;
-            const taken = new Set<string>();
-            for (const test of currentTests) {
-                const hasTaken = await hasStudentTakenTest(user.uid, test.id);
-                if (hasTaken) taken.add(test.id);
-            }
+
+            // Derive taken tests directly from results - no extra API calls!
+            const taken = new Set<string>(resultsData.map(r => r.testId));
             setTakenTests(taken);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
             setLoading(false);
         }
-    }, [user?.studentClass, user?.uid, tests]);
+    }, [user?.studentClass, user?.uid, tests.length]);
 
     // Ref to track if credit data has been loaded (prevents duplicate calls)
     const creditDataLoadedRef = useRef(false);
@@ -530,6 +528,9 @@ export default function StudentDashboard() {
 
             // Update results state
             setResults(allResults);
+
+            // Update takenTests immediately to prevent color flicker
+            setTakenTests(new Set(allResults.map(r => r.testId)));
 
             // Check for new results (only after initial load)
             if (!isInitialLoad) {
