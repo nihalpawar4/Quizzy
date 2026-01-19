@@ -53,7 +53,8 @@ import {
     Sparkles,
     ToggleLeft,
     ToggleRight,
-    MessageCircle
+    MessageCircle,
+    CalendarDays
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -1551,6 +1552,14 @@ export default function TeacherDashboard() {
                                             >
                                                 <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
                                                 <span className="text-sm font-medium text-gray-900 dark:text-white">Profile Settings</span>
+                                            </Link>
+                                            <Link
+                                                href="/teacher/weekly-reports"
+                                                onClick={() => setShowProfileDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                            >
+                                                <CalendarDays className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">Weekly Reports</span>
                                             </Link>
                                             <button
                                                 onClick={() => {
