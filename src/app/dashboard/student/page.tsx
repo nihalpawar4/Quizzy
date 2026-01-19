@@ -1077,65 +1077,45 @@ export default function StudentDashboard() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 relative overflow-hidden"
+                    className="mb-6"
                 >
-                    {/* Welcome Hero Card */}
-                    <div className="bg-gradient-to-r from-[#1650EB] via-[#3b7dd8] to-[#6095DB] rounded-2xl p-6 text-white relative overflow-hidden">
-                        {/* Decorative elements */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-
-                        <div className="relative z-10">
-                            {/* Greeting */}
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-3xl">
+                    {/* Welcome Section - Simple & Light */}
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        {/* Greeting */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-2xl">
                                     {new Date().getHours() < 12 ? '🌅' : new Date().getHours() < 17 ? '☀️' : '🌙'}
                                 </span>
-                                <span className="text-white/80 text-sm font-medium">
+                                <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
                                     {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
                                 </span>
                             </div>
-
-                            {/* Name */}
-                            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                                 {results.length === 0 ? (
-                                    <>Welcome, {user.name}! 🎉</>
+                                    <>Welcome, <span className="text-[#1650EB]">{user.name}</span>! 🎉</>
                                 ) : (
-                                    <>Welcome back, {user.name}! 👋</>
+                                    <>Welcome back, <span className="text-[#1650EB]">{user.name}</span>! 👋</>
                                 )}
                             </h2>
-
-                            <p className="text-white/80 text-sm md:text-base mb-4">
-                                {results.length === 0 ? (
-                                    "Let's get started with your first test! Pick one below."
-                                ) : (
-                                    `Class ${user.studentClass} • Keep up the great work!`
-                                )}
+                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                                {results.length === 0 ? "Let's start with your first test!" : `Class ${user.studentClass} Student`}
                             </p>
+                        </div>
 
-                            {/* Stats Row */}
-                            <div className="flex flex-wrap gap-3">
-                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
-                                    <Trophy className="w-5 h-5 text-yellow-300" />
-                                    <div>
-                                        <p className="text-lg font-bold">{results.length}</p>
-                                        <p className="text-xs text-white/70">Tests Done</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
-                                    <Target className="w-5 h-5 text-green-300" />
-                                    <div>
-                                        <p className="text-lg font-bold">{averageScore}%</p>
-                                        <p className="text-xs text-white/70">Avg Score</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-sm rounded-xl">
-                                    <BookOpen className="w-5 h-5 text-blue-200" />
-                                    <div>
-                                        <p className="text-lg font-bold">{tests.length}</p>
-                                        <p className="text-xs text-white/70">Available</p>
-                                    </div>
-                                </div>
+                        {/* Stats - Simple Inline Cards */}
+                        <div className="flex gap-3">
+                            <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{results.length}</p>
+                                <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Tests</p>
+                            </div>
+                            <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{averageScore}%</p>
+                                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Score</p>
+                            </div>
+                            <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+                                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{tests.length}</p>
+                                <p className="text-xs text-violet-600/70 dark:text-violet-400/70">Active</p>
                             </div>
                         </div>
                     </div>
