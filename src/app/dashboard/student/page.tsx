@@ -1186,11 +1186,11 @@ export default function StudentDashboard() {
 
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
+                    <div className="mb-8">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             📚 Available Tests for Class {user.studentClass}
                         </h3>
-                        {loading ? (
+                        {loading && tests.length === 0 ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                             </div>
@@ -1208,12 +1208,9 @@ export default function StudentDashboard() {
                                     const countdown = countdowns[test.id];
 
                                     return (
-                                        <motion.div
+                                        <div
                                             key={test.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.05 * index }}
-                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-xl hover:scale-[1.02] transition-all duration-300`}
+                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
                                         >
                                             {/* Gradient Header */}
                                             <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
@@ -1307,17 +1304,17 @@ export default function StudentDashboard() {
                                                         Waiting for test to start
                                                     </div>
                                                 ) : (
-                                                    <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#1650EB] to-[#3b7dd8] text-white rounded-xl font-medium hover:from-[#1243c7] hover:to-[#1650EB] transition-all shadow-lg shadow-[#1650EB]/20 group-hover:shadow-xl group-hover:shadow-[#1650EB]/30">
-                                                        Start Test <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                                    <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                                                        Start Test <ArrowRight className="w-4 h-4" />
                                                     </Link>
                                                 )}
                                             </div>
-                                        </motion.div>
+                                        </div>
                                     );
                                 })}
                             </div>
                         )}
-                    </motion.div>
+                    </div>
                 )}
 
                 {/* My Reports Tab */}
