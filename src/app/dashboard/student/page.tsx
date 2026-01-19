@@ -1196,70 +1196,105 @@ export default function StudentDashboard() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.05 * index }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow`}
+                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-xl hover:scale-[1.02] transition-all duration-300`}
                                         >
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                        <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">{test.subject}</span>
-                                                        {test.isPremium && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-medium rounded-full">
-                                                                <Star className="w-3 h-3" /> Premium
-                                                            </span>
-                                                        )}
-                                                        {test.coinCost && test.coinCost > 0 && !test.isMandatory && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded-full">
-                                                                <Coins className="w-3 h-3" /> {test.coinCost}
-                                                            </span>
-                                                        )}
-                                                        {isScheduled && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full">
-                                                                <Timer className="w-3 h-3" />
-                                                                Scheduled
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{test.title}</h4>
+                                            {/* Gradient Header */}
+                                            <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
+                                                    isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
+                                                        'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
+                                                }`}>
+                                                {/* Decorative Elements */}
+                                                <div className="absolute inset-0 overflow-hidden">
+                                                    <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
+                                                    <div className="absolute -bottom-8 -left-4 w-32 h-32 bg-white/5 rounded-full" />
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                                <span>{test.questionCount || '?'} Questions</span>
-                                                {test.duration && <span>{test.duration} min</span>}
-                                            </div>
-
-                                            {/* Countdown Timer for Scheduled Tests */}
-                                            {isScheduled && countdown && (
-                                                <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <Timer className="w-5 h-5 text-orange-600 dark:text-orange-400 animate-pulse" />
-                                                            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Starts in:</span>
+                                                {/* Subject Badge */}
+                                                <div className="absolute top-4 left-4">
+                                                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
+                                                        {test.subject}
+                                                    </span>
+                                                </div>
+                                                {/* Progress Circle (for completed tests) */}
+                                                {hasTaken && result && (
+                                                    <div className="absolute top-3 right-3">
+                                                        <div className="relative w-14 h-14">
+                                                            <svg className="w-14 h-14 transform -rotate-90">
+                                                                <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.3)" strokeWidth="4" fill="none" />
+                                                                <circle
+                                                                    cx="28" cy="28" r="24"
+                                                                    stroke="white" strokeWidth="4" fill="none"
+                                                                    strokeLinecap="round"
+                                                                    strokeDasharray={`${(result.score / result.totalQuestions) * 150.8} 150.8`}
+                                                                />
+                                                            </svg>
+                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                <span className="text-white text-sm font-bold">{Math.round((result.score / result.totalQuestions) * 100)}%</span>
+                                                            </div>
                                                         </div>
-                                                        <span className="text-lg font-bold text-orange-600 dark:text-orange-400 font-mono">
-                                                            {countdown}
-                                                        </span>
                                                     </div>
-                                                    <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">
-                                                        Scheduled: {new Date(test.scheduledStartTime!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
+                                                )}
+                                                {/* Premium/Coins badges */}
+                                                <div className="absolute bottom-3 left-4 flex gap-2">
+                                                    {test.isPremium && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-medium rounded-full shadow-lg">
+                                                            <Star className="w-3 h-3" /> Premium
+                                                        </span>
+                                                    )}
+                                                    {test.coinCost && test.coinCost > 0 && !test.isMandatory && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
+                                                            <Coins className="w-3 h-3" /> {test.coinCost}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
 
-                                            {hasTaken && result ? (
-                                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                                    <Trophy className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">Score: {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)</span>
+                                            {/* Card Content */}
+                                            <div className="p-5">
+                                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#1650EB] transition-colors">{test.title}</h4>
+                                                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                                    <span className="flex items-center gap-1">
+                                                        <BookOpen className="w-4 h-4" />
+                                                        {test.questionCount || '?'} Questions
+                                                    </span>
+                                                    {test.duration && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-4 h-4" />
+                                                            {test.duration} min
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            ) : isScheduled ? (
-                                                <div className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl font-medium cursor-not-allowed">
-                                                    <Timer className="w-4 h-4" />
-                                                    Waiting for test to start
-                                                </div>
-                                            ) : (
-                                                <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
-                                                    Start Test <ArrowRight className="w-4 h-4" />
-                                                </Link>
-                                            )}
+
+                                                {/* Countdown Timer for Scheduled Tests */}
+                                                {isScheduled && countdown && (
+                                                    <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <Timer className="w-5 h-5 text-orange-600 dark:text-orange-400 animate-pulse" />
+                                                                <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Starts in:</span>
+                                                            </div>
+                                                            <span className="text-lg font-bold text-orange-600 dark:text-orange-400 font-mono">
+                                                                {countdown}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {hasTaken && result ? (
+                                                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
+                                                        <Trophy className="w-5 h-5" />
+                                                        <span className="text-sm font-medium">Completed • {result.score}/{result.totalQuestions} correct</span>
+                                                    </div>
+                                                ) : isScheduled ? (
+                                                    <div className="flex items-center justify-center gap-2 w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl font-medium cursor-not-allowed">
+                                                        <Timer className="w-4 h-4" />
+                                                        Waiting for test to start
+                                                    </div>
+                                                ) : (
+                                                    <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#1650EB] to-[#3b7dd8] text-white rounded-xl font-medium hover:from-[#1243c7] hover:to-[#1650EB] transition-all shadow-lg shadow-[#1650EB]/20 group-hover:shadow-xl group-hover:shadow-[#1650EB]/30">
+                                                        Start Test <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                                    </Link>
+                                                )}
+                                            </div>
                                         </motion.div>
                                     );
                                 })}
