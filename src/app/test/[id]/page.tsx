@@ -176,16 +176,30 @@ export default function TestPage() {
         return 'mcq';
     };
 
-    // Anti-cheat: Enter fullscreen
+    // Anti-cheat: Enter fullscreen - use documentElement for better mobile support
     const enterFullscreen = useCallback(async () => {
         if (!antiCheatEnabled) return;
         try {
-            if (containerRef.current && document.fullscreenElement === null) {
-                await containerRef.current.requestFullscreen();
+            const element = document.documentElement;
+            if (document.fullscreenElement === null) {
+                // Try different fullscreen methods for cross-browser support
+                if (element.requestFullscreen) {
+                    await element.requestFullscreen();
+                } else if ((element as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen) {
+                    await (element as HTMLElement & { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+                } else if ((element as HTMLElement & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen) {
+                    await (element as HTMLElement & { mozRequestFullScreen: () => Promise<void> }).mozRequestFullScreen();
+                } else if ((element as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen) {
+                    await (element as HTMLElement & { msRequestFullscreen: () => Promise<void> }).msRequestFullscreen();
+                }
                 setIsFullscreen(true);
+                // Add body class to prevent background scrolling issues
+                document.body.classList.add('modal-open');
             }
         } catch (err) {
-            console.log('Fullscreen not supported:', err);
+            console.log('Fullscreen not supported on this device:', err);
+            // On mobile devices that don't support fullscreen, still mark as "fullscreen" to enable anti-cheat
+            setIsFullscreen(true);
         }
     }, [antiCheatEnabled]);
 
@@ -297,13 +311,27 @@ export default function TestPage() {
                 setWarningMessage('🖥️ Fullscreen exited! This will be reported.');
                 setShowAntiCheatWarning(true);
                 setTimeout(() => setShowAntiCheatWarning(false), 3000);
+                // Remove body class when exiting fullscreen
+                document.body.classList.remove('modal-open');
             } else if (document.fullscreenElement) {
                 setIsFullscreen(true);
+                // Add body class when entering fullscreen
+                document.body.classList.add('modal-open');
             }
         };
 
+        // Handle various browser prefixes for fullscreen change event
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
     }, [antiCheatEnabled, isSubmitted, isFullscreen]);
 
     // Load test data
@@ -599,10 +627,12 @@ export default function TestPage() {
                 antiCheatEnabled
             });
 
-            // Exit fullscreen on submit
+            // Exit fullscreen on submit and cleanup
             if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => { });
             }
+            // Remove body class
+            document.body.classList.remove('modal-open');
 
             setIsSubmitted(true);
         } catch (err) {
@@ -970,7 +1000,7 @@ export default function TestPage() {
     const questionType = getQuestionType(currentQuestion);
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-gray-50 dark:bg-gray-950 zen-mode">
+        <div ref={containerRef} className={`min-h-screen bg-gray-50 dark:bg-gray-950 zen-mode touch-scroll ${isFullscreen ? 'fullscreen-container' : ''}`}>
             {/* Review Modal */}
             <AnimatePresence>
                 {showReviewModal && (
@@ -978,7 +1008,7 @@ export default function TestPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
                         onClick={() => setShowReviewModal(false)}
                     >
                         <motion.div
@@ -986,16 +1016,16 @@ export default function TestPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-auto"
                         >
                             {/* Header */}
-                            <div className="sticky top-0 bg-gradient-to-r from-[#1650EB] to-indigo-600 p-6 text-white">
-                                <h2 className="text-2xl font-bold mb-1">Review Your Test</h2>
-                                <p className="text-indigo-100">Check your answers before final submission</p>
+                            <div className="flex-shrink-0 bg-gradient-to-r from-[#1650EB] to-indigo-600 p-4 sm:p-6 text-white">
+                                <h2 className="text-xl sm:text-2xl font-bold mb-1">Review Your Test</h2>
+                                <p className="text-sm text-indigo-100">Check your answers before final submission</p>
                             </div>
 
-                            {/* Content */}
-                            <div className="p-6 space-y-6">
+                            {/* Content - Scrollable */}
+                            <div className="flex-1 overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-6">
                                 {/* Stats Summary */}
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center border border-green-200 dark:border-green-800">
@@ -1026,8 +1056,8 @@ export default function TestPage() {
 
                                 {/* Question Grid */}
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Questions Overview</h3>
-                                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm sm:text-base">Questions Overview</h3>
+                                    <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5 sm:gap-2">
                                         {questions.map((_, index) => {
                                             const isAnswered = answers[index] !== null && answers[index] !== '';
                                             const isCurrent = index === currentIndex;
@@ -1038,12 +1068,12 @@ export default function TestPage() {
                                                         setCurrentIndex(index);
                                                         setShowReviewModal(false);
                                                     }}
-                                                    className={`aspect-square rounded-lg font-medium text-sm transition-all ${isCurrent
-                                                            ? 'bg-[#1650EB] text-white ring-2 ring-[#1650EB] ring-offset-2 dark:ring-offset-gray-900'
-                                                            : isAnswered
-                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-300 dark:border-green-700'
-                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-700'
-                                                        } hover:scale-110`}
+                                                    className={`aspect-square rounded-lg font-medium text-xs sm:text-sm transition-all min-h-[36px] ${isCurrent
+                                                        ? 'bg-[#1650EB] text-white ring-2 ring-[#1650EB] ring-offset-1 dark:ring-offset-gray-900'
+                                                        : isAnswered
+                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-300 dark:border-green-700'
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-700'
+                                                        } active:scale-95`}
                                                 >
                                                     {index + 1}
                                                 </button>
@@ -1276,62 +1306,62 @@ export default function TestPage() {
                 </AnimatePresence>
 
                 {/* Navigation */}
-                <div className="flex items-center justify-between mt-8">
-                    <button onClick={handlePrevious} disabled={currentIndex === 0} className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                        <ArrowLeft className="w-5 h-5" />
-                        Previous
+                <div className="flex items-center justify-between mt-6 sm:mt-8 gap-3">
+                    <button onClick={handlePrevious} disabled={currentIndex === 0} className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base">
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="hidden xs:inline">Previous</span>
                     </button>
 
                     {currentIndex === questions.length - 1 ? (
-                        <button onClick={handleSubmitClick} disabled={isSubmitting} className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            {isSubmitting ? (<><Loader2 className="w-5 h-5 animate-spin" />Submitting...</>) : (<><Flag className="w-5 h-5" />Finish Test</>)}
+                        <button onClick={handleSubmitClick} disabled={isSubmitting} className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-8 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base">
+                            {isSubmitting ? (<><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /><span className="hidden sm:inline">Submitting...</span></>) : (<><Flag className="w-4 h-4 sm:w-5 sm:h-5" /><span>Finish</span></>)}
                         </button>
                     ) : (
-                        <button onClick={handleNext} className="flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
-                            Next
-                            <ArrowRight className="w-5 h-5" />
+                        <button onClick={handleNext} className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] active:bg-[#0e3699] transition-colors text-sm sm:text-base">
+                            <span className="hidden xs:inline">Next</span>
+                            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                     )}
                 </div>
 
                 {/* Question Navigator */}
-                <div className="mt-8 bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800">
+                <div className="mt-6 sm:mt-8 bg-white dark:bg-gray-900 rounded-2xl p-3 sm:p-4 border border-gray-200 dark:border-gray-800">
                     {/* Legend */}
-                    <div className="flex flex-wrap items-center justify-center gap-4 mb-4 text-xs">
+                    <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4 text-[10px] sm:text-xs">
                         <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded bg-[#1650EB]" />
+                            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-[#1650EB]" />
                             <span className="text-gray-600 dark:text-gray-400">Current</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded bg-green-500" />
-                            <span className="text-gray-600 dark:text-gray-400">Attempted ({answeredCount})</span>
+                            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-green-500" />
+                            <span className="text-gray-600 dark:text-gray-400">Done ({answeredCount})</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded bg-red-400" />
-                            <span className="text-gray-600 dark:text-gray-400">Not Attempted ({questions.length - answeredCount})</span>
+                            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-red-400" />
+                            <span className="text-gray-600 dark:text-gray-400">Pending ({questions.length - answeredCount})</span>
                         </div>
                     </div>
 
                     {/* Question Dots */}
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
                         {questions.map((_, index) => {
                             const isCurrentQuestion = index === currentIndex;
                             const isAnswered = answers[index] !== null && answers[index] !== '';
 
                             let colorClass = '';
                             if (isCurrentQuestion) {
-                                colorClass = 'bg-[#1650EB] text-white ring-2 ring-blue-300 ring-offset-2 dark:ring-offset-gray-900';
+                                colorClass = 'bg-[#1650EB] text-white ring-2 ring-blue-300 ring-offset-1 dark:ring-offset-gray-900';
                             } else if (isAnswered) {
-                                colorClass = 'bg-green-500 text-white hover:bg-green-600';
+                                colorClass = 'bg-green-500 text-white active:bg-green-600';
                             } else {
-                                colorClass = 'bg-red-400 text-white hover:bg-red-500';
+                                colorClass = 'bg-red-400 text-white active:bg-red-500';
                             }
 
                             return (
                                 <button
                                     key={index}
                                     onClick={() => { setDirection(index > currentIndex ? 1 : -1); setCurrentIndex(index); }}
-                                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${colorClass}`}
+                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-xs sm:text-sm font-medium transition-all ${colorClass}`}
                                 >
                                     {index + 1}
                                 </button>

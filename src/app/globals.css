@@ -333,3 +333,221 @@ body {
   stroke-linecap: round;
   transition: stroke-dashoffset 0.5s ease;
 }
+
+/* ==================== MOBILE OPTIMIZATION ==================== */
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mobile-first touch targets - minimum 44px for accessibility */
+@media (max-width: 768px) {
+
+  .btn,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve tap response */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: rgba(22, 80, 235, 0.1);
+  }
+}
+
+/* Smooth scrolling for all containers */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-optimized modal/overlay scrolling */
+.mobile-scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: 100vh;
+  max-height: 100dvh;
+  /* Dynamic viewport height for mobile */
+}
+
+/* Fullscreen mode fixes for mobile */
+.fullscreen-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  z-index: 9999 !important;
+  background: inherit;
+}
+
+/* Fix iOS Safari viewport height issues */
+@supports (-webkit-touch-callout: none) {
+  .fullscreen-container {
+    height: -webkit-fill-available !important;
+  }
+}
+
+/* Test page mobile layout */
+@media (max-width: 640px) {
+
+  /* Smaller question navigation dots on mobile */
+  .question-nav-dot {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  /* Stack navigation buttons vertically on very small screens */
+  .nav-buttons-mobile {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nav-buttons-mobile button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Prevent text selection during tests (anti-cheat) */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Modal overlay - ensure it covers everything on mobile */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Modal content - mobile optimized */
+.modal-content {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 600px;
+}
+
+.dark .modal-content {
+  background: var(--gray-900);
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-top {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+}
+
+/* Fix for sticky headers on mobile */
+.sticky-header-mobile {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: inherit;
+}
+
+/* Improve form input styling on mobile */
+@media (max-width: 768px) {
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Touch-friendly scrollable areas */
+.touch-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbar but keep functionality on mobile */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--gray-200) 25%,
+      var(--gray-100) 50%,
+      var(--gray-200) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg,
+      var(--gray-800) 25%,
+      var(--gray-700) 50%,
+      var(--gray-800) 75%);
+  background-size: 200% 100%;
+}
+
+/* Mobile test card improvements */
+@media (max-width: 640px) {
+  .test-card {
+    padding: 16px;
+  }
+
+  .test-card h3 {
+    font-size: 16px;
+  }
+}
