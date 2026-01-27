@@ -551,3 +551,233 @@ body.modal-open {
     font-size: 16px;
   }
 }
+
+/* ==================== TEST WINDOW MOBILE FIXES ==================== */
+
+/* Test page container - mobile friendly */
+.test-page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Test header - fixed on top for mobile */
+.test-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  flex-shrink: 0;
+}
+
+/* Test main content - scrollable area */
+.test-main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 100px;
+  /* Space for fixed navigation on mobile */
+}
+
+@media (max-width: 640px) {
+  .test-main-content {
+    padding-bottom: 140px;
+    /* More space for stacked nav buttons */
+  }
+}
+
+/* Test navigation - fixed at bottom on mobile */
+.test-navigation {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  padding: 12px 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dark .test-navigation {
+  background: var(--gray-900);
+  border-color: var(--gray-800);
+}
+
+@supports (padding: max(0px)) {
+  .test-navigation {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Question card mobile optimization */
+@media (max-width: 640px) {
+  .question-card {
+    padding: 16px;
+    margin: 12px;
+    border-radius: 12px;
+  }
+
+  .question-text {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .option-button {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  /* Navigation buttons mobile */
+  .test-navigation {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .test-navigation button {
+    flex: 1;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+
+/* Very small screens - stack navigation */
+@media (max-width: 360px) {
+  .test-navigation {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .test-navigation button {
+    width: 100%;
+  }
+}
+
+/* Question navigator mobile */
+@media (max-width: 640px) {
+  .question-navigator {
+    margin: 12px;
+    padding: 12px;
+  }
+
+  .question-dot {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+}
+
+/* Review modal mobile fixes */
+.review-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.review-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  max-height: 90dvh;
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+  border-radius: 16px;
+  overflow: hidden;
+  background: white;
+}
+
+.dark .review-modal-content {
+  background: var(--gray-900);
+}
+
+.review-modal-header {
+  flex-shrink: 0;
+}
+
+.review-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.review-modal-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--gray-200);
+}
+
+.dark .review-modal-footer {
+  border-color: var(--gray-800);
+}
+
+@media (max-width: 640px) {
+  .review-modal-content {
+    max-height: 95vh;
+    max-height: 95dvh;
+    margin: 0;
+    border-radius: 16px;
+  }
+
+  .review-modal-header {
+    padding: 16px;
+  }
+
+  .review-modal-body {
+    padding: 16px;
+  }
+
+  .review-modal-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .review-modal-footer button {
+    width: 100%;
+  }
+}
+
+/* Instructions screen mobile */
+@media (max-width: 640px) {
+  .instructions-screen {
+    padding: 12px;
+  }
+
+  .instructions-card {
+    border-radius: 16px;
+    max-height: 95vh;
+    max-height: 95dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .instructions-content {
+    padding: 16px;
+  }
+
+  .instructions-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .instructions-footer button {
+    width: 100%;
+  }
+}
