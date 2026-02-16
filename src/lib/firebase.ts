@@ -50,7 +50,7 @@ if (typeof window !== 'undefined') {
             popupRedirectResolver: browserPopupRedirectResolver
         });
         console.log('[Quizy Auth] ✅ Auth initialized with IndexedDB + localStorage persistence');
-    } catch (error) {
+    } catch (_error) {
         // If already initialized (hot reload), just get the existing instance
         auth = getAuth(app);
         console.log('[Quizy Auth] Using existing auth instance');
@@ -123,7 +123,7 @@ const clearSessionBackup = () => {
 
 // Initialize persistence on client side - NOW HANDLED BY initializeAuth
 // This is kept for backwards compatibility with code that calls ensurePersistence
-let persistenceReady = false;
+let _persistenceReady = false;
 
 /**
  * Ensure persistence is ready.
@@ -136,7 +136,7 @@ const ensurePersistence = (): Promise<void> => {
     }
 
     // Mark as ready and resolve
-    persistenceReady = true;
+    _persistenceReady = true;
     console.log('[Quizy Auth] Persistence confirmed ready');
     return Promise.resolve();
 };

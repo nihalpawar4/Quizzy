@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, CheckCircle } from 'lucide-react';
 import { usePWA } from './PWAProvider';
@@ -11,9 +11,9 @@ export function InstallPrompt() {
     const [installing, setInstalling] = useState(false);
     const [justInstalled, setJustInstalled] = useState(false);
     const [mounted, setMounted] = useState(false);
-
-    // Handle mount state
+    const mountedRef = useRef(false);
     useEffect(() => {
+        mountedRef.current = true;
         setMounted(true);
     }, []);
 
@@ -47,7 +47,7 @@ export function InstallPrompt() {
 
     // Handle success toast when app is installed
     useEffect(() => {
-        if (!mounted || !isInstalled) return;
+        if (!mountedRef.current || !isInstalled) return;
 
         const alreadyShown = localStorage.getItem('quizy-app-installed-shown');
         if (!alreadyShown) {
@@ -60,7 +60,7 @@ export function InstallPrompt() {
 
             return () => clearTimeout(timer);
         }
-    }, [mounted, isInstalled]);
+    }, [isInstalled]);
 
     const handleInstall = useCallback(async () => {
         if (isInstallable) {

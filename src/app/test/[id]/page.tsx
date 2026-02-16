@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
     ArrowLeft,
     ArrowRight,
@@ -15,11 +15,10 @@ import {
     ShieldAlert,
     Maximize,
     AlertTriangle,
-    Coins
+
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTestById, getQuestionsByTestId, submitTestResult, hasStudentTakenTest } from '@/lib/services';
-import { deductCoinsForTest, getWalletByStudentId } from '@/lib/creditServices';
 import type { Test, Question } from '@/types';
 
 // Circular Progress Component
@@ -103,9 +102,9 @@ export default function TestPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const params = useParams();
-    const searchParams = useSearchParams();
+
     const testId = params.id as string;
-    const isPremiumTest = searchParams.get('premium') === 'true';
+
 
     const [test, setTest] = useState<Test | null>(null);
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -142,11 +141,7 @@ export default function TestPage() {
     const [showInstructionsScreen, setShowInstructionsScreen] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
 
-    // Coin payment state
-    const [showCoinPayment, setShowCoinPayment] = useState(false);
-    const [coinsPaid, setCoinsPaid] = useState(false);
-    const [userBalance, setUserBalance] = useState<number>(0);
-    const [isPayingCoins, setIsPayingCoins] = useState(false);
+
 
     // Review modal state
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -405,26 +400,16 @@ export default function TestPage() {
             const marksPerQ = testData.marksPerQuestion || 1;
             setTotalMarks(questionsData.length * marksPerQ);
 
-            // Check if test requires coin payment (not mandatory and has coin cost)
-            const requiresPayment = !testData.isMandatory && testData.coinCost && testData.coinCost > 0 && !isPremiumTest;
-
-            if (requiresPayment) {
-                // Get user's wallet balance
-                const wallet = await getWalletByStudentId(user!.uid);
-                setUserBalance(wallet?.balance || 0);
-                setShowCoinPayment(true);
+            // Show instructions or start test directly
+            if (testData.showInstructions !== false) {
+                setShowInstructionsScreen(true);
             } else {
-                // No payment needed, show instructions or start
-                if (testData.showInstructions !== false) {
-                    setShowInstructionsScreen(true);
-                } else {
-                    setTestStartTime(new Date());
-                    if (testData.duration) {
-                        setTimeLeft(testData.duration * 60);
-                    }
-                    if (testData.enableAntiCheat) {
-                        setTimeout(() => enterFullscreen(), 500);
-                    }
+                setTestStartTime(new Date());
+                if (testData.duration) {
+                    setTimeLeft(testData.duration * 60);
+                }
+                if (testData.enableAntiCheat) {
+                    setTimeout(() => enterFullscreen(), 500);
                 }
             }
         } catch (err) {
@@ -435,49 +420,7 @@ export default function TestPage() {
         }
     };
 
-    // Handle coin payment
-    const handleCoinPayment = async () => {
-        if (!user || !test || !test.coinCost) return;
 
-        setIsPayingCoins(true);
-        try {
-            const result = await deductCoinsForTest(
-                user.uid,
-                user.name,
-                test.id,
-                test.title,
-                test.coinCost,
-                test.isPremium || false // isPremiumTest - determines if it counts toward glow
-            );
-
-            if (!result.success) {
-                setError(result.message);
-                setIsPayingCoins(false);
-                return;
-            }
-
-            setCoinsPaid(true);
-            setShowCoinPayment(false);
-
-            // Now show instructions or start test
-            if (test.showInstructions !== false) {
-                setShowInstructionsScreen(true);
-            } else {
-                setTestStartTime(new Date());
-                if (test.duration) {
-                    setTimeLeft(test.duration * 60);
-                }
-                if (test.enableAntiCheat) {
-                    setTimeout(() => enterFullscreen(), 500);
-                }
-            }
-        } catch (err) {
-            console.error('Error paying coins:', err);
-            setError('Failed to process payment. Please try again.');
-        } finally {
-            setIsPayingCoins(false);
-        }
-    };
 
     // Start test after agreeing to instructions
     const startTestAfterInstructions = () => {
@@ -686,108 +629,7 @@ export default function TestPage() {
         );
     }
 
-    // Coin Payment Screen
-    if (showCoinPayment && test) {
-        const canAfford = userBalance >= (test.coinCost || 0);
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="max-w-md w-full bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden"
-                >
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-amber-400 to-yellow-500 p-6 text-white text-center">
-                        <Coins className="w-16 h-16 mx-auto mb-3" />
-                        <h1 className="text-2xl font-bold mb-1">Coin Payment Required</h1>
-                        <p className="text-amber-100">This test costs coins to attempt</p>
-                    </div>
 
-                    {/* Content */}
-                    <div className="p-6 space-y-6">
-                        {/* Test Info */}
-                        <div className="text-center">
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{test.title}</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{test.subject} • Class {test.targetClass}</p>
-                        </div>
-
-                        {/* Cost Display */}
-                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 text-center">
-                            <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">Test Cost</p>
-                            <div className="flex items-center justify-center gap-2">
-                                <Coins className="w-8 h-8 text-amber-500" />
-                                <span className="text-4xl font-bold text-amber-600 dark:text-amber-400">{test.coinCost}</span>
-                                <span className="text-lg text-amber-500">coins</span>
-                            </div>
-                        </div>
-
-                        {/* Balance Display */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                            <span className="text-gray-600 dark:text-gray-400">Your Balance:</span>
-                            <span className={`font-bold text-lg ${canAfford ? 'text-green-600' : 'text-red-500'}`}>
-                                {userBalance} coins
-                            </span>
-                        </div>
-
-                        {/* Glow Progress Info */}
-                        {!test.isPremium && (
-                            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                                <p className="text-sm text-indigo-700 dark:text-indigo-400">
-                                    ✨ This spending will count toward your <strong>Glow Status</strong> goal!
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Insufficient Balance Warning */}
-                        {!canAfford && (
-                            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                                <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                                    <AlertCircle className="w-5 h-5" />
-                                    <span className="font-medium">Insufficient coins!</span>
-                                </div>
-                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                                    You need {(test.coinCost || 0) - userBalance} more coins to attempt this test.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="p-6 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
-                        <button
-                            onClick={() => router.push('/dashboard/student')}
-                            className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleCoinPayment}
-                            disabled={!canAfford || isPayingCoins}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all ${canAfford && !isPayingCoins
-                                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 shadow-lg hover:shadow-xl'
-                                : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
-                                }`}
-                        >
-                            {isPayingCoins ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Processing...
-                                </>
-                            ) : canAfford ? (
-                                <>
-                                    <Coins className="w-4 h-4" />
-                                    Pay {test.coinCost} Coins & Start
-                                </>
-                            ) : (
-                                'Not Enough Coins'
-                            )}
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    }
 
     // Instructions Screen
     if (showInstructionsScreen && test) {

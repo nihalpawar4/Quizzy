@@ -32,7 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const faqData = [
   {
     question: "What is Quizy?",
-    answer: "Quizy is a modern academic testing platform designed for students of Classes 5-10. It provides interactive tests, instant feedback, real-time chat with teachers, progress tracking, and a gamified learning experience with credits and achievements."
+    answer: "Quizy is a modern academic testing platform designed for students of Classes 5-10. It provides interactive tests, instant feedback, real-time chat with teachers, and progress tracking."
   },
   {
     question: "How do I start taking tests?",
@@ -50,10 +50,7 @@ const faqData = [
     question: "Can I add a profile picture?",
     answer: "Yes! Go to Profile Settings and upload your photo. Your picture will appear in the chat, dashboard, and everywhere in the app. It updates in real-time for everyone!"
   },
-  {
-    question: "What is the Credit Economy?",
-    answer: "Teachers can enable a fun Credit Economy where students earn credits for completing tests and activities. It's a gamified way to motivate learning! Teachers can track and manage student credits."
-  },
+
   {
     question: "Can I retake tests?",
     answer: "Currently, each test can be taken once to maintain result integrity. However, new tests are added regularly by teachers, giving you plenty of opportunities to practice."
@@ -777,8 +774,8 @@ export default function HomePage() {
             },
             {
               icon: Trophy,
-              title: 'Credit Economy',
-              description: 'Earn credits for completing tests and activities. A fun, gamified learning experience!',
+              title: 'Analytics',
+              description: 'Detailed performance analytics, class rankings, and exportable reports for teachers.',
             },
             {
               icon: User,
@@ -835,7 +832,7 @@ export default function HomePage() {
               Frequently Asked Questions
             </h2>
             <p className="text-[#6D6D6D] dark:text-gray-400">
-              Got questions? We've got answers!
+              Got questions? We&apos;ve got answers!
             </p>
           </motion.div>
 

@@ -22,7 +22,6 @@ import {
     TrendingDown,
     Download,
     FileText,
-    Send,
     Loader2,
     AlertCircle,
     BarChart3,
@@ -423,23 +422,23 @@ export default function WeeklyReportsPage() {
                                                     key={student.uid}
                                                     onClick={() => handleSelectStudent(student)}
                                                     className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl transition-all text-left ${selectedStudent?.uid === student.uid
-                                                            ? 'bg-[#1650EB]/10 border-2 border-[#1650EB]'
-                                                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+                                                        ? 'bg-[#1650EB]/10 border-2 border-[#1650EB]'
+                                                        : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
                                                         }`}
                                                 >
                                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${selectedStudent?.uid === student.uid
-                                                            ? 'bg-[#1650EB]'
-                                                            : 'bg-gray-200 dark:bg-gray-700'
+                                                        ? 'bg-[#1650EB]'
+                                                        : 'bg-gray-200 dark:bg-gray-700'
                                                         }`}>
                                                         <UserIcon className={`w-4 h-4 ${selectedStudent?.uid === student.uid
-                                                                ? 'text-white'
-                                                                : 'text-gray-600 dark:text-gray-400'
+                                                            ? 'text-white'
+                                                            : 'text-gray-600 dark:text-gray-400'
                                                             }`} />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className={`text-sm font-medium truncate ${selectedStudent?.uid === student.uid
-                                                                ? 'text-[#1650EB]'
-                                                                : 'text-gray-900 dark:text-white'
+                                                            ? 'text-[#1650EB]'
+                                                            : 'text-gray-900 dark:text-white'
                                                             }`}>
                                                             {student.name}
                                                         </p>

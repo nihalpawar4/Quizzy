@@ -5,7 +5,7 @@
  * Manages light/dark theme state across the application
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -17,75 +17,71 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Get system preference
+const getSystemTheme = (): 'light' | 'dark' => {
+    if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+};
+
+// Apply theme class to document (pure DOM side effect, no setState)
+const applyThemeToDOM = (newResolvedTheme: 'light' | 'dark') => {
+    if (typeof document !== 'undefined') {
+        const root = document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(newResolvedTheme);
+        root.style.colorScheme = newResolvedTheme;
+    }
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>('system');
     const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+    const mountedRef = useRef(false);
     const [mounted, setMounted] = useState(false);
 
-    // Get system preference
-    const getSystemTheme = (): 'light' | 'dark' => {
-        if (typeof window !== 'undefined') {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        return 'light';
-    };
-
-    // Apply theme to document
-    const applyTheme = (newResolvedTheme: 'light' | 'dark') => {
-        if (typeof document !== 'undefined') {
-            const root = document.documentElement;
-
-            // Remove both classes first
-            root.classList.remove('light', 'dark');
-
-            // Add the new theme class
-            root.classList.add(newResolvedTheme);
-
-            // Also set color-scheme for native elements
-            root.style.colorScheme = newResolvedTheme;
-
-            setResolvedTheme(newResolvedTheme);
-        }
-    };
-
-    // Initialize on mount
+    // Initialize on mount - read from localStorage and apply
     useEffect(() => {
+        mountedRef.current = true;
         setMounted(true);
 
-        // Get stored theme or default to system
         const stored = localStorage.getItem('quizy-theme') as Theme | null;
         const initialTheme = stored || 'system';
-        setThemeState(initialTheme);
-
-        // Apply immediately
         const resolved = initialTheme === 'system' ? getSystemTheme() : initialTheme;
-        applyTheme(resolved);
+
+        setThemeState(initialTheme);
+        setResolvedTheme(resolved);
+        applyThemeToDOM(resolved);
     }, []);
 
-    // Apply theme when it changes
+    // Apply theme when it changes (after mount)
     useEffect(() => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         const resolved = theme === 'system' ? getSystemTheme() : theme;
-        applyTheme(resolved);
+        setResolvedTheme(resolved);
+        applyThemeToDOM(resolved);
         localStorage.setItem('quizy-theme', theme);
-    }, [theme, mounted]);
+    }, [theme]);
 
     // Listen for system theme changes
     useEffect(() => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
         const handleChange = () => {
             if (theme === 'system') {
-                applyTheme(getSystemTheme());
+                const resolved = getSystemTheme();
+                setResolvedTheme(resolved);
+                applyThemeToDOM(resolved);
             }
         };
 
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [theme, mounted]);
+    }, [theme]);
 
     const setTheme = (newTheme: Theme) => {
         setThemeState(newTheme);
