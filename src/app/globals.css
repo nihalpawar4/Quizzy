@@ -271,6 +271,28 @@ body {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Enrollment countdown & popup animations */
+@keyframes countdown-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(15deg); }
+  75% { transform: rotate(-15deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
 /* Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, var(--primary-600), var(--primary-400));

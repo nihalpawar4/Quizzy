@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,10 @@ import {
   Loader2,
   CheckCircle,
   Sun,
-  Moon
+  Moon,
+  Clock,
+  Zap,
+  Bell
 } from 'lucide-react';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -206,6 +209,261 @@ const getSmartResponse = (message: string): { response: string; showContact: boo
     showContact: false
   };
 };
+
+// Shared deadline — everything auto-expires after this
+const ENROLLMENT_DEADLINE = new Date('2026-03-31T23:59:59+05:30').getTime();
+
+// ==================== ENROLLMENT COUNTDOWN TIMER ====================
+function CountdownTimer({ onClose, onHeightChange }: { onClose: () => void; onHeightChange: (h: number) => void }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Measure actual height and report to parent
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        onHeightChange(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    // Initial measurement
+    onHeightChange(el.offsetHeight);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      const distance = ENROLLMENT_DEADLINE - Date.now();
+      if (distance <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        onClose(); // Auto-close when deadline passes
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(distance / 86400000),
+        hours: Math.floor((distance % 86400000) / 3600000),
+        minutes: Math.floor((distance % 3600000) / 60000),
+        seconds: Math.floor((distance % 60000) / 1000),
+      });
+    };
+
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div ref={barRef} className="fixed top-0 left-0 right-0 z-[60]">
+      <div className="relative bg-gradient-to-r from-[#0a1628] via-[#1650EB] to-[#0a1628] py-2.5 px-4 overflow-hidden">
+        {/* CSS-based shimmer */}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          style={{ animation: 'countdown-shimmer 3s linear infinite' }}
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
+          {/* Left spacer for centering */}
+          <div className="w-8 flex-shrink-0" />
+
+          {/* Center content */}
+          <div className="flex items-center justify-center gap-3 sm:gap-5 flex-1 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-yellow-400" style={{ animation: 'wiggle 2s ease-in-out infinite' }} />
+              <span className="text-[11px] sm:text-sm font-bold text-white tracking-wide whitespace-nowrap">
+                🎓 2027 BATCH ENROLLMENT CLOSING SOON!
+              </span>
+            </div>
+
+            {/* Horizontal countdown: number + label side by side */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {[
+                { value: timeLeft.days, label: 'DAYS' },
+                { value: timeLeft.hours, label: 'HRS' },
+                { value: timeLeft.minutes, label: 'MIN' },
+                { value: timeLeft.seconds, label: 'SEC' },
+              ].map((item, i) => (
+                <div key={item.label} className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1 bg-white/15 border border-white/20 rounded-md px-2 py-1 sm:px-2.5 sm:py-1.5">
+                    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+                      {String(item.value).padStart(2, '0')}
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-blue-200 tracking-wider">
+                      {item.label}
+                    </span>
+                  </div>
+                  {i < 3 && (
+                    <span className="text-white/70 font-bold text-sm" style={{ animation: 'blink 1s ease-in-out infinite' }}>:</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* X button — always visible with its own space */}
+          <button
+            onClick={onClose}
+            className="w-8 flex-shrink-0 flex items-center justify-center p-1 hover:bg-white/20 rounded-full transition-colors"
+            aria-label="Close countdown"
+          >
+            <X className="w-4 h-4 text-white/70 hover:text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== ENROLLMENT POPUP ====================
+function EnrollmentPopup() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    // Don't show popup if enrollment deadline has passed
+    if (Date.now() >= ENROLLMENT_DEADLINE) return;
+
+    // Show popup for first 3 page visits (tracked in localStorage)
+    const visitCountStr = localStorage.getItem('enrollment_popup_visits') || '0';
+    const visitCount = parseInt(visitCountStr, 10);
+    if (visitCount < 3) {
+      localStorage.setItem('enrollment_popup_visits', String(visitCount + 1));
+      const showTimer = setTimeout(() => setIsOpen(true), 2500);
+      return () => clearTimeout(showTimer);
+    }
+  }, []);
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
+  // Auto-dismiss after 1 minute
+  useEffect(() => {
+    if (isOpen) {
+      const autoDismiss = setTimeout(() => handleClose(), 60000);
+      return () => clearTimeout(autoDismiss);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+            className="fixed inset-0 bg-black/50 z-[70]"
+          />
+
+          {/* Popup */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+          >
+            <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-gray-900">
+              {/* Top accent bar */}
+              <div className="h-2 bg-[#1650EB]" />
+
+              {/* Close button */}
+              <button
+                onClick={handleClose}
+                className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors z-10"
+                aria-label="Close popup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="p-7 pt-6">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1650EB]/10 border border-[#1650EB]/20 rounded-full mb-5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#1650EB]" />
+                  <span className="text-xs font-bold text-[#1650EB] tracking-wide uppercase">
+                    New Enrollments Open
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2 leading-tight">
+                  2027 Batch
+                  <span className="block text-[#1650EB]">Now Enrolling!</span>
+                </h2>
+
+                {/* Subtitle */}
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-5 leading-relaxed">
+                  Enroll now in <strong className="text-gray-900 dark:text-white">Nihal&apos;s Home Tutoring Classes</strong> for Classes 5 to 10. Limited seats for the upcoming academic year!
+                </p>
+
+                {/* Class chips */}
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  {[5, 6, 7, 8, 9, 10].map((cls) => (
+                    <div
+                      key={cls}
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full"
+                    >
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Class {cls}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Features */}
+                <div className="grid grid-cols-2 gap-2 mb-6">
+                  {[
+                    { icon: BookOpen, text: 'All Subjects' },
+                    { icon: GraduationCap, text: 'Expert Tutoring' },
+                    { icon: Zap, text: 'Interactive Tests' },
+                    { icon: Trophy, text: 'Track Progress' },
+                  ].map((feat) => (
+                    <div
+                      key={feat.text}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800"
+                    >
+                      <feat.icon className="w-4 h-4 text-[#1650EB] flex-shrink-0" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{feat.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA Button */}
+                <a
+                  href="/auth/register?role=student"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#1650EB] hover:bg-[#1243c7] text-white rounded-xl font-bold text-base shadow-md shadow-[#1650EB]/20 transition-all duration-200 hover:shadow-lg"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  Enroll Now — It&apos;s Free!
+                  <ArrowRight className="w-5 h-5" />
+                </a>
+
+                <button
+                  onClick={handleClose}
+                  className="w-full mt-2.5 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                >
+                  Maybe Later
+                </button>
+
+                {/* Timer reminder */}
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-[11px] text-gray-400">
+                    Enrollment closes March 31, 2026 • Don&apos;t miss out!
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
 
 function FAQItem({ question, answer, isOpen, onClick }: { question: string; answer: string; isOpen: boolean; onClick: () => void }) {
   return (
@@ -477,6 +735,20 @@ function Chatbot() {
 
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const [showCountdown, setShowCountdown] = useState(() => {
+    // Don't show countdown if deadline has already passed
+    return Date.now() < ENROLLMENT_DEADLINE;
+  });
+  const [countdownHeight, setCountdownHeight] = useState(0);
+
+  const handleCountdownHeight = useCallback((h: number) => {
+    setCountdownHeight(h);
+  }, []);
+
+  const handleCountdownClose = useCallback(() => {
+    setShowCountdown(false);
+    setCountdownHeight(0);
+  }, []);
   const { resolvedTheme, setTheme } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -519,8 +791,17 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Minimal Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-white/90 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800/50">
+      {/* Enrollment Countdown Timer */}
+      {showCountdown && <CountdownTimer onClose={handleCountdownClose} onHeightChange={handleCountdownHeight} />}
+
+      {/* Enrollment Popup */}
+      <EnrollmentPopup />
+
+      {/* Minimal Navigation - smoothly adjusts when countdown is dismissed */}
+      <nav
+        className="fixed left-0 right-0 z-50 px-6 py-4 bg-white/90 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800/50 transition-[top] duration-300 ease-in-out"
+        style={{ top: countdownHeight }}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -594,7 +875,10 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <main className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-20 overflow-hidden">
+      <main
+        className="relative flex flex-col items-center justify-center min-h-screen px-6 overflow-hidden transition-[padding-top] duration-300 ease-in-out"
+        style={{ paddingTop: countdownHeight + 80 }}
+      >
         {/* Animated Background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Gradient Orbs */}
