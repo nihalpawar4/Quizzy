@@ -220,10 +220,10 @@ function LoginForm() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-4xl lg:text-5xl font-bold text-[#020218] dark:text-white leading-tight"
+                        className="text-4xl lg:text-5xl text-[#020218] dark:text-white leading-tight"
                     >
-                        Welcome back to{' '}
-                        <span className="text-[#1650EB]">
+                        <span className="typo-serif-display">Welcome back to</span>{' '}
+                        <span className="typo-display text-[#1650EB]">
                             Quizy
                         </span>
                     </motion.h1>
@@ -232,7 +232,7 @@ function LoginForm() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="text-lg text-[#6D6D6D] dark:text-gray-400"
+                        className="typo-body text-lg text-[#6D6D6D] dark:text-gray-400"
                     >
                         Continue your learning journey. Practice tests, track progress, and excel in your exams.
                     </motion.p>
@@ -253,7 +253,7 @@ function LoginForm() {
                                 <div className="w-10 h-10 rounded-xl bg-[#1650EB]/10 dark:bg-[#1650EB]/20 flex items-center justify-center">
                                     <item.icon className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
                                 </div>
-                                <span className="text-[#020218] dark:text-gray-300">{item.text}</span>
+                                <span className="typo-body text-[#020218] dark:text-gray-300">{item.text}</span>
                             </div>
                         ))}
                     </motion.div>
@@ -279,16 +279,16 @@ function LoginForm() {
                                 <div className="w-12 h-12 bg-[#1650EB] rounded-xl flex items-center justify-center">
                                     <GraduationCap className="w-7 h-7 text-white" />
                                 </div>
-                                <span className="text-2xl font-bold text-[#020218] dark:text-white">Quizy</span>
+                                <span className="typo-brand text-2xl text-[#020218] dark:text-white">Quizy</span>
                             </Link>
                         </div>
 
                         {/* Header */}
                         <div className="text-center mb-6">
-                            <h2 className="text-2xl font-bold text-[#020218] dark:text-white mb-2">
+                            <h2 className="typo-heading text-2xl text-[#020218] dark:text-white mb-2">
                                 Sign In
                             </h2>
-                            <p className="text-[#6D6D6D] dark:text-gray-400">
+                            <p className="typo-body text-[#6D6D6D] dark:text-gray-400">
                                 {roleParam === 'teacher'
                                     ? 'Access your teacher dashboard'
                                     : 'Continue your learning journey'}
@@ -318,7 +318,7 @@ function LoginForm() {
                                 disabled={isGoogleLoading || loading}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-white rounded-xl font-medium border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-white rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
                             >
                                 {isGoogleLoading ? (
                                     <>
@@ -355,7 +355,7 @@ function LoginForm() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Email */}
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-[#020218] dark:text-gray-300 mb-2">
+                                <label htmlFor="email" className="block text-sm text-[#020218] dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Email Address
                                 </label>
                                 <div className="relative group">
@@ -374,7 +374,7 @@ function LoginForm() {
 
                             {/* Password */}
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-[#020218] dark:text-gray-300 mb-2">
+                                <label htmlFor="password" className="block text-sm text-[#020218] dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Password
                                 </label>
                                 <div className="relative group">
@@ -398,7 +398,7 @@ function LoginForm() {
                                 disabled={isSubmitting || loading}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1650EB] text-white rounded-xl font-semibold shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:bg-[#1243c7] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1650EB] text-white rounded-xl shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:bg-[#1243c7] transition-all disabled:opacity-50 disabled:cursor-not-allowed" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
                             >
                                 {isSubmitting ? (
                                     <>
@@ -429,7 +429,7 @@ function LoginForm() {
                         {/* Register Link */}
                         <Link
                             href={roleParam === 'teacher' ? '/auth/register?role=teacher' : '/auth/register'}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-50 dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] transition-all"
+                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-50 dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
                         >
                             Create Account
                             <ArrowRight className="w-4 h-4" />
@@ -481,7 +481,7 @@ export default function LoginPage() {
                         >
                             <GraduationCap className="w-6 h-6 text-white" />
                         </motion.div>
-                        <span className="text-xl font-bold text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
+                        <span className="typo-brand text-xl text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
                     </Link>
                 </div>
             </header>

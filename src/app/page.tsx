@@ -386,13 +386,13 @@ function EnrollmentPopup() {
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1650EB]/10 border border-[#1650EB]/20 rounded-full mb-5">
                   <Sparkles className="w-3.5 h-3.5 text-[#1650EB]" />
-                  <span className="text-xs font-bold text-[#1650EB] tracking-wide uppercase">
+                  <span className="typo-accent text-xs text-[#1650EB] tracking-wide">
                     New Enrollments Open
                   </span>
                 </div>
 
                 {/* Title */}
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2 leading-tight">
+                <h2 className="typo-display text-2xl sm:text-3xl text-gray-900 dark:text-white mb-2 leading-tight">
                   2027 Batch
                   <span className="block text-[#1650EB]">Now Enrolling!</span>
                 </h2>
@@ -477,7 +477,7 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
         onClick={onClick}
         className="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-gray-900 hover:bg-[#1650EB]/5 dark:hover:bg-gray-800/50 transition-colors"
       >
-        <span className="font-medium text-[#020218] dark:text-white">{question}</span>
+        <span className="typo-subheading text-[#020218] dark:text-white">{question}</span>
         <ChevronDown className={`w-5 h-5 text-[#1650EB] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
@@ -489,7 +489,7 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-5 pt-0 text-[#6D6D6D] dark:text-gray-400 bg-white dark:bg-gray-900">
+            <div className="typo-body p-5 pt-0 text-[#6D6D6D] dark:text-gray-400 bg-white dark:bg-gray-900">
               {answer}
             </div>
           </motion.div>
@@ -733,6 +733,121 @@ function Chatbot() {
   );
 }
 
+// ==================== TYPING ANIMATION ====================
+const typingPhrases = [
+  'Best Tutors Available',
+  'Expert Guided Practice',
+  'Smart Learning Path',
+  'Top Results Guaranteed',
+  'Personalized Study Plans',
+  'Interactive Mock Tests',
+];
+
+function TypingAnimation() {
+  const [currentPhrase, setCurrentPhrase] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const phrase = typingPhrases[currentPhrase];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!isDeleting) {
+      // Typing
+      if (displayText.length < phrase.length) {
+        timeout = setTimeout(() => {
+          setDisplayText(phrase.slice(0, displayText.length + 1));
+        }, 80 + Math.random() * 40);
+      } else {
+        // Pause at full phrase
+        timeout = setTimeout(() => setIsDeleting(true), 2000);
+      }
+    } else {
+      // Deleting
+      if (displayText.length > 0) {
+        timeout = setTimeout(() => {
+          setDisplayText(displayText.slice(0, -1));
+        }, 40);
+      } else {
+        // Move to next phrase
+        setIsDeleting(false);
+        setCurrentPhrase((prev) => (prev + 1) % typingPhrases.length);
+      }
+    }
+
+    return () => clearTimeout(timeout);
+  }, [displayText, isDeleting, currentPhrase]);
+
+  return (
+    <span className="typo-arsenal text-sm sm:text-base text-[#1650EB] dark:text-[#6095DB]">
+      {displayText}
+      <span
+        className="inline-block w-[2px] h-[1em] bg-[#1650EB] dark:bg-[#6095DB] ml-0.5 align-middle"
+        style={{ animation: 'blink 1s step-end infinite' }}
+      />
+    </span>
+  );
+}
+
+// ==================== PEN UNDERLINE ANIMATION ====================
+// Simple curved underline below "Master Your Exams" with pen nib following
+
+function PenUnderline() {
+  return (
+    <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto h-[30px] -mt-1 mb-2">
+      <motion.svg
+        viewBox="0 0 400 30"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Curved underline path */}
+        <motion.path
+          d="M 10 20 Q 100 5, 200 18 Q 300 30, 390 12"
+          stroke="url(#penUnderlineGrad)"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          fill="none"
+          initial={{ pathLength: 0 }}
+          whileInView={{ pathLength: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: "easeOut", delay: 0.8 }}
+        />
+        {/* Pen nib following the path */}
+        <motion.g
+          initial={{ x: 10, y: 20, opacity: 0 }}
+          whileInView={{
+            x: [10, 100, 200, 300, 390],
+            y: [20, 10, 18, 26, 12],
+            opacity: [0, 1, 1, 1, 0],
+          }}
+          viewport={{ once: true }}
+          transition={{
+            duration: 0.7,
+            ease: "easeOut",
+            delay: 0.8,
+            times: [0, 0.25, 0.5, 0.75, 1],
+          }}
+        >
+          {/* Nib triangle */}
+          <path d="M -1.5 -6 L 0 2 L 1.5 -6 Z" fill="#6095DB" transform="rotate(25)" />
+          {/* Glow dot at tip */}
+          <circle cx={0} cy={0} r={3} fill="#1650EB" opacity={0.5} />
+        </motion.g>
+        <defs>
+          <linearGradient id="penUnderlineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#1650EB" stopOpacity="0.2" />
+            <stop offset="40%" stopColor="#1650EB" stopOpacity="0.7" />
+            <stop offset="70%" stopColor="#6095DB" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#6095DB" stopOpacity="0.15" />
+          </linearGradient>
+        </defs>
+      </motion.svg>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [showCountdown, setShowCountdown] = useState(() => {
@@ -811,7 +926,7 @@ export default function HomePage() {
             <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-[#020218] dark:text-white">Quizy</span>
+            <span className="typo-brand text-xl text-[#020218] dark:text-white">Quizy</span>
           </motion.div>
 
           <motion.div
@@ -854,19 +969,19 @@ export default function HomePage() {
 
             <Link
               href="#faq"
-              className="hidden sm:block text-sm font-medium text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors"
+              className="hidden sm:block text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               FAQ
             </Link>
             <Link
               href="/auth/login"
-              className="text-sm font-medium text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors"
+              className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               Sign In
             </Link>
             <Link
               href="/auth/register"
-              className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] transition-colors shadow-sm"
+              className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
             >
               Get Started
             </Link>
@@ -889,6 +1004,7 @@ export default function HomePage() {
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#6095DB]/30 dark:bg-[#1650EB]/20 rounded-full blur-3xl"
+            style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
             animate={{
@@ -897,6 +1013,7 @@ export default function HomePage() {
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#1650EB]/25 dark:bg-[#6095DB]/15 rounded-full blur-3xl"
+            style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
             animate={{
@@ -905,10 +1022,11 @@ export default function HomePage() {
             }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-1/2 right-1/3 w-64 h-64 bg-[#6095DB]/20 dark:bg-[#1650EB]/10 rounded-full blur-3xl"
+            style={{ willChange: 'transform' }}
           />
 
           {/* Floating Particles */}
-          {[...Array(6)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-2 h-2 bg-[#1650EB]/50 dark:bg-[#6095DB]/40 rounded-full"
@@ -931,19 +1049,19 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
-          {/* Nihal's Home Tutoring Badge - Simple */}
+          {/* Nihal's Home Tutoring Badge - Code comment style */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 border border-[#1650EB]/30 dark:border-[#1650EB]/50 rounded-full mb-4"
+            className="mb-4"
           >
-            <span className="text-sm font-bold text-[#1650EB] dark:text-[#6095DB]">
-              Nihal&apos;s Home Tutoring Classes
+            <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
+              {"// Nihal's_Home_Tutoring [Classes]"}
             </span>
           </motion.div>
 
-          {/* Class Badge */}
+          {/* Class Badge - Code comment style */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -956,73 +1074,97 @@ export default function HomePage() {
             >
               <Sparkles className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
             </motion.div>
-            <span className="text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
-              For Classes 5-10 • All Subjects
+            <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
+              Classes 5-10 • All Subjects
             </span>
           </motion.div>
 
-          {/* Main Headline */}
+          {/* Main Headline — 3 lines: "Master Your Exams" / "with excellent tutors" / typing */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#020218] dark:text-white mb-6"
+            className="text-4xl sm:text-5xl lg:text-7xl text-[#020218] dark:text-white mb-3 text-center"
+            style={{ lineHeight: 1.1 }}
           >
             <motion.span
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
+              className="typo-serif-display"
             >
-              Master Your
+              Master Your{' '}
             </motion.span>
             <motion.span
-              initial={{ opacity: 0, scale: 0.5 }}
+              initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
-              className="block mt-2"
             >
-              <span className="text-[#1650EB]">
+              <span className="typo-display text-[#1650EB]">
                 Exams
               </span>
             </motion.span>
           </motion.h1>
+
+          {/* Pen underline animation — draws curved line under heading */}
+          <PenUnderline />
+
+          {/* Line 2: "with excellent tutors" */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="typo-serif-display text-xl sm:text-2xl lg:text-3xl text-[#6D6D6D] dark:text-gray-400 mb-3 text-center"
+          >
+            with excellent tutors
+          </motion.p>
+
+          {/* Line 3: Typing animation */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            className="mb-8 h-7 sm:h-8 flex items-center justify-center"
+          >
+            <TypingAnimation />
+          </motion.div>
 
           {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="typo-body text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-10"
           >
             Practice smarter, not harder. Take interactive tests, track your progress,
             and achieve academic excellence with our distraction-free platform.
           </motion.p>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons — slightly smaller, matching typography */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <Link
               href="/auth/register?role=student"
-              className="group relative flex items-center gap-2 px-8 py-4 bg-[#1650EB] text-white rounded-xl font-semibold text-lg shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+              className="group relative flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               <motion.span
                 className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
               />
               <span className="relative z-10 flex items-center gap-2">
                 Start Learning
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
             <Link
               href="/auth/login?role=teacher"
-              className="group flex items-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl font-semibold text-lg border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all"
+              className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               Teacher Portal
-              <ArrowRight className="w-5 h-5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </Link>
           </motion.div>
 
@@ -1031,10 +1173,10 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-8 flex items-center justify-center gap-2 text-sm text-[#6D6D6D] dark:text-gray-400"
+            className="mt-8 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
           >
             <Heart className="w-4 h-4 text-[#1650EB]" />
-            <span>Trusted by students across India</span>
+            <span className="typo-accent text-[11px]">Trusted by students across India</span>
           </motion.div>
         </div>
 
@@ -1080,8 +1222,9 @@ export default function HomePage() {
             <motion.div
               key={feature.title}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 + index * 0.1 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.08 }}
               whileHover={{ y: -5, scale: 1.02 }}
               className="group p-6 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-[#1650EB]/50 dark:hover:border-[#1650EB]/50 hover:shadow-lg hover:shadow-[#1650EB]/10 dark:hover:shadow-none transition-all duration-300"
             >
@@ -1092,10 +1235,10 @@ export default function HomePage() {
               >
                 <feature.icon className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
               </motion.div>
-              <h3 className="text-lg font-semibold text-[#020218] dark:text-white mb-2">
+              <h3 className="typo-subheading text-lg text-[#020218] dark:text-white mb-2">
                 {feature.title}
               </h3>
-              <p className="text-sm text-[#6D6D6D] dark:text-gray-400">
+              <p className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400">
                 {feature.description}
               </p>
             </motion.div>
@@ -1112,10 +1255,11 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#020218] dark:text-white mb-4">
-              Frequently Asked Questions
+            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4">
+              <span className="typo-serif-display">Frequently Asked</span>{' '}
+              <span className="typo-display text-[#1650EB]">Questions</span>
             </h2>
-            <p className="text-[#6D6D6D] dark:text-gray-400">
+            <p className="typo-body text-[#6D6D6D] dark:text-gray-400">
               Got questions? We&apos;ve got answers!
             </p>
           </motion.div>
@@ -1135,42 +1279,221 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col items-center justify-center gap-6">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-white" />
+      <footer className="relative overflow-hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
+        {/* CTA Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative mx-4 sm:mx-8 mt-8 rounded-2xl overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #111133 50%, #0d0d2b 100%)' }}
+        >
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-8 sm:px-12 py-12 gap-8">
+            <div className="flex-1">
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl text-white mb-3" style={{ lineHeight: 1.15 }}>
+                <span className="typo-serif-display">Experience superior</span>
+                <br />
+                <span className="typo-display">learning</span>
+              </h3>
+              <p className="typo-body text-gray-400 text-sm sm:text-base mb-6 max-w-md">
+                Interactive tests, real-time progress tracking, and expert guidance.
+              </p>
+              <Link
+                href="/auth/register?role=student"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[#020218] rounded-full text-sm hover:bg-gray-100 transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+              >
+                Get started
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            {/* Decorative SVG — glowing nodes & flowing lines */}
+            <div className="flex-1 flex justify-center md:justify-end">
+              <svg viewBox="0 0 300 200" className="w-64 sm:w-80 h-auto opacity-70" fill="none">
+                {/* Flowing curved lines */}
+                <motion.path
+                  d="M 20 160 Q 80 100, 150 120 T 280 80"
+                  stroke="#1650EB"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={0.4}
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.2, ease: "easeInOut", delay: 0.2 }}
+                />
+                <motion.path
+                  d="M 40 180 Q 120 80, 200 110 T 290 50"
+                  stroke="#6095DB"
+                  strokeWidth={1}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={0.3}
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.5, ease: "easeInOut", delay: 0.3 }}
+                />
+                <motion.path
+                  d="M 60 140 C 100 60, 180 90, 260 40"
+                  stroke="#1650EB"
+                  strokeWidth={1}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={0.25}
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.2, ease: "easeInOut", delay: 0.5 }}
+                />
+                {/* Glowing connection nodes */}
+                {[
+                  { cx: 80, cy: 130, r: 4, delay: 0.4 },
+                  { cx: 150, cy: 115, r: 5, delay: 0.6 },
+                  { cx: 220, cy: 90, r: 4, delay: 0.8 },
+                  { cx: 280, cy: 70, r: 3, delay: 1.0 },
+                  { cx: 120, cy: 95, r: 3, delay: 0.5 },
+                  { cx: 200, cy: 60, r: 3, delay: 0.7 },
+                  { cx: 260, cy: 45, r: 4, delay: 0.9 },
+                ].map((node, i) => (
+                  <motion.circle
+                    key={i}
+                    cx={node.cx}
+                    cy={node.cy}
+                    r={node.r}
+                    fill="#1650EB"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: [0, 0.8, 0.5] }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: node.delay, ease: "backOut" }}
+                  />
+                ))}
+                {/* Outer glow rings on key nodes */}
+                {[
+                  { cx: 150, cy: 115, delay: 0.7 },
+                  { cx: 260, cy: 45, delay: 1.0 },
+                ].map((ring, i) => (
+                  <motion.circle
+                    key={`ring-${i}`}
+                    cx={ring.cx}
+                    cy={ring.cy}
+                    r={12}
+                    stroke="#1650EB"
+                    strokeWidth={1}
+                    fill="none"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 0.2 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: ring.delay }}
+                  />
+                ))}
+                {/* Dotted arc decoration */}
+                <motion.path
+                  d="M 100 170 A 120 120 0 0 1 270 60"
+                  stroke="#6095DB"
+                  strokeWidth={0.8}
+                  strokeDasharray="3 6"
+                  fill="none"
+                  opacity={0.2}
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.5, ease: "easeInOut", delay: 0.3 }}
+                />
+              </svg>
+            </div>
+          </div>
+          {/* Gradient overlay on banner edges */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1650EB]/5 via-transparent to-[#6095DB]/10 pointer-events-none" />
+        </motion.div>
+
+        {/* Main Footer Content */}
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10"
+          >
+            {/* Brand Column */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
+                  <GraduationCap className="w-6 h-6 text-white" />
+                </div>
+                <span className="typo-brand text-xl text-[#020218] dark:text-white">Quizy</span>
               </div>
-              <span className="text-xl font-bold text-[#020218] dark:text-white">Quizy</span>
+              <p className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 mb-4">
+                Interactive learning platform for students of Classes 5-10, built with care by Nihal Pawar.
+              </p>
+              <div className="flex items-center gap-2 text-[#6D6D6D] dark:text-gray-400">
+                <Heart className="w-3.5 h-3.5 text-[#1650EB] fill-[#1650EB]" />
+                <span className="text-xs">Made with love in India</span>
+              </div>
             </div>
 
-            {/* Links */}
-            <div className="flex items-center gap-8">
-              <Link href="#" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
-                Privacy Policy
-              </Link>
-              <Link href="#" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
-                Terms of Service
-              </Link>
-              <Link href="#faq" className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors">
-                FAQ
-              </Link>
+            {/* Quick Links */}
+            <div>
+              <h4 className="typo-accent text-xs text-[#020218] dark:text-gray-300 mb-4">Quick Links</h4>
+              <ul className="space-y-2.5">
+                {['Home', 'Features', 'FAQ', 'Get Started'].map((link) => (
+                  <li key={link}>
+                    <Link
+                      href={link === 'FAQ' ? '#faq' : link === 'Get Started' ? '/auth/register' : '#'}
+                      className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors"
+                    >
+                      {link}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* Made with love */}
-            <div className="flex items-center gap-2 text-[#6D6D6D] dark:text-gray-400">
-              <span className="text-sm">Made with</span>
-              <Heart className="w-4 h-4 text-[#1650EB] fill-[#1650EB]" />
-              <span className="text-sm">by</span>
-              <span className="text-sm font-semibold text-[#020218] dark:text-white">Nihal Pawar</span>
+            {/* For */}
+            <div>
+              <h4 className="typo-accent text-xs text-[#020218] dark:text-gray-300 mb-4">For</h4>
+              <ul className="space-y-2.5">
+                {['Students', 'Teachers', 'Parents', 'Schools'].map((link) => (
+                  <li key={link}>
+                    <span className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400">
+                      {link}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* Copyright */}
+            {/* Legal */}
+            <div>
+              <h4 className="typo-accent text-xs text-[#020218] dark:text-gray-300 mb-4">Legal</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'Terms of Service', href: '#' },
+                  { label: 'Privacy Policy', href: '#' },
+                  { label: 'Cookie Policy', href: '#' },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-gray-400 dark:text-gray-500">
               © 2025 Quizy. All rights reserved.
             </p>
+            <div className="flex items-center gap-2 text-[#6D6D6D] dark:text-gray-400">
+              <span className="text-xs">Built by</span>
+              <span className="text-xs text-[#020218] dark:text-white" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.015em' }}>Nihal Pawar</span>
+            </div>
           </div>
         </div>
       </footer>

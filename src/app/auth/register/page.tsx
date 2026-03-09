@@ -179,8 +179,8 @@ function RegisterForm() {
                                 onClick={() => setSelectedClass(option.value)}
                                 whileTap={{ scale: 0.95 }}
                                 className={`py-3 px-2 rounded-lg text-sm font-semibold transition-all ${selectedClass === option.value
-                                        ? 'bg-[#1650EB] text-white shadow-md'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    ? 'bg-[#1650EB] text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                     }`}
                             >
                                 {option.label}
@@ -239,19 +239,17 @@ function RegisterForm() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-4xl lg:text-5xl font-bold text-[#020218] dark:text-white leading-tight"
+                        className="text-4xl lg:text-5xl text-[#020218] dark:text-white leading-tight"
                     >
-                        Start your journey with{' '}
-                        <span className="bg-gradient-to-r from-[#1650EB] to-[#1650EB] bg-clip-text text-transparent">
-                            Quizy
-                        </span>
+                        <span className="typo-serif-display">Start your journey with</span>{' '}
+                        <span className="typo-display text-transparent bg-gradient-to-r from-[#1650EB] to-[#1650EB] bg-clip-text">Quizy</span>
                     </motion.h1>
 
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="text-lg text-[#6D6D6D] dark:text-gray-400"
+                        className="typo-body text-lg text-[#6D6D6D] dark:text-gray-400"
                     >
                         Join thousands of students preparing for their exams with our interactive testing platform.
                     </motion.p>
@@ -279,7 +277,7 @@ function RegisterForm() {
                                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center">
                                     <item.icon className={`w-5 h-5 ${item.color}`} />
                                 </div>
-                                <span className="text-gray-700 dark:text-gray-300">{item.text}</span>
+                                <span className="typo-body text-gray-700 dark:text-gray-300">{item.text}</span>
                             </motion.div>
                         ))}
                     </motion.div>
@@ -305,13 +303,13 @@ function RegisterForm() {
                                 <div className="w-12 h-12 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
                                     <GraduationCap className="w-7 h-7 text-white" />
                                 </div>
-                                <span className="text-2xl font-bold text-[#020218] dark:text-white">Quizy</span>
+                                <span className="typo-brand text-2xl text-[#020218] dark:text-white">Quizy</span>
                             </Link>
                         </div>
 
                         {/* Header */}
                         <div className="text-center mb-6">
-                            <h2 className="text-2xl font-bold text-[#020218] dark:text-white mb-2">
+                            <h2 className="typo-heading text-2xl text-[#020218] dark:text-white mb-2">
                                 Create Account
                             </h2>
                             <p className="text-[#6D6D6D] dark:text-gray-400 text-sm">
@@ -329,7 +327,7 @@ function RegisterForm() {
                                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${role === 'student'
                                     ? 'bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white shadow-lg shadow-[#6095DB]/30 dark:shadow-[#1650EB]/30'
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                    }`}
+                                    }`} style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
                             >
                                 <BookOpen className="w-5 h-5" />
                                 Student
@@ -342,7 +340,7 @@ function RegisterForm() {
                                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${role === 'teacher'
                                     ? 'bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white shadow-lg shadow-[#6095DB]/30 dark:shadow-[#1650EB]/30'
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                    }`}
+                                    }`} style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
                             >
                                 <Shield className="w-5 h-5" />
                                 Teacher
@@ -372,7 +370,7 @@ function RegisterForm() {
                                 disabled={isGoogleLoading || loading}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-white rounded-xl font-medium border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-white rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
                             >
                                 {isGoogleLoading ? (
                                     <>
@@ -409,7 +407,7 @@ function RegisterForm() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {/* Name */}
                             <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="name" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Full Name
                                 </label>
                                 <div className="relative group">
@@ -428,7 +426,7 @@ function RegisterForm() {
 
                             {/* Email */}
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="email" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Email Address
                                 </label>
                                 <div className="relative group">
@@ -454,7 +452,7 @@ function RegisterForm() {
                                         exit={{ opacity: 0, height: 0 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label htmlFor="class" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                             Select Your Class
                                         </label>
                                         <div className="relative">
@@ -485,7 +483,7 @@ function RegisterForm() {
                                         exit={{ opacity: 0, height: 0 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        <label htmlFor="adminCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label htmlFor="adminCode" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                             Admin Code
                                         </label>
                                         <div className="relative group">
@@ -508,7 +506,7 @@ function RegisterForm() {
 
                             {/* Password */}
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="password" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Password
                                 </label>
                                 <div className="relative group">
@@ -528,7 +526,7 @@ function RegisterForm() {
 
                             {/* Confirm Password */}
                             <div>
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="confirmPassword" className="block text-sm text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                     Confirm Password
                                 </label>
                                 <div className="relative group">
@@ -552,7 +550,7 @@ function RegisterForm() {
                                 disabled={isSubmitting || loading}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white rounded-xl font-semibold shadow-lg shadow-[#6095DB]/30 dark:shadow-[#1650EB]/30 hover:shadow-xl hover:from-[#1243c7] hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white rounded-xl shadow-lg shadow-[#6095DB]/30 dark:shadow-[#1650EB]/30 hover:shadow-xl hover:from-[#1243c7] hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
                             >
                                 {isSubmitting ? (
                                     <>
@@ -583,7 +581,7 @@ function RegisterForm() {
                         {/* Login Link */}
                         <Link
                             href="/auth/login"
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-[#6095DB]/50 dark:hover:border-[#1650EB] transition-all"
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-[#6095DB]/50 dark:hover:border-[#1650EB] transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
                         >
                             Sign In
                             <ArrowRight className="w-4 h-4" />
@@ -636,7 +634,7 @@ export default function RegisterPage() {
                         >
                             <GraduationCap className="w-6 h-6 text-white" />
                         </motion.div>
-                        <span className="text-xl font-bold text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
+                        <span className="typo-brand text-xl text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
                     </Link>
                 </div>
             </header>
