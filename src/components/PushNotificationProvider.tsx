@@ -13,7 +13,7 @@
 
 import { useEffect, useState, createContext, useContext, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, CheckCircle, BookOpen, FileText, Coins } from 'lucide-react';
+import { Bell, X, BookOpen, FileText, Coins } from 'lucide-react';
 import { onForegroundMessage } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 

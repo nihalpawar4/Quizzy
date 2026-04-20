@@ -41,6 +41,7 @@
   --font-display: var(--font-manrope), var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif-display: var(--font-serif), 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-code: var(--font-mono), 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-script: var(--font-script), 'Dancing Script', cursive;
 }
 
 
@@ -130,11 +131,13 @@ body {
   font-size: 0.78em;
 }
 
-/* Nav brand / logo text — sharp wordmark, not overly heavy */
+/* Nav brand / logo text — cookie-style cursive wordmark */
 .typo-brand {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: var(--font-script), 'Cookie', cursive;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  font-style: normal;
+  font-size: 1.75em;
 }
 
 /* Selection */
@@ -152,6 +155,11 @@ body {
 :focus-visible {
   outline: 2px solid var(--primary-500);
   outline-offset: 2px;
+}
+
+/* Safe area for mobile (iPhone notch/home indicator) */
+.safe-area-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
 /* Custom Scrollbar */
@@ -409,6 +417,17 @@ body {
   50% {
     opacity: 1;
     transform: scale(1) rotate(180deg);
+  }
+}
+
+/* Testimonial marquee - smooth infinite scroll */
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
   }
 }
 

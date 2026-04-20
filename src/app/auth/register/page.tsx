@@ -19,6 +19,7 @@ import {
     Trophy,
     Zap
 } from 'lucide-react';
+import { QuizyLogoIcon } from '@/components/QuizyLogo';
 import { useAuth, validateAdminCode } from '@/contexts/AuthContext';
 import { CLASS_OPTIONS, ADMIN_EMAILS } from '@/lib/constants';
 
@@ -160,7 +161,7 @@ function RegisterForm() {
                     {/* Header */}
                     <div className="text-center mb-6">
                         <div className="w-12 h-12 bg-[#1650EB] rounded-xl flex items-center justify-center mx-auto mb-3">
-                            <GraduationCap className="w-6 h-6 text-white" />
+                            <GraduationCap className="w-7 h-7 text-white" />
                         </div>
                         <h2 className="text-xl font-bold text-[#020218] dark:text-white">
                             Select Your Class
@@ -231,7 +232,7 @@ function RegisterForm() {
                     >
                         <span className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB]/10 dark:bg-[#1650EB]/50 rounded-full text-sm font-medium text-[#1243c7] dark:text-[#6095DB]/50">
                             <Sparkles className="w-4 h-4" />
-                            Nihal&apos;s Home Tutoring Classes
+                            Experts Academy of Excellence
                         </span>
                     </motion.div>
 
@@ -634,7 +635,7 @@ export default function RegisterPage() {
                         >
                             <GraduationCap className="w-6 h-6 text-white" />
                         </motion.div>
-                        <span className="typo-brand text-xl text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
+                        <span className="typo-brand text-2xl text-[#020218] dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">Quizy</span>
                     </Link>
                 </div>
             </header>

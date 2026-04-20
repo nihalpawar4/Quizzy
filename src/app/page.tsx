@@ -16,14 +16,16 @@ import {
   Send,
   X,
   User,
-  Bot,
   Loader2,
   CheckCircle,
   Sun,
   Moon,
   Clock,
   Zap,
-  Bell
+  Bell,
+  Star,
+  Shield,
+  Award
 } from 'lucide-react';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -185,7 +187,7 @@ const getSmartResponse = (message: string): { response: string; showContact: boo
 
   // About Quizy
   if (msg.includes('what is quizy') || msg.includes('about quizy') || msg.includes('tell me about')) {
-    return { response: "📚 About Quizy:\n\nQuizy is a modern academic testing platform designed for students of Classes 5-10 and their teachers.\n\n• Students can take interactive tests and track their progress\n• Teachers can create tests and analyze student performance\n• Beautiful, distraction-free interface\n• Completely free to use!\n\nBuilt with ❤️ by Nihal Pawar", showContact: false };
+    return { response: "📚 About Quizy:\n\nQuizy is a modern academic testing platform by Experts Academy of Excellence, designed for students of Classes 5-10 (CBSE/ICSE) and their teachers.\n\n• Students can take interactive tests and track their progress\n• Teachers can create tests and analyze student performance\n• Beautiful, distraction-free interface\n• Completely free to use!\n\nBuilt with ❤️ by Nihal Pawar", showContact: false };
   }
 
   // Who made this
@@ -211,7 +213,7 @@ const getSmartResponse = (message: string): { response: string; showContact: boo
 };
 
 // Shared deadline — everything auto-expires after this
-const ENROLLMENT_DEADLINE = new Date('2026-03-31T23:59:59+05:30').getTime();
+const ENROLLMENT_DEADLINE = new Date('2026-06-10T23:59:59+05:30').getTime();
 
 // ==================== ENROLLMENT COUNTDOWN TIMER ====================
 function CountdownTimer({ onClose, onHeightChange }: { onClose: () => void; onHeightChange: (h: number) => void }) {
@@ -274,7 +276,7 @@ function CountdownTimer({ onClose, onHeightChange }: { onClose: () => void; onHe
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-yellow-400" style={{ animation: 'wiggle 2s ease-in-out infinite' }} />
               <span className="text-[11px] sm:text-sm font-bold text-white tracking-wide whitespace-nowrap">
-                🎓 2027 BATCH ENROLLMENT CLOSING SOON!
+                🎓 ADMISSIONS CLOSING SOON — ENROLL NOW!
               </span>
             </div>
 
@@ -317,7 +319,7 @@ function CountdownTimer({ onClose, onHeightChange }: { onClose: () => void; onHe
   );
 }
 
-// ==================== ENROLLMENT POPUP ====================
+// ==================== ADMISSION OPEN POPUP ====================
 function EnrollmentPopup() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -326,10 +328,10 @@ function EnrollmentPopup() {
     if (Date.now() >= ENROLLMENT_DEADLINE) return;
 
     // Show popup for first 3 page visits (tracked in localStorage)
-    const visitCountStr = localStorage.getItem('enrollment_popup_visits') || '0';
+    const visitCountStr = localStorage.getItem('admission_popup_visits_v2') || '0';
     const visitCount = parseInt(visitCountStr, 10);
     if (visitCount < 3) {
-      localStorage.setItem('enrollment_popup_visits', String(visitCount + 1));
+      localStorage.setItem('admission_popup_visits_v2', String(visitCount + 1));
       const showTimer = setTimeout(() => setIsOpen(true), 2500);
       return () => clearTimeout(showTimer);
     }
@@ -358,66 +360,90 @@ function EnrollmentPopup() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/50 z-[70]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]"
           />
 
           {/* Popup */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           >
-            <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-gray-900">
-              {/* Top accent bar */}
-              <div className="h-2 bg-[#1650EB]" />
-
-              {/* Close button */}
-              <button
-                onClick={handleClose}
-                className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors z-10"
-                aria-label="Close popup"
+            <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+              {/* Animated gradient header */}
+              <div
+                className="relative px-6 pt-7 pb-5 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #0a1628 0%, #1650EB 50%, #0a1628 100%)' }}
               >
-                <X className="w-5 h-5" />
-              </button>
+                {/* Shimmer overlay */}
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                  style={{ animation: 'countdown-shimmer 3s linear infinite' }}
+                />
+                {/* Close button on header */}
+                <button
+                  onClick={handleClose}
+                  className="absolute top-3 right-3 p-1.5 text-white/60 hover:text-white hover:bg-white/15 rounded-full transition-colors z-10"
+                  aria-label="Close popup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
 
-              <div className="p-7 pt-6">
-                {/* Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1650EB]/10 border border-[#1650EB]/20 rounded-full mb-5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#1650EB]" />
-                  <span className="typo-accent text-xs text-[#1650EB] tracking-wide">
-                    New Enrollments Open
+                {/* Pulsing admission badge */}
+                <motion.div
+                  animate={{ scale: [1, 1.04, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white/15 border border-white/25 rounded-full mb-4"
+                >
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400" />
                   </span>
-                </div>
+                  <span className="text-[11px] font-bold text-white tracking-widest uppercase">
+                    Admissions Open
+                  </span>
+                </motion.div>
 
                 {/* Title */}
-                <h2 className="typo-display text-2xl sm:text-3xl text-gray-900 dark:text-white mb-2 leading-tight">
-                  2027 Batch
-                  <span className="block text-[#1650EB]">Now Enrolling!</span>
+                <h2 className="typo-display text-2xl sm:text-3xl text-white mb-1.5 leading-tight">
+                  Experts Academy
+                  <span className="block text-blue-200">of Excellence</span>
                 </h2>
-
-                {/* Subtitle */}
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-5 leading-relaxed">
-                  Enroll now in <strong className="text-gray-900 dark:text-white">Nihal&apos;s Home Tutoring Classes</strong> for Classes 5 to 10. Limited seats for the upcoming academic year!
+                <p className="text-blue-200/80 text-sm font-medium">
+                  2026–27 Academic Session • Limited Seats
                 </p>
+              </div>
 
-                {/* Class chips */}
-                <div className="flex flex-wrap items-center gap-2 mb-5">
-                  {[5, 6, 7, 8, 9, 10].map((cls) => (
+              <div className="p-6 pt-5">
+                {/* Highlight chips row */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {[
+                    { icon: BookOpen, label: 'All Subjects' },
+                    { icon: Shield, label: 'CBSE / ICSE' },
+                    { icon: Award, label: 'Expert Faculty' },
+                  ].map((chip) => (
                     <div
-                      key={cls}
-                      className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full"
+                      key={chip.label}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1650EB]/8 dark:bg-[#1650EB]/15 border border-[#1650EB]/15 dark:border-[#1650EB]/25 rounded-full"
                     >
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Class {cls}</span>
+                      <chip.icon className="w-3.5 h-3.5 text-[#1650EB] dark:text-[#6095DB]" />
+                      <span className="text-xs font-semibold text-[#1650EB] dark:text-[#6095DB]">{chip.label}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Features */}
+                {/* Class range */}
+                <div className="flex items-center gap-2 mb-5 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <GraduationCap className="w-4 h-4 text-[#1650EB] flex-shrink-0" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Class 5 to 10 • CBSE & ICSE Boards</span>
+                </div>
+
+                {/* Features grid */}
                 <div className="grid grid-cols-2 gap-2 mb-6">
                   {[
-                    { icon: BookOpen, text: 'All Subjects' },
+                    { icon: Star, text: 'Personal Attention' },
                     { icon: GraduationCap, text: 'Expert Tutoring' },
                     { icon: Zap, text: 'Interactive Tests' },
                     { icon: Trophy, text: 'Track Progress' },
@@ -435,11 +461,11 @@ function EnrollmentPopup() {
                 {/* CTA Button */}
                 <a
                   href="/auth/register?role=student"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#1650EB] hover:bg-[#1243c7] text-white rounded-xl font-bold text-base shadow-md shadow-[#1650EB]/20 transition-all duration-200 hover:shadow-lg"
+                  className="group flex items-center justify-center gap-2 w-full py-3.5 bg-[#1650EB] hover:bg-[#1243c7] text-white rounded-xl font-bold text-base shadow-lg shadow-[#1650EB]/25 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   <GraduationCap className="w-5 h-5" />
                   Enroll Now — It&apos;s Free!
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
 
                 <button
@@ -453,7 +479,7 @@ function EnrollmentPopup() {
                 <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center gap-2">
                   <Clock className="w-3.5 h-3.5 text-gray-400" />
                   <span className="text-[11px] text-gray-400">
-                    Enrollment closes March 31, 2026 • Don&apos;t miss out!
+                    Admissions close June 10, 2026 • Don&apos;t miss out!
                   </span>
                 </div>
               </div>
@@ -502,37 +528,87 @@ function FAQItem({ question, answer, isOpen, onClick }: { question: string; answ
 
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{ text: string; isBot: boolean }[]>([
-    { text: "Hi! 👋 I'm Quizy Bot, your smart assistant. Ask me anything about Quizy - tests, registration, subjects, features, and more! Type 'contact' if you need to reach our support team.", isBot: true }
+  const [messages, setMessages] = useState<{ text: string; isBot: boolean; isTyping?: boolean }[]>([
+    { text: "Hi! 👋 I'm Quizy Bot, your smart assistant. Tap a topic below or type anything to get started!", isBot: true }
   ]);
   const [input, setInput] = useState('');
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  // Quick reply suggestions
+  const quickReplies = [
+    { label: '📚 What is Quizy?', value: 'what is quizy' },
+    { label: '📝 How to register?', value: 'how to register' },
+    { label: '📖 Subjects available', value: 'subjects' },
+    { label: '💬 Contact support', value: 'contact' },
+    { label: '🎓 Classes offered', value: 'classes' },
+    { label: '⭐ Features', value: 'features' },
+  ];
 
-    const userMessage = input.trim();
-    setMessages(prev => [...prev, { text: userMessage, isBot: false }]);
-    setInput('');
-    setIsTyping(true);
+  // Auto-scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, []);
 
-    // Get smart response
-    const { response, showContact } = getSmartResponse(userMessage);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isBotTyping, scrollToBottom]);
 
-    // Simulate typing delay for more natural feel
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [...prev, { text: response, isBot: true }]);
+  // Typing animation — reveals text character by character
+  const typeMessage = useCallback((fullText: string, showContact: boolean) => {
+    setIsBotTyping(true);
 
-      if (showContact) {
-        setTimeout(() => setShowContactForm(true), 500);
+    // Add placeholder message that will be typed out
+    setMessages(prev => [...prev, { text: '', isBot: true, isTyping: true }]);
+
+    let charIndex = 0;
+    const speed = Math.max(8, Math.min(18, 1200 / fullText.length)); // Adaptive speed
+
+    const typeInterval = setInterval(() => {
+      charIndex++;
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastBot = updated.length - 1;
+        if (updated[lastBot] && updated[lastBot].isBot) {
+          updated[lastBot] = { text: fullText.slice(0, charIndex), isBot: true, isTyping: charIndex < fullText.length };
+        }
+        return updated;
+      });
+
+      if (charIndex >= fullText.length) {
+        clearInterval(typeInterval);
+        setIsBotTyping(false);
+        if (showContact) {
+          setTimeout(() => setShowContactForm(true), 400);
+        }
       }
-    }, 800 + Math.random() * 500);
-  };
+    }, speed);
+  }, []);
+
+  const handleSend = useCallback((text?: string) => {
+    const userMessage = (text || input).trim();
+    if (!userMessage || isBotTyping) return;
+
+    setMessages(prev => [...prev, { text: userMessage, isBot: false }]);
+    if (!text) setInput('');
+
+    // Short delay then start typing
+    setTimeout(() => {
+      const { response, showContact } = getSmartResponse(userMessage);
+      typeMessage(response, showContact);
+    }, 300);
+  }, [input, isBotTyping, typeMessage]);
+
+  const handleQuickReply = useCallback((value: string) => {
+    handleSend(value);
+  }, [handleSend]);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -580,75 +656,86 @@ function Chatbot() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed z-50 overflow-hidden
+              bottom-24 right-4
+              w-[calc(100vw-2rem)] max-w-96 max-h-[70vh] sm:max-h-[600px]
+              rounded-2xl shadow-2xl
+              bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800
+              flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-[#1650EB]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
+            <div className="relative overflow-hidden flex-shrink-0">
+              <div
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(135deg, #0a1628 0%, #1650EB 60%, #1243c7 100%)' }}
+              />
+              <div className="relative z-10 flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  {/* Logo */}
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/25">
+                      <GraduationCap className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-400 border-2 border-[#1650EB]" />
+                    </span>
+                  </div>
+                  <h3 className="typo-brand text-xl text-white">Quizy Bot</h3>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-white">Quizy Bot</h3>
-                  <p className="text-xs text-white/80">Online</p>
-                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-white/15 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/80 hover:text-white" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
             </div>
 
-            {/* Messages */}
-            <div className="h-80 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
+            {/* Messages Area */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50/80 dark:bg-gray-900 overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {messages.map((msg, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}
                 >
-                  <div className={`flex items-start gap-2 max-w-[80%] ${msg.isBot ? '' : 'flex-row-reverse'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.isBot ? 'bg-[#1650EB]/10 dark:bg-[#1650EB]/20' : 'bg-gray-200 dark:bg-gray-800'
+                  <div className={`flex items-end gap-1.5 max-w-[85%] ${msg.isBot ? '' : 'flex-row-reverse'}`}>
+                    {msg.isBot && (
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 mb-0.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-[#1650EB] dark:text-[#6095DB]" />
+                      </div>
+                    )}
+                    <div className={`px-3.5 py-2.5 ${msg.isBot
+                      ? 'bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-200 rounded-2xl rounded-bl-md border border-gray-100 dark:border-gray-700 shadow-sm'
+                      : 'bg-[#1650EB] text-white rounded-2xl rounded-br-md shadow-sm shadow-[#1650EB]/20'
                       }`}>
-                      {msg.isBot ? (
-                        <Bot className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
-                      ) : (
-                        <User className="w-4 h-4 text-[#6D6D6D] dark:text-gray-400" />
-                      )}
-                    </div>
-                    <div className={`p-3 rounded-2xl ${msg.isBot
-                      ? 'bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-gray-700'
-                      : 'bg-[#1650EB] text-white rounded-tr-none'
-                      }`}>
-                      <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{msg.text}{msg.isTyping && <span className="inline-block w-0.5 h-3.5 bg-[#1650EB] dark:bg-[#6095DB] ml-0.5 animate-pulse" />}</p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
 
-              {/* Typing Indicator */}
-              {isTyping && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start"
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1650EB]/10 dark:bg-[#1650EB]/20">
-                      <Bot className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
+              {/* Typing Indicator (3 dots before text starts) */}
+              {isBotTyping && messages.length > 0 && messages[messages.length - 1]?.text === '' && (
+                <div className="flex justify-start">
+                  <div className="flex items-end gap-1.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center bg-[#1650EB]/10 dark:bg-[#1650EB]/20 mb-0.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-[#1650EB] dark:text-[#6095DB]" />
                     </div>
-                    <div className="p-3 rounded-2xl bg-white dark:bg-gray-800 rounded-tl-none border border-gray-200 dark:border-gray-700">
+                    <div className="px-4 py-3 bg-white dark:bg-gray-800 rounded-2xl rounded-bl-md border border-gray-100 dark:border-gray-700 shadow-sm">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                        <span className="w-2 h-2 bg-[#6D6D6D] dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* Contact Form */}
@@ -705,24 +792,45 @@ function Chatbot() {
                   <span className="text-sm text-green-700 dark:text-green-400">Message sent successfully!</span>
                 </motion.div>
               )}
+
+              <div ref={messagesEndRef} />
             </div>
 
+            {/* Quick Replies */}
+            {messages.length <= 2 && !isBotTyping && (
+              <div className="flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex flex-wrap gap-1.5">
+                  {quickReplies.map((qr) => (
+                    <button
+                      key={qr.value}
+                      onClick={() => handleQuickReply(qr.value)}
+                      className="px-3 py-1.5 text-xs font-medium bg-[#1650EB]/8 dark:bg-[#1650EB]/15 text-[#1650EB] dark:text-[#6095DB] border border-[#1650EB]/20 dark:border-[#1650EB]/30 rounded-full hover:bg-[#1650EB]/15 dark:hover:bg-[#1650EB]/25 transition-colors active:scale-95"
+                    >
+                      {qr.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 safe-area-bottom">
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] outline-none"
+                  disabled={isBotTyping}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm text-[#020218] dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none disabled:opacity-50 transition-all"
                 />
                 <button
-                  onClick={handleSend}
-                  className="p-2 bg-[#1650EB] text-white rounded-lg hover:bg-[#1243c7] transition-colors"
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isBotTyping}
+                  className="p-2.5 bg-[#1650EB] text-white rounded-full hover:bg-[#1243c7] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex-shrink-0"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -769,8 +877,8 @@ function TypingAnimation() {
           setDisplayText(displayText.slice(0, -1));
         }, 40);
       } else {
-        // Move to next phrase
-        setIsDeleting(false);
+        // Move to next phrase (intentional state machine transition)
+        setIsDeleting(false); // eslint-disable-line react-hooks/set-state-in-effect
         setCurrentPhrase((prev) => (prev + 1) % typingPhrases.length);
       }
     }
@@ -926,7 +1034,7 @@ export default function HomePage() {
             <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="typo-brand text-xl text-[#020218] dark:text-white">Quizy</span>
+            <span className="typo-brand text-2xl text-[#020218] dark:text-white">Quizy</span>
           </motion.div>
 
           <motion.div
@@ -1049,7 +1157,7 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
-          {/* Nihal's Home Tutoring Badge - Code comment style */}
+          {/* Experts Academy Top Label */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1057,11 +1165,11 @@ export default function HomePage() {
             className="mb-4"
           >
             <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
-              {"// Nihal's_Home_Tutoring [Classes]"}
+              {"// EXPERTS_ACADEMY_OF_EXCELLENCE"}
             </span>
           </motion.div>
 
-          {/* Class Badge - Code comment style */}
+          {/* Badge Line — Classes • Subjects • Boards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1072,10 +1180,10 @@ export default function HomePage() {
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Sparkles className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
+              <CheckCircle className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
             </motion.div>
             <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
-              Classes 5-10 • All Subjects
+              Classes 5–10 • All Subjects • CBSE/ICSE Boards
             </span>
           </motion.div>
 
@@ -1245,6 +1353,114 @@ export default function HomePage() {
           ))}
         </motion.div>
       </main>
+
+      {/* Student Testimonials Section */}
+      <section className="py-24 px-6 overflow-hidden">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4">
+              <span className="typo-serif-display">What Our</span>{' '}
+              <span className="typo-display text-[#1650EB]">Students Say</span>
+            </h2>
+            <p className="typo-body text-[#6D6D6D] dark:text-gray-400">
+              Real feedback from students who love learning with Quizy
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Infinite Scrolling Marquee */}
+        <div className="relative">
+          {/* Gradient masks on edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-slate-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-slate-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />
+
+          <div
+            className="flex gap-6"
+            style={{
+              animation: 'marqueeScroll 30s linear infinite',
+              width: 'max-content',
+            }}
+          >
+            {/* Duplicate cards twice for seamless loop */}
+            {[...Array(2)].map((_, setIndex) => (
+              <div key={setIndex} className="flex gap-6 flex-shrink-0">
+                {[
+                  {
+                    name: 'Sanjoli',
+                    class: 'Class 9',
+                    text: 'Quizy has completely changed how I prepare for exams. The instant feedback on tests helps me understand my mistakes right away!',
+                    rating: 5,
+                    emoji: '🎯',
+                  },
+                  {
+                    name: 'Harsh',
+                    class: 'Class 10',
+                    text: 'The chat feature with teachers is amazing! I can ask doubts anytime and get quick responses. My scores have improved a lot.',
+                    rating: 5,
+                    emoji: '🚀',
+                  },
+                  {
+                    name: 'Pradeep',
+                    class: 'Class 8',
+                    text: 'I love the dark mode and the clean interface. Studying at night is so much easier now. The analytics show me exactly where to improve.',
+                    rating: 5,
+                    emoji: '📊',
+                  },
+                  {
+                    name: 'Shreyansh',
+                    class: 'Class 7',
+                    text: 'The timed tests feel like real exams which helps me manage time better. Plus the progress tracking keeps me motivated every day!',
+                    rating: 4,
+                    emoji: '⏱️',
+                  },
+                  {
+                    name: 'Nikita',
+                    class: 'Class 9',
+                    text: 'Best study platform ever! The subject-wise tests and detailed report cards help me focus on weak areas. Highly recommend to all students.',
+                    rating: 5,
+                    emoji: '⭐',
+                  },
+                ].map((testimonial) => (
+                  <div
+                    key={`${setIndex}-${testimonial.name}`}
+                    className="w-80 flex-shrink-0 p-6 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-[#1650EB]/30 dark:hover:border-[#1650EB]/30 transition-colors"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center text-white font-bold text-lg">
+                        {testimonial.name.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="typo-subheading text-sm text-[#020218] dark:text-white">{testimonial.name}</p>
+                        <p className="typo-body text-xs text-[#6D6D6D] dark:text-gray-400">{testimonial.class}</p>
+                      </div>
+                      <span className="text-2xl">{testimonial.emoji}</span>
+                    </div>
+                    {/* Stars */}
+                    <div className="flex gap-0.5 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${i < testimonial.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
+                        />
+                      ))}
+                    </div>
+                    {/* Quote */}
+                    <p className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 leading-relaxed">
+                      &ldquo;{testimonial.text}&rdquo;
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
       <section id="faq" className="py-24 px-6">
@@ -1421,7 +1637,7 @@ export default function HomePage() {
                 <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
                   <GraduationCap className="w-6 h-6 text-white" />
                 </div>
-                <span className="typo-brand text-xl text-[#020218] dark:text-white">Quizy</span>
+                <span className="typo-brand text-2xl text-[#020218] dark:text-white">Quizy</span>
               </div>
               <p className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 mb-4">
                 Interactive learning platform for students of Classes 5-10, built with care by Nihal Pawar.
@@ -1436,13 +1652,18 @@ export default function HomePage() {
             <div>
               <h4 className="typo-accent text-xs text-[#020218] dark:text-gray-300 mb-4">Quick Links</h4>
               <ul className="space-y-2.5">
-                {['Home', 'Features', 'FAQ', 'Get Started'].map((link) => (
-                  <li key={link}>
+                {[
+                  { label: 'Home', href: '/' },
+                  { label: 'Features', href: '/features' },
+                  { label: 'FAQ', href: '#faq' },
+                  { label: 'Get Started', href: '/auth/register' },
+                ].map((link) => (
+                  <li key={link.label}>
                     <Link
-                      href={link === 'FAQ' ? '#faq' : link === 'Get Started' ? '/auth/register' : '#'}
+                      href={link.href}
                       className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors"
                     >
-                      {link}
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -1453,11 +1674,19 @@ export default function HomePage() {
             <div>
               <h4 className="typo-accent text-xs text-[#020218] dark:text-gray-300 mb-4">For</h4>
               <ul className="space-y-2.5">
-                {['Students', 'Teachers', 'Parents', 'Schools'].map((link) => (
-                  <li key={link}>
-                    <span className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400">
-                      {link}
-                    </span>
+                {[
+                  { label: 'Students', href: '/for/students' },
+                  { label: 'Teachers', href: '/for/teachers' },
+                  { label: 'Parents', href: '/for/parents' },
+                  { label: 'Schools', href: '/for/schools' },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#1650EB] dark:hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>

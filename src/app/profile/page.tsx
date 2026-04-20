@@ -191,7 +191,7 @@ export default function ProfilePage() {
             await refreshUser();
             setPhotoSuccess(true);
             setTimeout(() => setPhotoSuccess(false), 3000);
-        } catch (error) {
+        } catch {
             setPhotoError('Failed to delete photo. Please try again.');
         } finally {
             setIsUploadingPhoto(false);

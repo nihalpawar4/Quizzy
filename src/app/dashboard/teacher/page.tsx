@@ -28,12 +28,9 @@ import {
     Clock,
     Target,
     Search,
-    Filter,
     Eye,
     Copy,
-    Check,
     ArrowRight,
-    ArrowLeft,
     Mail,
     Ban,
     ShieldCheck,
@@ -44,15 +41,12 @@ import {
     FileText,
     BookMarked,
     Save,
-    Bell,
     Megaphone,
     MessageCircle,
     CalendarDays
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    getAllTests,
-    getAllResults,
     getResultsByTest,
     getAllStudents,
     createTest,
@@ -70,17 +64,15 @@ import {
     deleteNote,
     updateNoteStatus,
     createAnnouncement,
-    createTestNotification,
-    createNoteNotification,
     subscribeToTeacherAnnouncements,
     deleteNotification,
     deleteRelatedAnnouncements
 } from '@/lib/services';
-import { downloadCSV, downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
+import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
-import type { Test, TestResult, User, SubjectNote, Question, Notification } from '@/types';
+import type { Test, TestResult, User, SubjectNote, Notification } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
-import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 
@@ -896,7 +888,6 @@ export default function TeacherDashboard() {
     }
 
     // Stats
-    const totalStudents = new Set(results.map(r => r.studentId)).size;
     const totalTests = tests.length;
     const averageScore = results.length > 0
         ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / results.length)
@@ -1939,7 +1930,7 @@ export default function TeacherDashboard() {
                                                                 <p className="font-medium text-purple-900 dark:text-purple-200">AI Tip: Generate Questions Instantly!</p>
                                                                 <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                                                                     Copy the sample JSON format below and ask ChatGPT or any AI:
-                                                                    <span className="italic">"Generate 20 questions on [topic] for class [X] in this JSON format with mixed types"</span>
+                                                                    <span className="italic">&quot;Generate 20 questions on [topic] for class [X] in this JSON format with mixed types&quot;</span>
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -2174,7 +2165,7 @@ export default function TeacherDashboard() {
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
-                                        {detailedResults.map((result, idx) => (
+                                        {detailedResults.map((result) => (
                                             <div key={result.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                                                 {/* Student Header */}
                                                 <div className="flex items-center justify-between mb-4">
@@ -2270,7 +2261,7 @@ export default function TeacherDashboard() {
                                     <p className="text-center text-gray-500 py-8">No tests created yet.</p>
                                 ) : (
                                     <div className="space-y-3">
-                                        {tests.map((test, idx) => {
+                                        {tests.map((test) => {
                                             const testResults = results.filter(r => r.testId === test.id);
                                             return (
                                                 <div key={test.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
@@ -2905,7 +2896,7 @@ export default function TeacherDashboard() {
                                         {/* Info about PDF upload */}
                                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
                                             <p className="text-sm text-amber-700 dark:text-amber-400">
-                                                <strong>💡 Tip for PDFs:</strong> For PDF notes, you can upload your PDF to a cloud storage (like Google Drive or Dropbox), get a shareable link, and paste it in the content field with content type as "Text". Students can then click the link to view the PDF.
+                                                <strong>💡 Tip for PDFs:</strong> For PDF notes, you can upload your PDF to a cloud storage (like Google Drive or Dropbox), get a shareable link, and paste it in the content field with content type as &quot;Text&quot;. Students can then click the link to view the PDF.
                                             </p>
                                         </div>
                                     </div>
@@ -3375,7 +3366,7 @@ export default function TeacherDashboard() {
                             <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                                 <div className="flex items-center justify-between">
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        💡 Deleting an announcement removes it from all students' notifications instantly
+                                        💡 Deleting an announcement removes it from all students&apos; notifications instantly
                                     </p>
                                     <button
                                         onClick={() => {

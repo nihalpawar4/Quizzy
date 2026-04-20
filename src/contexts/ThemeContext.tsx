@@ -5,7 +5,7 @@
  * Manages light/dark theme state across the application
  */
 
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -36,34 +36,41 @@ const applyThemeToDOM = (newResolvedTheme: 'light' | 'dark') => {
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setThemeState] = useState<Theme>('system');
-    const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
     const mountedRef = useRef(false);
     const [mounted, setMounted] = useState(false);
 
-    // Initialize on mount - read from localStorage and apply
+    // Initialize theme from localStorage (lazy initializer avoids setState-in-effect)
+    const [theme, setThemeState] = useState<Theme>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('quizy-theme') as Theme | null) || 'system';
+        }
+        return 'system';
+    });
+
+    // Version counter to force useMemo recomputation on system theme change
+    const [systemThemeVersion, setSystemThemeVersion] = useState(0);
+
+    // Derive resolved theme from theme state (avoids extra setState-in-effect)
+    const resolvedTheme = useMemo<'light' | 'dark'>(() => {
+        void systemThemeVersion; // Used as dependency to trigger recomputation
+        if (typeof window === 'undefined') return 'light';
+        return theme === 'system' ? getSystemTheme() : theme;
+    }, [theme, systemThemeVersion]);
+
+    // Mark mounted and apply DOM theme on mount
     useEffect(() => {
         mountedRef.current = true;
         setMounted(true);
-
-        const stored = localStorage.getItem('quizy-theme') as Theme | null;
-        const initialTheme = stored || 'system';
-        const resolved = initialTheme === 'system' ? getSystemTheme() : initialTheme;
-
-        setThemeState(initialTheme);
-        setResolvedTheme(resolved);
-        applyThemeToDOM(resolved);
+        applyThemeToDOM(resolvedTheme);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Apply theme when it changes (after mount)
     useEffect(() => {
         if (!mountedRef.current) return;
-
-        const resolved = theme === 'system' ? getSystemTheme() : theme;
-        setResolvedTheme(resolved);
-        applyThemeToDOM(resolved);
+        applyThemeToDOM(resolvedTheme);
         localStorage.setItem('quizy-theme', theme);
-    }, [theme]);
+    }, [theme, resolvedTheme]);
 
     // Listen for system theme changes
     useEffect(() => {
@@ -73,9 +80,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         const handleChange = () => {
             if (theme === 'system') {
-                const resolved = getSystemTheme();
-                setResolvedTheme(resolved);
-                applyThemeToDOM(resolved);
+                // Increment version to force useMemo recomputation
+                setSystemThemeVersion(v => v + 1);
             }
         };
 

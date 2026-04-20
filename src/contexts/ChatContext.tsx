@@ -175,7 +175,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return () => {
             cleanup();
         };
-    }, [user?.uid]);
+    }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Subscribe to messages when current chat changes
     useEffect(() => {
@@ -212,7 +212,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 messageUnsubRef.current = null;
             }
         };
-    }, [currentChat?.id, user?.uid]);
+    }, [currentChat?.id, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Handle visibility change (user switches tabs) and page unload
     useEffect(() => {
@@ -248,7 +248,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             // Set user offline when component unmounts (e.g., logout, navigation)
             setUserOffline(user.uid).catch(console.error);
         };
-    }, [user?.uid]);
+    }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Send message
     const sendMessage = useCallback(async (text: string) => {

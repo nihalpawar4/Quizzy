@@ -38,14 +38,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 
 import { useChat } from '@/contexts/ChatContext';
 
 export default function StudentDashboard() {
-    const { user, loading: authLoading, signOut, refreshUser } = useAuth();
+    const { user, loading: authLoading, signOut, refreshUser: _refreshUser } = useAuth();
     const { totalUnreadCount } = useChat();
     const router = useRouter();
 
@@ -66,7 +66,6 @@ export default function StudentDashboard() {
 
     // New reports notification state
     const [newReportsCount, setNewReportsCount] = useState(0);
-    const [lastSeenReportsCount, setLastSeenReportsCount] = useState(0);
     const [newReportNotification, setNewReportNotification] = useState<TestResult | null>(null);
 
     // Notes state
@@ -538,7 +537,7 @@ export default function StudentDashboard() {
         );
     }
 
-    const totalTests = results.length;
+    const _totalTests = results.length;
     const averageScore = results.length > 0
         ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / results.length)
         : 0;
@@ -868,7 +867,6 @@ export default function StudentDashboard() {
                             onClick={() => {
                                 setActiveTab('reports');
                                 setNewReportsCount(0);
-                                setLastSeenReportsCount(results.length);
                             }}
                             className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'reports' ? 'bg-emerald-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >

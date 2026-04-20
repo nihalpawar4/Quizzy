@@ -63,13 +63,14 @@ export default function ChatWindow({
     currentUserRole,
     presence,
     isTyping,
-    isSending,
+    isSending: _isSending,
     onSendMessage,
     onTyping,
     onStopTyping,
     onBack,
     onClearHistory
 }: ChatWindowProps) {
+    void _isSending; // Part of interface contract, used by parent
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);

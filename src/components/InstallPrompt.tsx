@@ -10,11 +10,12 @@ export function InstallPrompt() {
     const [showPrompt, setShowPrompt] = useState(false);
     const [installing, setInstalling] = useState(false);
     const [justInstalled, setJustInstalled] = useState(false);
-    const [mounted, setMounted] = useState(false);
-    const mountedRef = useRef(false);
+    const [mounted, setMounted] = useState(() => typeof window !== 'undefined');
+    const mountedRef = useRef(typeof window !== 'undefined');
     useEffect(() => {
         mountedRef.current = true;
-        setMounted(true);
+        if (!mounted) setMounted(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Show install prompt after 3 seconds - ALWAYS (unless already installed/dismissed)
@@ -51,6 +52,7 @@ export function InstallPrompt() {
 
         const alreadyShown = localStorage.getItem('quizy-app-installed-shown');
         if (!alreadyShown) {
+            // Intentional: setState triggered by external isInstalled state change
             setJustInstalled(true);
             localStorage.setItem('quizy-app-installed-shown', 'true');
 

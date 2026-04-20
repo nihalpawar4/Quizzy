@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Manrope, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Inter, Manrope, JetBrains_Mono, Playfair_Display, Cookie } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -32,6 +32,12 @@ const playfair = Playfair_Display({
   variable: "--font-serif",
   weight: ["400", "500", "600", "700", "800"],
   style: ["normal", "italic"],
+});
+
+const cookieFont = Cookie({
+  subsets: ["latin"],
+  variable: "--font-script",
+  weight: ["400"],
 });
 
 // PWA Viewport Configuration
@@ -119,7 +125,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Quizy" />
       </head>
       <body
-        className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable} ${playfair.variable} antialiased bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100`}
+        className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable} ${playfair.variable} ${cookieFont.variable} antialiased bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100`}
         suppressHydrationWarning
       >
         <ThemeProvider>
