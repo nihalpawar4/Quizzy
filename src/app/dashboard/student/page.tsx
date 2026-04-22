@@ -32,7 +32,8 @@ import {
     Trash2,
     Megaphone,
     Settings,
-    ChevronDown
+    ChevronDown,
+    Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
@@ -622,7 +623,15 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Link
+                            href="/"
+                            className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            title="Go to Home"
+                        >
+                            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden md:inline text-sm font-medium">Home</span>
+                        </Link>
                         {/* Notification Bell */}
                         <div className="relative">
                             <button

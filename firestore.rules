@@ -191,6 +191,32 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
     
+    // ==================== COMMUNITY Q&A COLLECTIONS ====================
+    
+    // Pending Questions (awaiting teacher approval)
+    match /pending_questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create: if true;
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+    
+    // Approved Questions (publicly visible)
+    match /approved_questions/{questionId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isTeacher();
+      
+      // Answers subcollection
+      match /answers/{answerId} {
+        allow read: if true;
+        allow create: if true;
+        allow update: if true;
+        allow delete: if isTeacher();
+      }
+    }
+    
     // ==================== WEBRTC CALLS COLLECTION ====================
     
     match /calls/{callId} {

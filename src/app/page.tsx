@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   GraduationCap,
   BookOpen,
@@ -31,6 +30,7 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { PostQuestionButton, PostQuestionModal, QuestionList } from '@/components/qa';
 
 
 // FAQ Data - Updated with all features
@@ -958,6 +958,7 @@ function PenUnderline() {
 
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [showCountdown, setShowCountdown] = useState(() => {
     // Don't show countdown if deadline has already passed
     return Date.now() < ENROLLMENT_DEADLINE;
@@ -974,15 +975,6 @@ export default function HomePage() {
   }, []);
   const { resolvedTheme, setTheme } = useTheme();
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  // Redirect to dashboard if user is already logged in
-  useEffect(() => {
-    if (!loading && user) {
-      console.log('[Quizy] User already logged in, redirecting to dashboard...');
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -995,18 +987,6 @@ export default function HomePage() {
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If user is logged in, show loading while redirecting
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
         </div>
       </div>
     );
@@ -1081,18 +1061,29 @@ export default function HomePage() {
             >
               FAQ
             </Link>
-            <Link
-              href="/auth/login"
-              className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/auth/register"
-              className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
-            >
-              Get Started
-            </Link>
+            {user ? (
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </motion.div>
         </div>
       </nav>
@@ -1464,7 +1455,7 @@ export default function HomePage() {
 
       {/* FAQ Section */}
       <section id="faq" className="py-24 px-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1480,7 +1471,7 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {faqData.map((faq, index) => (
               <FAQItem
                 key={index}
@@ -1493,6 +1484,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Community Questions Section */}
+      <QuestionList user={user} />
 
       {/* Footer */}
       <footer className="relative overflow-hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
@@ -1726,6 +1720,16 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Post Question Button */}
+      <PostQuestionButton onClick={() => setIsQuestionModalOpen(true)} />
+
+      {/* Question Submission Modal */}
+      <PostQuestionModal
+        isOpen={isQuestionModalOpen}
+        onClose={() => setIsQuestionModalOpen(false)}
+        user={user}
+      />
 
       {/* Chatbot */}
       <Chatbot />
