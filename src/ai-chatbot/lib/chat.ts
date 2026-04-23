@@ -1,6 +1,7 @@
 /**
- * AI Chatbot — Chat Logic (Gemini AI)
+ * AI Chatbot — Chat Logic (Gemini AI + Offline Fallback)
  * Uses Google Gemini API for generating responses
+ * Falls back to built-in knowledge when API is unavailable
  * Completely isolated module
  */
 
@@ -60,6 +61,82 @@ export interface ChatResponse {
   error?: string;
 }
 
+// ==================== OFFLINE FALLBACK ====================
+// Built-in knowledge base — used when ALL Gemini models are unavailable
+
+const FALLBACK_RESPONSES: { keywords: string[]; response: string }[] = [
+  {
+    keywords: ['hello', 'hi', 'hey', 'howdy', 'greetings', 'good morning', 'good evening', 'good afternoon'],
+    response: "Hey there! 👋 I'm Quizy AI, your study buddy. I can help you with study tips, platform info, and more. What would you like to know? 📚",
+  },
+  {
+    keywords: ['who made', 'who created', 'who built', 'who owns', 'creator', 'owner', 'developer', 'founded', 'ownership'],
+    response: "Quizy was created and is owned by **Nihal Pawar** ✨ He built this entire platform to help students excel in their academics! 🚀",
+  },
+  {
+    keywords: ['what is quizy', 'about quizy', 'tell me about', 'what does quizy do', 'explain quizy'],
+    response: "Quizy is an academic testing platform for students of Class 5-10! 📚 It features:\n\n- **Interactive Tests** with multiple question types\n- **Real-time Progress Tracking** 📊\n- **AI-Powered Assistance** (that's me! 🤖)\n- **Teacher Dashboard** for analytics\n- **Study Materials** and notes\n- **Community Q&A Forum**\n\nCreated by **Nihal Pawar** to make learning fun and effective! ✨",
+  },
+  {
+    keywords: ['study tips', 'how to study', 'study advice', 'exam tips', 'prepare for exam'],
+    response: "Here are some proven study tips! 📖✨\n\n1. **Active Recall** — Test yourself instead of just reading\n2. **Spaced Repetition** — Review material at increasing intervals\n3. **Pomodoro Technique** — 25 min study + 5 min break 🍅\n4. **Teach Someone** — Explaining helps you understand deeply\n5. **Practice Problems** — Use Quizy tests to practice!\n6. **Sleep Well** — Your brain consolidates memory during sleep 😴\n7. **Stay Hydrated** — Drink water, it helps focus 💧\n\nConsistency beats intensity. A little every day goes a long way! 💪",
+  },
+  {
+    keywords: ['math', 'mathematics', 'algebra', 'geometry', 'calculus'],
+    response: "Math tips! ➕✨\n\n- **Practice daily** — even 15 minutes helps build confidence\n- **Understand formulas** — don't just memorize, understand WHY they work\n- **Draw diagrams** for geometry problems 📐\n- **Check your work** by substituting answers back\n- **Start with easier problems**, then build up difficulty\n\nMath is like a muscle — the more you exercise it, the stronger it gets! 💪📊",
+  },
+  {
+    keywords: ['science', 'physics', 'chemistry', 'biology'],
+    response: "Science study tips! 🔬✨\n\n- **Visualize concepts** — draw diagrams, watch animations\n- **Connect theory to real life** — why does ice float? Why is sky blue?\n- **Practice numerical problems** step by step\n- **Make flashcards** for important definitions and reactions\n- **Do experiments** when possible — hands-on learning sticks!\n\nStay curious — that's what science is all about! 🧪🌟",
+  },
+  {
+    keywords: ['english', 'grammar', 'writing', 'essay', 'reading'],
+    response: "English tips! ✍️📚\n\n- **Read daily** — novels, newspapers, anything! It builds vocabulary\n- **Write regularly** — even a short diary entry helps\n- **Learn 5 new words daily** and use them in sentences\n- **Practice grammar** with exercises\n- **Read your work aloud** — you'll catch errors easily\n\nLanguage is a skill that improves with practice! Keep reading and writing! 📖✨",
+  },
+  {
+    keywords: ['test', 'tests', 'quiz', 'exam', 'available test', 'upcoming test'],
+    response: "You can find all available tests on your **Student Dashboard** 📝\n\n- Tests are organized by **subject** and **class**\n- Your teacher creates and assigns tests for your class\n- You'll get **notifications** when new tests are available 🔔\n- After completing a test, you get **instant results** with detailed analytics!\n\nHead to your dashboard to see what's waiting for you! 🚀",
+  },
+  {
+    keywords: ['performance', 'score', 'result', 'how am i doing', 'progress', 'performing'],
+    response: "Check your performance on your **Dashboard**! 📊\n\n- **Test Results** — see scores for each test\n- **Average Score** — track your overall performance\n- **Subject-wise Analysis** — find your strengths and weak areas\n- **Progress Trends** — see how you're improving over time 📈\n\nSign in and visit your dashboard for the latest stats! Keep pushing forward! 💪✨",
+  },
+  {
+    keywords: ['register', 'sign up', 'create account', 'join', 'get started'],
+    response: "Joining Quizy is easy and **free**! 🎉\n\n1. Go to the **Sign Up** page\n2. Enter your name, email, and password\n3. Select your role (Student/Teacher) and class\n4. You're in! Start taking tests right away! 🚀\n\nIt takes less than a minute. Welcome to the Quizy family! 🎓✨",
+  },
+  {
+    keywords: ['feature', 'features', 'what can', 'capabilities'],
+    response: "Quizy is packed with features! 🚀\n\n📝 **Interactive Tests** — MCQ, True/False, Fill in Blanks & more\n📊 **Real-time Analytics** — track your progress instantly\n🤖 **AI Assistant** — that's me! Always here to help\n💬 **Community Q&A** — ask and answer questions\n📚 **Study Materials** — access notes from teachers\n🔔 **Notifications** — never miss a test or update\n🏆 **Leaderboards** — compete with classmates\n\nAll built with ❤️ by **Nihal Pawar**!",
+  },
+  {
+    keywords: ['help', 'support', 'contact', 'issue', 'problem', 'bug'],
+    response: "Need help? Here's what you can do:\n\n1. **Check your Dashboard** for the latest info\n2. **Ask me** — I can answer most questions! 🤖\n3. **Community Q&A** — post your question on the forum\n4. **Contact Support** — use the contact form on the landing page\n\nI'm here to help you succeed! What specific issue can I help with? 💪",
+  },
+  {
+    keywords: ['thank', 'thanks', 'thank you', 'thx', 'appreciate'],
+    response: "You're welcome! 😊 Happy to help! If you need anything else, just ask. Good luck with your studies! 📚✨💪",
+  },
+  {
+    keywords: ['bye', 'goodbye', 'see you', 'later', 'quit'],
+    response: "Goodbye! 👋 Good luck with your studies — you've got this! Come back anytime you need help. See you soon! 🌟📚",
+  },
+];
+
+function getOfflineResponse(message: string): string {
+  const msg = message.toLowerCase().trim();
+
+  // Check keyword matches
+  for (const entry of FALLBACK_RESPONSES) {
+    if (entry.keywords.some((kw) => msg.includes(kw))) {
+      return entry.response;
+    }
+  }
+
+  // Default fallback
+  return "I'm here to help! 😊 You can ask me about:\n\n📚 **Study tips** for any subject\n📝 **Tests & scores** on Quizy\n🎓 **How Quizy works**\n💡 **Academic advice**\n\nJust type your question and I'll do my best to answer! ✨";
+}
+
 // ==================== GEMINI API ====================
 
 async function callGemini(model: string, apiKey: string, contents: { role: string; parts: { text: string }[] }[]): Promise<Response> {
@@ -88,10 +165,8 @@ export async function generateChatResponse(request: ChatRequest): Promise<ChatRe
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return {
-      reply: '',
-      error: 'Gemini API key not configured. Please add GEMINI_API_KEY to your .env.local file.',
-    };
+    // No API key — use offline fallback
+    return { reply: getOfflineResponse(request.message) };
   }
 
   // Build the conversation with context injection
@@ -104,7 +179,7 @@ export async function generateChatResponse(request: ChatRequest): Promise<ChatRe
   // Build Gemini API contents array
   const contents: { role: string; parts: { text: string }[] }[] = [];
 
-  // System instruction as first user message + context
+  // System instruction + context
   contents.push({
     role: 'user',
     parts: [{ text: `${SYSTEM_PROMPT}\n\n${contextBlock}\n${userInfo}\n\nReady to help.` }],
@@ -136,17 +211,14 @@ export async function generateChatResponse(request: ChatRequest): Promise<ChatRe
 
         if (res.status === 429) {
           // Rate limited — wait and retry, or try next model
-          console.warn(`[AI Chat] Rate limited on ${model}, attempt ${attempt + 1}`);
           if (attempt === 0) {
-            await new Promise((r) => setTimeout(r, 2000)); // Wait 2s
+            await new Promise((r) => setTimeout(r, 2000));
             continue;
           }
           break; // Try next model
         }
 
         if (!res.ok) {
-          const errorText = await res.text();
-          console.error(`[AI Chat] ${model} error:`, res.status, errorText.substring(0, 200));
           break; // Try next model
         }
 
@@ -156,16 +228,12 @@ export async function generateChatResponse(request: ChatRequest): Promise<ChatRe
         if (reply) {
           return { reply: reply.trim() };
         }
-      } catch (err) {
-        console.error(`[AI Chat] Error calling ${model}:`, err);
+      } catch {
         break; // Try next model
       }
     }
   }
 
-  // All models failed
-  return {
-    reply: 'I\'m currently experiencing high demand. Please try again in a moment! 🔄',
-    error: 'All AI models are temporarily unavailable.',
-  };
+  // ALL models failed — use offline fallback (never show error to user)
+  return { reply: getOfflineResponse(request.message) };
 }
