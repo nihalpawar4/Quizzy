@@ -202,8 +202,22 @@ const requestNotificationPermission = async (): Promise<string | null> => {
         const fcm = await initializeMessaging();
         if (!fcm) return null;
 
-        // Get FCM token with your VAPID key
-        const token = await getToken(fcm, { vapidKey: VAPID_KEY });
+        // CRITICAL: Register our firebase-messaging service worker and pass it to getToken
+        // This ensures FCM uses OUR service worker for background push (not a default one)
+        // Without this, background notifications won't work when the app is closed
+        let swRegistration: ServiceWorkerRegistration | undefined;
+        try {
+            swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('[Quizy FCM] Messaging SW registered for FCM, scope:', swRegistration.scope);
+        } catch (swError) {
+            console.warn('[Quizy FCM] SW registration failed, using default:', swError);
+        }
+
+        // Get FCM token with VAPID key AND our service worker registration
+        const token = await getToken(fcm, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: swRegistration,
+        });
 
         console.log('[Quizy FCM] Token obtained:', token?.substring(0, 20) + '...');
         return token;

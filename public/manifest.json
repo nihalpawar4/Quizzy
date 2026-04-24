@@ -3,7 +3,7 @@
     "short_name": "Quizy",
     "description": "A modern academic testing platform for students and teachers. Created by Nihal Pawar.",
     "author": "Nihal Pawar",
-    "start_url": "/",
+    "start_url": "/dashboard",
     "display": "standalone",
     "background_color": "#020218",
     "theme_color": "#1650EB",
