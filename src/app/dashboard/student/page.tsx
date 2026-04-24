@@ -39,9 +39,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
+import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
+import { subscribeToHomework } from '@/services/homeworkService';
+import { requestAndStoreFCMToken } from '@/lib/messaging';
+import HomeworkList from '@/components/homework/HomeworkList';
 
 import { useChat } from '@/contexts/ChatContext';
 
@@ -61,7 +65,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -73,7 +77,9 @@ export default function StudentDashboard() {
     const [notes, setNotes] = useState<SubjectNote[]>([]);
     const [selectedNote, setSelectedNote] = useState<SubjectNote | null>(null);
 
-
+    // Homework state
+    const [homeworks, setHomeworks] = useState<Homework[]>([]);
+    const [homeworkLoading, setHomeworkLoading] = useState(true);
 
     // Notification state
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -421,6 +427,23 @@ export default function StudentDashboard() {
         return () => unsubscribe();
     }, [user?.studentClass]);
 
+    // Real-time listener for homework (filtered by student's class)
+    useEffect(() => {
+        if (!user?.studentClass) return;
+        const unsub = subscribeToHomework(user.studentClass, (data) => {
+            setHomeworks(data);
+            setHomeworkLoading(false);
+        });
+        return () => unsub();
+    }, [user?.studentClass]);
+
+    // Request FCM token for push notifications
+    useEffect(() => {
+        if (user?.uid) {
+            requestAndStoreFCMToken(user.uid).catch(console.error);
+        }
+    }, [user?.uid]);
+
     // Real-time listener for notifications (filtered by student's class)
     useEffect(() => {
         if (!user?.studentClass || !user?.uid) return;
@@ -545,8 +568,8 @@ export default function StudentDashboard() {
 
     // Quick actions - Leaderboard is now functional, others coming soon
     const quickActions = [
+        { icon: BookOpen, label: 'Homework', color: 'bg-indigo-100 dark:bg-indigo-900/50', iconColor: 'text-indigo-600 dark:text-indigo-400', comingSoon: false, href: '/dashboard/student/homework' },
         { icon: Target, label: 'Practice Mode', color: 'bg-green-100 dark:bg-green-900/50', iconColor: 'text-green-600 dark:text-green-400', comingSoon: true },
-        { icon: Calendar, label: 'Study Planner', color: 'bg-blue-100 dark:bg-blue-900/50', iconColor: 'text-blue-600 dark:text-blue-400', comingSoon: true },
         { icon: MessageSquare, label: 'Chat', color: 'bg-pink-100 dark:bg-pink-900/50', iconColor: 'text-pink-600 dark:text-pink-400', comingSoon: false, href: '/chat' },
         { icon: HelpCircle, label: 'Help Center', color: 'bg-orange-100 dark:bg-orange-900/50', iconColor: 'text-orange-600 dark:text-orange-400', comingSoon: true },
     ];
@@ -901,6 +924,19 @@ export default function StudentDashboard() {
                                 </span>
                             )}
                         </button>
+                        <button
+                            onClick={() => setActiveTab('homework')}
+                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homework' ? 'bg-indigo-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        >
+                            <BookOpen className="w-5 h-5" />
+                            <span className="hidden sm:inline">Homework</span>
+                            <span className="sm:hidden">HW</span>
+                            {homeworks.length > 0 && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'homework' ? 'bg-white text-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'}`}>
+                                    {homeworks.length}
+                                </span>
+                            )}
+                        </button>
 
                     </div>
                 </div>
@@ -1173,6 +1209,16 @@ export default function StudentDashboard() {
                                 ))}
                             </div>
                         )}
+                    </motion.div>
+                )}
+
+                {/* Homework Tab */}
+                {activeTab === 'homework' && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            📝 Homework for Class {user.studentClass}
+                        </h3>
+                        <HomeworkList homeworks={homeworks} loading={homeworkLoading} />
                     </motion.div>
                 )}
 

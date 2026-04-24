@@ -104,6 +104,17 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
     
+    // ==================== HOMEWORKS COLLECTION ====================
+    
+    match /homeworks/{homeworkId} {
+      // All authenticated users can read homework
+      allow read: if isAuthenticated();
+      // Only teachers can create, update, delete homework
+      allow create: if isTeacher();
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+    
     // ==================== CREDIT ECONOMY COLLECTIONS ====================
     
     match /wallets/{walletId} {

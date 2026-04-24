@@ -23,7 +23,7 @@ interface NotificationPayload {
         body?: string;
     };
     data?: {
-        type?: 'test' | 'report' | 'note' | 'credit' | 'general';
+        type?: 'test' | 'report' | 'note' | 'credit' | 'general' | 'homework';
         testId?: string;
         tag?: string;
         [key: string]: string | undefined;
@@ -140,6 +140,8 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
                 return <BookOpen className="w-5 h-5 text-purple-500" />;
             case 'credit':
                 return <Coins className="w-5 h-5 text-yellow-500" />;
+            case 'homework':
+                return <BookOpen className="w-5 h-5 text-indigo-500" />;
             default:
                 return <Bell className="w-5 h-5 text-gray-500" />;
         }

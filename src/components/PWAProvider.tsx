@@ -93,8 +93,9 @@ export function usePWA() {
 export function PWARegistration() {
     useEffect(() => {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-            // Register service worker after page load
+            // Register service workers after page load
             window.addEventListener('load', () => {
+                // Register main service worker (offline caching)
                 navigator.serviceWorker
                     .register('/sw.js')
                     .then((registration) => {
@@ -108,7 +109,6 @@ export function PWARegistration() {
                                 newWorker.addEventListener('statechange', () => {
                                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                         console.log('[Quizy PWA] New version available!');
-                                        // You could show a toast notification here
                                     }
                                 });
                             }
@@ -116,6 +116,16 @@ export function PWARegistration() {
                     })
                     .catch((error) => {
                         console.error('[Quizy PWA] Service Worker registration failed:', error);
+                    });
+
+                // Register Firebase Messaging service worker (background push notifications)
+                navigator.serviceWorker
+                    .register('/firebase-messaging-sw.js')
+                    .then((registration) => {
+                        console.log('[Quizy PWA] Firebase Messaging SW registered, scope:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.error('[Quizy PWA] Firebase Messaging SW registration failed:', error);
                     });
             });
         }

@@ -45,6 +45,8 @@ export const COLLECTIONS = {
     RESULTS: 'results',
     NOTES: 'notes',
     NOTIFICATIONS: 'notifications',
+    // Homework collection
+    HOMEWORKS: 'homeworks',
     // Chat collections
     CHATS: 'chats',
     MESSAGES: 'messages',

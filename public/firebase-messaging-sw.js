@@ -63,6 +63,10 @@ self.addEventListener('notificationclick', (event) => {
         targetUrl = '/dashboard/student';
     } else if (data?.type === 'note') {
         targetUrl = '/dashboard/student';
+    } else if (data?.type === 'homework') {
+        targetUrl = '/dashboard/student/homework';
+    } else if (data?.url) {
+        targetUrl = data.url;
     }
 
     event.waitUntil(

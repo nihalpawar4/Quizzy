@@ -1264,6 +1264,13 @@ export default function TeacherDashboard() {
                                     <Megaphone className="w-4 h-4" />
                                     <span>Announce</span>
                                 </button>
+                                <Link
+                                    href="/dashboard/teacher/homework"
+                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                                >
+                                    <BookOpen className="w-4 h-4" />
+                                    <span>Homework</span>
+                                </Link>
                                 <button
                                     onClick={() => setShowCreateModal(true)}
                                     className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] transition-colors"
