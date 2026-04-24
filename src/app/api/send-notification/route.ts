@@ -1,22 +1,12 @@
 /**
- * API Route: Send Push Notification
- * Uses Firebase Admin SDK (or FCM HTTP v1 API) to send push notifications
+ * API Route: Send Push Notification via FCM
+ * Uses Firebase Admin SDK to send REAL background push notifications
+ * These work even when the PWA is closed (like Swiggy/Zomato)
  * By Nihal Pawar
- * 
- * NOTE: Since we're using client-side Firebase (no Admin SDK), 
- * this uses the FCM REST API with the server key.
- * For production, use Firebase Admin SDK with a service account.
- * 
- * Since Firebase Admin SDK requires a service account JSON that we don't have
- * configured in env vars yet, this endpoint will use the legacy FCM HTTP API
- * which works with just the server key. For a production setup, you should
- * migrate to Firebase Admin SDK.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-
-// Firebase Cloud Messaging sender ID from the Firebase config
-const FCM_SENDER_ID = '964585344236';
+import { adminMessaging } from '@/lib/firebaseAdmin';
 
 export async function POST(request: NextRequest) {
     try {
@@ -37,39 +27,90 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Since we don't have a Firebase service account configured for Admin SDK,
-        // we'll return success and rely on Firestore real-time listeners + 
-        // foreground message handling for notifications.
-        // 
-        // To enable actual server-side push:
-        // 1. Go to Firebase Console > Project Settings > Service Accounts
-        // 2. Generate a new private key
-        // 3. Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local
-        // 4. Use firebase-admin SDK here
-        //
-        // For now, the notification system works through:
-        // - Firestore real-time listeners (instant in-app updates)
-        // - Foreground FCM messages (when app is open)
-        // - The PushNotificationProvider handles foreground toast notifications
+        console.log(`[Quizy FCM] Sending push to ${tokens.length} devices`);
+        console.log(`[Quizy FCM] Title: ${title}`);
+        console.log(`[Quizy FCM] Body: ${notifBody}`);
 
-        console.log(`[Quizy API] Notification request received:`);
-        console.log(`  Title: ${title}`);
-        console.log(`  Body: ${notifBody}`);
-        console.log(`  Tokens: ${tokens.length} recipients`);
-        console.log(`  Data:`, data);
+        // Build the FCM message
+        // IMPORTANT: Use `data` only (not `notification`) so the service worker
+        // has full control over how the notification is displayed.
+        // When `notification` is included, Android auto-displays it and
+        // onBackgroundMessage doesn't fire.
+        const message = {
+            // Use data-only message so our service worker controls the display
+            data: {
+                title: title,
+                body: notifBody,
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+                tag: data?.tag || 'quizy-homework',
+                type: data?.type || 'homework',
+                url: data?.url || '/dashboard/student/homework',
+                // Timestamp to ensure unique notifications
+                timestamp: Date.now().toString(),
+            },
+        };
 
-        // Return success - real-time Firestore listeners will handle the update
+        // Send to each token individually to handle failures gracefully
+        const results = {
+            success: 0,
+            failure: 0,
+            errors: [] as string[],
+        };
+
+        // Use sendEachForMulticast for batch sending
+        const multicastMessage = {
+            ...message,
+            tokens: tokens,
+        };
+
+        try {
+            const response = await adminMessaging.sendEachForMulticast(multicastMessage);
+            results.success = response.successCount;
+            results.failure = response.failureCount;
+
+            // Log individual failures
+            response.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    const errorMsg = resp.error?.message || 'Unknown error';
+                    results.errors.push(`Token ${idx}: ${errorMsg}`);
+                    console.error(`[Quizy FCM] Failed for token ${idx}:`, errorMsg);
+                }
+            });
+        } catch (sendError) {
+            console.error('[Quizy FCM] Multicast send failed:', sendError);
+            
+            // Fallback: try sending individually
+            for (let i = 0; i < tokens.length; i++) {
+                try {
+                    await adminMessaging.send({
+                        ...message,
+                        token: tokens[i],
+                    });
+                    results.success++;
+                } catch (individualError) {
+                    results.failure++;
+                    const errMsg = individualError instanceof Error ? individualError.message : 'Unknown';
+                    results.errors.push(`Token ${i}: ${errMsg}`);
+                    console.error(`[Quizy FCM] Individual send failed for token ${i}:`, errMsg);
+                }
+            }
+        }
+
+        console.log(`[Quizy FCM] Results: ${results.success} sent, ${results.failure} failed`);
+
         return NextResponse.json({
             success: true,
-            message: `Notification queued for ${tokens.length} recipients`,
-            info: 'Real-time updates delivered via Firestore listeners. Configure Firebase Admin SDK for background push notifications.',
-            recipientCount: tokens.length
+            sent: results.success,
+            failed: results.failure,
+            errors: results.errors.length > 0 ? results.errors : undefined,
         });
 
     } catch (error) {
-        console.error('[Quizy API] Notification error:', error);
+        console.error('[Quizy FCM] API error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to send notification' },
+            { error: 'Failed to send notification', details: errorMessage },
             { status: 500 }
         );
     }
