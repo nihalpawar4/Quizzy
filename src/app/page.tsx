@@ -761,7 +761,7 @@ export default function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
             >
-              <span className="typo-display text-[#1650EB]" data-tour="landing-hero">
+              <span className="typo-display text-[#1650EB]">
                 Exams
               </span>
             </motion.span>
@@ -810,7 +810,6 @@ export default function HomePage() {
           >
             <Link
               href="/auth/register?role=student"
-              data-tour="landing-cta-student"
               className="group relative flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               <motion.span
@@ -823,7 +822,6 @@ export default function HomePage() {
             </Link>
             <Link
               href="/auth/login?role=teacher"
-              data-tour="landing-cta-teacher"
               className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               Teacher Portal
@@ -839,7 +837,7 @@ export default function HomePage() {
             className="mt-8 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
           >
             <Heart className="w-4 h-4 text-[#1650EB]" />
-            <span className="typo-accent text-[11px]" data-tour="landing-features">Trusted by students across India</span>
+            <span className="typo-accent text-[11px]">Trusted by students across India</span>
           </motion.div>
         </div>
 
@@ -918,7 +916,7 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4" data-tour="landing-faq">
+            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4">
               <span className="typo-serif-display">Frequently Asked</span>{' '}
               <span className="typo-display text-[#1650EB]">Questions</span>
             </h2>

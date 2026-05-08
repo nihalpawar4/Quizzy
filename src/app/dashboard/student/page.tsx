@@ -871,7 +871,7 @@ export default function StudentDashboard() {
                         </div>
 
                         {/* Stats - Simple Inline Cards */}
-                        <div className="flex gap-3" data-tour="dashboard-stats">
+                        <div className="flex gap-3">
                             <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
                                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{results.length}</p>
                                 <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Tests</p>
@@ -890,7 +890,7 @@ export default function StudentDashboard() {
 
                 {/* Tab Navigation */}
                 <div className="mb-5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="flex gap-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-max sm:min-w-0" data-tour="dashboard-tabs">
+                    <div className="flex gap-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-max sm:min-w-0">
                         <button
                             onClick={() => setActiveTab('tests')}
                             className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'tests' ? 'bg-[#1650EB] text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
@@ -948,7 +948,7 @@ export default function StudentDashboard() {
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
                     <div className="mb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" data-tour="dashboard-content">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             📚 Available Tests for Class {user.studentClass}
                         </h3>
                         {loading && tests.length === 0 ? (
@@ -1230,7 +1230,7 @@ export default function StudentDashboard() {
 
                 {/* Quick Actions */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" data-tour="dashboard-quick-actions">⚡ Quick Actions</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {quickActions.map((action, index) => (
                             <motion.div
