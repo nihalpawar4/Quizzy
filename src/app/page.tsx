@@ -31,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostQuestionButton, PostQuestionModal, QuestionList } from '@/components/qa';
+import { GuidedTour, landingPageSteps } from '@/components/tour';
 
 
 // FAQ Data - Updated with all features
@@ -570,6 +571,7 @@ export default function HomePage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2"
+            data-tour="landing-logo"
           >
             <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
@@ -581,6 +583,7 @@ export default function HomePage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
+            data-tour="landing-nav-actions"
           >
             {/* Theme Toggle Button */}
             <motion.button
@@ -589,6 +592,7 @@ export default function HomePage() {
               whileTap={{ scale: 0.95 }}
               className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#6D6D6D] dark:text-gray-400 hover:bg-[#1650EB]/10 dark:hover:bg-[#1650EB]/20 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors"
               aria-label="Toggle theme"
+              data-tour="landing-theme-toggle"
             >
               <AnimatePresence mode="wait">
                 {resolvedTheme === 'dark' ? (
@@ -745,6 +749,7 @@ export default function HomePage() {
             transition={{ delay: 0.3 }}
             className="text-4xl sm:text-5xl lg:text-7xl text-[#020218] dark:text-white mb-3 text-center"
             style={{ lineHeight: 1.1 }}
+            data-tour="landing-hero"
           >
             <motion.span
               initial={{ opacity: 0, x: -20 }}
@@ -808,6 +813,7 @@ export default function HomePage() {
           >
             <Link
               href="/auth/register?role=student"
+              data-tour="landing-cta-student"
               className="group relative flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               <motion.span
@@ -820,6 +826,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/auth/login?role=teacher"
+              data-tour="landing-cta-teacher"
               className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               Teacher Portal
@@ -845,6 +852,7 @@ export default function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
           className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto mt-20"
+          data-tour="landing-features"
         >
           {[
             {
@@ -905,116 +913,8 @@ export default function HomePage() {
         </motion.div>
       </main>
 
-      {/* Student Testimonials Section */}
-      <section className="py-24 px-6 overflow-hidden">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-14"
-          >
-            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4">
-              <span className="typo-serif-display">What Our</span>{' '}
-              <span className="typo-display text-[#1650EB]">Students Say</span>
-            </h2>
-            <p className="typo-body text-[#6D6D6D] dark:text-gray-400">
-              Real feedback from students who love learning with Quizy
-            </p>
-          </motion.div>
-        </div>
-
-        {/* Infinite Scrolling Marquee */}
-        <div className="relative">
-          {/* Gradient masks on edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-slate-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-slate-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />
-
-          <div
-            className="flex gap-6"
-            style={{
-              animation: 'marqueeScroll 30s linear infinite',
-              width: 'max-content',
-            }}
-          >
-            {/* Duplicate cards twice for seamless loop */}
-            {[...Array(2)].map((_, setIndex) => (
-              <div key={setIndex} className="flex gap-6 flex-shrink-0">
-                {[
-                  {
-                    name: 'Sanjoli',
-                    class: 'Class 9',
-                    text: 'Quizy has completely changed how I prepare for exams. The instant feedback on tests helps me understand my mistakes right away!',
-                    rating: 5,
-                    emoji: '🎯',
-                  },
-                  {
-                    name: 'Harsh',
-                    class: 'Class 10',
-                    text: 'The chat feature with teachers is amazing! I can ask doubts anytime and get quick responses. My scores have improved a lot.',
-                    rating: 5,
-                    emoji: '🚀',
-                  },
-                  {
-                    name: 'Pradeep',
-                    class: 'Class 8',
-                    text: 'I love the dark mode and the clean interface. Studying at night is so much easier now. The analytics show me exactly where to improve.',
-                    rating: 5,
-                    emoji: '📊',
-                  },
-                  {
-                    name: 'Shreyansh',
-                    class: 'Class 7',
-                    text: 'The timed tests feel like real exams which helps me manage time better. Plus the progress tracking keeps me motivated every day!',
-                    rating: 4,
-                    emoji: '⏱️',
-                  },
-                  {
-                    name: 'Nikita',
-                    class: 'Class 9',
-                    text: 'Best study platform ever! The subject-wise tests and detailed report cards help me focus on weak areas. Highly recommend to all students.',
-                    rating: 5,
-                    emoji: '⭐',
-                  },
-                ].map((testimonial) => (
-                  <div
-                    key={`${setIndex}-${testimonial.name}`}
-                    className="w-80 flex-shrink-0 p-6 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-[#1650EB]/30 dark:hover:border-[#1650EB]/30 transition-colors"
-                  >
-                    {/* Header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center text-white font-bold text-lg">
-                        {testimonial.name.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="typo-subheading text-sm text-[#020218] dark:text-white">{testimonial.name}</p>
-                        <p className="typo-body text-xs text-[#6D6D6D] dark:text-gray-400">{testimonial.class}</p>
-                      </div>
-                      <span className="text-2xl">{testimonial.emoji}</span>
-                    </div>
-                    {/* Stars */}
-                    <div className="flex gap-0.5 mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${i < testimonial.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
-                        />
-                      ))}
-                    </div>
-                    {/* Quote */}
-                    <p className="typo-body text-sm text-[#6D6D6D] dark:text-gray-400 leading-relaxed">
-                      &ldquo;{testimonial.text}&rdquo;
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* FAQ Section */}
-      <section id="faq" className="py-24 px-6">
+      <section id="faq" className="py-24 px-6" data-tour="landing-faq">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1293,6 +1193,13 @@ export default function HomePage() {
 
       {/* AI Chatbot — Powered by Gemini + RAG */}
       <ChatWidget user={user} />
+
+      {/* Guided Tour — Premium onboarding for first-time visitors */}
+      <GuidedTour
+        steps={landingPageSteps}
+        tourId="landing-page"
+        autoStart={true}
+      />
     </div>
   );
 }

@@ -941,3 +941,460 @@ body.modal-open {
     width: 100%;
   }
 }
+
+/* ==================== GUIDED TOUR / ONBOARDING STYLES ==================== */
+/* Premium floating cloud-bubble tour with soft glow effects */
+
+/* Glow ring pulsing animation — subtle breathing */
+@keyframes tourGlowPulse {
+  0%, 100% {
+    stroke-opacity: 0.5;
+    filter: drop-shadow(0 0 6px rgba(22, 80, 235, 0.3));
+  }
+  50% {
+    stroke-opacity: 0.85;
+    filter: drop-shadow(0 0 12px rgba(22, 80, 235, 0.5)) drop-shadow(0 0 24px rgba(96, 149, 219, 0.2));
+  }
+}
+
+/* Soft breathing glow for spotlight ring */
+.tour-glow-ring {
+  animation: tourGlowPulse 2.4s ease-in-out infinite;
+}
+
+/* ---- Cloud-like Floating Dialogue Bubble ---- */
+.tour-tooltip-card {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+  box-shadow:
+    0 12px 48px rgba(2, 2, 24, 0.10),
+    0 4px 16px rgba(2, 2, 24, 0.05),
+    0 0 0 1px rgba(22, 80, 235, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  overflow: visible;
+  will-change: transform, top, left;
+  position: relative;
+}
+
+.dark .tour-tooltip-card {
+  background: rgba(17, 24, 39, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.35),
+    0 4px 16px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(22, 80, 235, 0.1),
+    0 0 32px rgba(22, 80, 235, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Progress bar — integrated into the rounded shape */
+.tour-tooltip-progress-bar {
+  height: 3px;
+  background: rgba(22, 80, 235, 0.08);
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+}
+
+.dark .tour-tooltip-progress-bar {
+  background: rgba(22, 80, 235, 0.12);
+}
+
+.tour-tooltip-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1650EB, #6095DB);
+  border-radius: 0 3px 3px 0;
+  transition: width 0.4s ease;
+}
+
+/* Card content padding — more spacious for bubble feel */
+.tour-tooltip-content {
+  padding: 18px 20px 16px;
+}
+
+/* Header row */
+.tour-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* Step badge — pill shape */
+.tour-tooltip-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(22, 80, 235, 0.07);
+  border: 1px solid rgba(22, 80, 235, 0.1);
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1650EB;
+  letter-spacing: 0.02em;
+  font-family: var(--font-display, system-ui);
+}
+
+.dark .tour-tooltip-step-badge {
+  background: rgba(22, 80, 235, 0.12);
+  border-color: rgba(22, 80, 235, 0.2);
+  color: #6095DB;
+}
+
+.tour-tooltip-icon-emoji {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Close button — round circle for bubble aesthetic */
+.tour-tooltip-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tour-tooltip-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #374151;
+}
+
+.dark .tour-tooltip-close {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .tour-tooltip-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+}
+
+/* Title */
+.tour-tooltip-title {
+  font-family: var(--font-display, system-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: #020218;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.dark .tour-tooltip-title {
+  color: #f9fafb;
+}
+
+/* Description */
+.tour-tooltip-desc {
+  font-family: var(--font-sans, system-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6D6D6D;
+  margin-bottom: 16px;
+}
+
+.dark .tour-tooltip-desc {
+  color: #9ca3af;
+}
+
+/* Step dots — capsule progress */
+.tour-tooltip-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.tour-tooltip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: rgba(22, 80, 235, 0.12);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark .tour-tooltip-dot {
+  background: rgba(96, 149, 219, 0.15);
+}
+
+.tour-tooltip-dot.active {
+  width: 24px;
+  background: linear-gradient(90deg, #1650EB, #6095DB);
+  box-shadow: 0 0 10px rgba(22, 80, 235, 0.25);
+}
+
+.tour-tooltip-dot.completed {
+  background: #1650EB;
+}
+
+.dark .tour-tooltip-dot.completed {
+  background: #6095DB;
+}
+
+/* Navigation buttons */
+.tour-tooltip-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tour-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Skip button */
+.tour-btn-skip {
+  font-family: var(--font-display, system-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  background: transparent;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.01em;
+}
+
+.tour-btn-skip:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .tour-btn-skip:hover {
+  color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Previous button — soft rounded */
+.tour-btn-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-display, system-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: #6D6D6D;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 7px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tour-btn-prev:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #020218;
+}
+
+.dark .tour-btn-prev {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+}
+
+.dark .tour-btn-prev:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f9fafb;
+}
+
+/* Next / Finish button — soft rounded gradient */
+.tour-btn-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display, system-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #1650EB, #1243c7);
+  border: none;
+  padding: 7px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(22, 80, 235, 0.25);
+  letter-spacing: 0.01em;
+}
+
+.tour-btn-next:hover {
+  background: linear-gradient(135deg, #1243c7, #0e3699);
+  box-shadow: 0 4px 16px rgba(22, 80, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.tour-btn-next:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(22, 80, 235, 0.2);
+}
+
+/* Restart Tour button (for settings/profile page) */
+.tour-restart-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-family: var(--font-display, system-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: #1650EB;
+  background: rgba(22, 80, 235, 0.06);
+  border: 1px solid rgba(22, 80, 235, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tour-restart-btn:hover {
+  background: rgba(22, 80, 235, 0.12);
+  border-color: rgba(22, 80, 235, 0.2);
+}
+
+.dark .tour-restart-btn {
+  color: #6095DB;
+  background: rgba(22, 80, 235, 0.1);
+  border-color: rgba(22, 80, 235, 0.2);
+}
+
+.dark .tour-restart-btn:hover {
+  background: rgba(22, 80, 235, 0.18);
+  border-color: rgba(22, 80, 235, 0.3);
+}
+
+/* ==================== TOUR MOBILE RESPONSIVENESS ==================== */
+
+@media (max-width: 640px) {
+  .tour-tooltip-card {
+    border-radius: 20px;
+  }
+
+  .tour-tooltip-progress-bar {
+    border-radius: 20px 20px 0 0;
+  }
+
+  .tour-tooltip-content {
+    padding: 14px 14px 12px;
+  }
+
+  .tour-tooltip-title {
+    font-size: 15px;
+  }
+
+  .tour-tooltip-desc {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .tour-tooltip-dots {
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .tour-tooltip-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .tour-tooltip-dot.active {
+    width: 18px;
+  }
+
+  .tour-btn-next {
+    padding: 7px 14px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+
+  .tour-btn-prev {
+    padding: 7px 12px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+
+  .tour-btn-skip {
+    font-size: 11px;
+    border-radius: 10px;
+  }
+}
+
+/* ==================== POST QUESTION FAB ==================== */
+/* Premium floating AI-assistant style button */
+
+.post-question-fab {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  z-index: 50;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  outline: none;
+  background: transparent;
+}
+
+.post-question-fab-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1650EB 0%, #4674e8 50%, #6095DB 100%);
+  box-shadow:
+    0 4px 20px rgba(22, 80, 235, 0.30),
+    0 1px 4px rgba(22, 80, 235, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.post-question-fab:hover .post-question-fab-inner {
+  box-shadow:
+    0 6px 28px rgba(22, 80, 235, 0.38),
+    0 2px 8px rgba(22, 80, 235, 0.15);
+}
+
+.dark .post-question-fab-inner {
+  background: linear-gradient(135deg, #1650EB 0%, #3960d0 50%, #1243c7 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 4px 20px rgba(22, 80, 235, 0.25),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark .post-question-fab:hover .post-question-fab-inner {
+  box-shadow:
+    0 6px 28px rgba(22, 80, 235, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 640px) {
+  .post-question-fab {
+    bottom: 88px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .post-question-fab-inner {
+    border-radius: 14px;
+  }
+}
