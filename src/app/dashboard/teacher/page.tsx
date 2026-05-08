@@ -79,6 +79,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuestion } from '@/lib/qaService';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
 
@@ -933,7 +934,7 @@ export default function TeacherDashboard() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
+                <MotivationalLoader subtitle="Loading teacher dashboard..." />
             </div>
         );
     }

@@ -239,6 +239,7 @@ body {
   border: 1px solid var(--gray-200);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  contain: content;
 }
 
 .dark .card {
@@ -420,16 +421,6 @@ body {
   }
 }
 
-/* Testimonial marquee - smooth infinite scroll */
-@keyframes marqueeScroll {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(-50%);
-  }
-}
 
 /* Gradient Text */
 .gradient-text {
@@ -527,6 +518,7 @@ body.modal-open {
 .scroll-smooth {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
 }
 
 /* Mobile-optimized modal/overlay scrolling */
@@ -537,6 +529,7 @@ body.modal-open {
   overscroll-behavior: contain;
   max-height: 100vh;
   max-height: 100dvh;
+  transform: translateZ(0);
   /* Dynamic viewport height for mobile */
 }
 

@@ -12,6 +12,7 @@ import HomeworkList from '@/components/homework/HomeworkList';
 import { subscribeToHomework } from '@/services/homeworkService';
 import { requestAndStoreFCMToken } from '@/lib/messaging';
 import type { Homework } from '@/types/homework';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function StudentHomeworkPage() {
     const { user, loading: authLoading } = useAuth();
@@ -66,10 +67,7 @@ export default function StudentHomeworkPage() {
 
     if (authLoading || !user) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-            <div className="text-center">
-                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">Loading homework...</p>
-            </div>
+            <MotivationalLoader subtitle="Loading homework..." />
         </div>
     );
 

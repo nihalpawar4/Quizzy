@@ -48,7 +48,8 @@ import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
 
 import { useChat } from '@/contexts/ChatContext';
-import { GuidedTour, RestartTourButton, studentDashboardSteps } from '@/components/tour';
+import { GuidedTour, studentDashboardSteps } from '@/components/tour';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser: _refreshUser } = useAuth();
@@ -557,10 +558,7 @@ export default function StudentDashboard() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <div className="text-center">
-                    <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
-                </div>
+                <MotivationalLoader subtitle="Loading your dashboard..." />
             </div>
         );
     }
@@ -825,16 +823,6 @@ export default function StudentDashboard() {
                                                 <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
                                                 <span className="text-sm font-medium text-gray-900 dark:text-white">Profile Settings</span>
                                             </Link>
-                                            {/* Replay Tour Button */}
-                                            <RestartTourButton
-                                                tourId="student-dashboard"
-                                                onRestart={() => {
-                                                    setShowProfileDropdown(false);
-                                                    setTimeout(() => setTourActive(true), 300);
-                                                }}
-                                                label="Replay Tour"
-                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                            />
                                             <button
                                                 onClick={() => {
                                                     setShowProfileDropdown(false);

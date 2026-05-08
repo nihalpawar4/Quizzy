@@ -36,6 +36,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePictureService';
 import { resetTour } from '@/components/tour';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function ProfilePage() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
@@ -208,7 +209,7 @@ export default function ProfilePage() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
+                <MotivationalLoader />
             </div>
         );
     }

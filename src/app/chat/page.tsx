@@ -12,6 +12,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { ChatList, ChatWindow, NewChatModal } from '@/components/chat';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function ChatPage() {
     const router = useRouter();
@@ -61,10 +62,7 @@ export default function ChatPage() {
     if (authLoading || !user) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-3 border-[#1650EB] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-                </div>
+                <MotivationalLoader />
             </div>
         );
     }

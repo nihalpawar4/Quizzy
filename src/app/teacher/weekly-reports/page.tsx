@@ -48,6 +48,7 @@ import { getAllStudents } from '@/lib/services';
 import { getWeeklyReport, formatWeekRange } from '@/lib/weeklyReportServices';
 import type { User } from '@/types';
 import type { WeeklyReportData } from '@/types/weeklyReport';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function WeeklyReportsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -328,10 +329,7 @@ export default function WeeklyReportsPage() {
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#1650EB] mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-                </div>
+                <MotivationalLoader subtitle="Loading reports..." />
             </div>
         );
     }
@@ -475,10 +473,7 @@ export default function WeeklyReportsPage() {
                         {/* Loading report */}
                         {selectedStudent && reportLoading && (
                             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 sm:p-12 text-center">
-                                <Loader2 className="w-8 h-8 animate-spin text-[#1650EB] mx-auto mb-4" />
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Loading report...
-                                </p>
+                                <MotivationalLoader size="md" subtitle="Generating report..." />
                             </div>
                         )}
 

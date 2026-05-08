@@ -13,6 +13,7 @@ import HomeworkForm from '@/components/homework/HomeworkForm';
 import { subscribeToAllHomework, deleteHomework } from '@/services/homeworkService';
 import type { Homework } from '@/types/homework';
 import { CLASS_OPTIONS, SUBJECTS } from '@/lib/constants';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function TeacherHomeworkPage() {
     const { user, loading: authLoading } = useAuth();
@@ -50,7 +51,7 @@ export default function TeacherHomeworkPage() {
 
     if (authLoading || !user) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-            <Loader2 className="w-10 h-10 text-[#1650EB] animate-spin" />
+            <MotivationalLoader subtitle="Loading homework..." />
         </div>
     );
 

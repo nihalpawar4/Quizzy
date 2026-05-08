@@ -19,6 +19,7 @@ import {
 import { QuizyLogoIcon } from '@/components/QuizyLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { CLASS_OPTIONS } from '@/lib/constants';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 // Google Icon SVG Component
 const GoogleIcon = () => (
@@ -454,9 +455,7 @@ function LoginLoading() {
     return (
         <div className="w-full max-w-md">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-8">
-                <div className="flex justify-center">
-                    <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
-                </div>
+                <MotivationalLoader size="md" />
             </div>
         </div>
     );
