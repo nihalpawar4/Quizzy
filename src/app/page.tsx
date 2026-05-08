@@ -747,7 +747,6 @@ export default function HomePage() {
             transition={{ delay: 0.3 }}
             className="text-4xl sm:text-5xl lg:text-7xl text-[#020218] dark:text-white mb-3 text-center"
             style={{ lineHeight: 1.1 }}
-            data-tour="landing-hero"
           >
             <motion.span
               initial={{ opacity: 0, x: -20 }}
@@ -762,7 +761,7 @@ export default function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
             >
-              <span className="typo-display text-[#1650EB]">
+              <span className="typo-display text-[#1650EB]" data-tour="landing-hero">
                 Exams
               </span>
             </motion.span>
@@ -840,7 +839,7 @@ export default function HomePage() {
             className="mt-8 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
           >
             <Heart className="w-4 h-4 text-[#1650EB]" />
-            <span className="typo-accent text-[11px]">Trusted by students across India</span>
+            <span className="typo-accent text-[11px]" data-tour="landing-features">Trusted by students across India</span>
           </motion.div>
         </div>
 
@@ -850,7 +849,6 @@ export default function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
           className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto mt-20"
-          data-tour="landing-features"
         >
           {[
             {
@@ -912,7 +910,7 @@ export default function HomePage() {
       </main>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-24 px-6" data-tour="landing-faq">
+      <section id="faq" className="py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -920,7 +918,7 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4">
+            <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4" data-tour="landing-faq">
               <span className="typo-serif-display">Frequently Asked</span>{' '}
               <span className="typo-display text-[#1650EB]">Questions</span>
             </h2>

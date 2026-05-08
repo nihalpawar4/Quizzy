@@ -947,8 +947,8 @@ export default function StudentDashboard() {
 
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
-                    <div className="mb-8" data-tour="dashboard-content">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" data-tour="dashboard-content">
                             📚 Available Tests for Class {user.studentClass}
                         </h3>
                         {loading && tests.length === 0 ? (
@@ -1229,8 +1229,8 @@ export default function StudentDashboard() {
 
 
                 {/* Quick Actions */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8" data-tour="dashboard-quick-actions">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" data-tour="dashboard-quick-actions">⚡ Quick Actions</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {quickActions.map((action, index) => (
                             <motion.div

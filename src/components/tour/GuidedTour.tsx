@@ -346,11 +346,22 @@ export default function GuidedTour({
 
   if (!isActive || !step || !targetRect) return null;
 
-  // Spotlight dimensions with padding
-  const sx = targetRect.left - spotlightPadding;
-  const sy = targetRect.top - spotlightPadding;
-  const sw = targetRect.width + spotlightPadding * 2;
-  const sh = targetRect.height + spotlightPadding * 2;
+  // Spotlight dimensions with padding — capped for mobile so large elements
+  // don't cause full-page highlighting
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const maxW = isMobile ? Math.min(window.innerWidth * 0.88, 360) : Infinity;
+  const maxH = isMobile ? 200 : Infinity;
+
+  const rawW = targetRect.width + spotlightPadding * 2;
+  const rawH = targetRect.height + spotlightPadding * 2;
+  const sw = Math.min(rawW, maxW);
+  const sh = Math.min(rawH, maxH);
+
+  // Center the capped spotlight on the target element
+  const centerX = targetRect.left + targetRect.width / 2;
+  const centerY = targetRect.top + targetRect.height / 2;
+  const sx = centerX - sw / 2;
+  const sy = centerY - sh / 2;
 
   return (
     <AnimatePresence>
