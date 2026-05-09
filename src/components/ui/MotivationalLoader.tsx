@@ -31,6 +31,9 @@ const MOTIVATIONAL_MESSAGES = [
   'Dream big. Start small. Act now.',
 ];
 
+// Use a fixed initial message to prevent SSR/client hydration mismatch
+const INITIAL_MESSAGE = MOTIVATIONAL_MESSAGES[0];
+
 function getRandomMessage(exclude?: string): string {
   const filtered = exclude
     ? MOTIVATIONAL_MESSAGES.filter((m) => m !== exclude)
@@ -58,7 +61,8 @@ export default function MotivationalLoader({
   subtitle,
   className = '',
 }: MotivationalLoaderProps) {
-  const [message, setMessage] = useState(() => getRandomMessage());
+  // Use a stable initial value to avoid SSR hydration mismatch (Math.random differs server vs client)
+  const [message, setMessage] = useState(INITIAL_MESSAGE);
 
   useEffect(() => {
     const interval = setInterval(() => {

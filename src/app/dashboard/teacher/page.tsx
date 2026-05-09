@@ -1176,7 +1176,7 @@ export default function TeacherDashboard() {
                 </motion.div>
 
                 {/* Stats Cards - Clickable */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <button
                         onClick={() => { setActiveTab('tests'); setShowTestsModal(true); }}
                         className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'tests' ? 'border-[#1650EB] dark:border-[#6095DB] ring-2 ring-[#1650EB]/20' : 'border-gray-200 dark:border-gray-800'}`}
@@ -1786,14 +1786,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                         onClick={() => { setShowCreateModal(false); resetCreateForm(); }}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto touch-scroll"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {createSuccess ? (
@@ -1807,7 +1807,7 @@ export default function TeacherDashboard() {
                             ) : (
                                 <>
                                     {/* Header with Steps */}
-                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create New Test</h3>
                                             <button onClick={() => { setShowCreateModal(false); resetCreateForm(); }} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
@@ -1830,7 +1830,7 @@ export default function TeacherDashboard() {
                                         </div>
                                     </div>
 
-                                    <div className="p-6">
+                                    <div className="p-6 flex-1 overflow-y-auto">
                                         {/* STEP 1: Test Details */}
                                         {createStep === 1 && (
                                             <div className="space-y-6">
@@ -2269,7 +2269,7 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     {/* Footer with Navigation */}
-                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between">
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between flex-shrink-0">
                                         <button onClick={() => createStep > 1 ? setCreateStep((createStep - 1) as 1 | 2 | 3) : (setShowCreateModal(false), resetCreateForm())} className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                             {createStep > 1 ? 'Back' : 'Cancel'}
                                         </button>
@@ -2297,7 +2297,7 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                         onClick={() => setShowDetailedAnalytics(false)}
                     >
                         <motion.div
@@ -2308,7 +2308,7 @@ export default function TeacherDashboard() {
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
-                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedTest.title}</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTest.subject} • Class {selectedTest.targetClass} • {detailedResults.length} submissions</p>
@@ -2394,7 +2394,7 @@ export default function TeacherDashboard() {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end flex-shrink-0">
                                 <button onClick={() => setShowDetailedAnalytics(false)} className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                     Close
                                 </button>
@@ -2717,14 +2717,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                         onClick={closeEditModal}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {editSuccess ? (
@@ -2738,7 +2738,7 @@ export default function TeacherDashboard() {
                             ) : (
                                 <>
                                     {/* Header */}
-                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-xl flex items-center justify-center">
@@ -2756,7 +2756,7 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     {/* Content */}
-                                    <div className="p-6 space-y-6">
+                                    <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                                         {/* Test Details */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
@@ -2858,7 +2858,7 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     {/* Footer */}
-                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between">
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between flex-shrink-0">
                                         <button
                                             onClick={closeEditModal}
                                             className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -2887,14 +2887,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                         onClick={() => { setShowNotesModal(false); resetNoteForm(); }}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {noteSuccess ? (
@@ -2908,7 +2908,7 @@ export default function TeacherDashboard() {
                             ) : (
                                 <>
                                     {/* Header */}
-                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                                    <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
@@ -2926,7 +2926,7 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     {/* Content */}
-                                    <div className="p-6 space-y-6">
+                                    <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                                         {/* Basic Info */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="md:col-span-2">
@@ -3067,7 +3067,7 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     {/* Footer */}
-                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between">
+                                    <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between flex-shrink-0">
                                         <button
                                             onClick={() => { setShowNotesModal(false); resetNoteForm(); }}
                                             className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -3103,11 +3103,11 @@ export default function TeacherDashboard() {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
-                            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${(selectedProctoringResult.tabSwitchCount || 0) > 0 ||
@@ -3136,7 +3136,7 @@ export default function TeacherDashboard() {
                             </div>
 
                             {/* Content */}
-                            <div className="p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {/* Test Info */}
                                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedProctoringResult.testTitle}</p>
@@ -3244,7 +3244,7 @@ export default function TeacherDashboard() {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end flex-shrink-0">
                                 <button
                                     onClick={() => setSelectedProctoringResult(null)}
                                     className="px-6 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -3271,7 +3271,7 @@ export default function TeacherDashboard() {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full"
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {announcementSuccess ? (

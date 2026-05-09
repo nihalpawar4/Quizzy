@@ -69,7 +69,7 @@ export default function StudentDashboard() {
     // My Reports state
     const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
     // New reports notification state
     const [newReportsCount, setNewReportsCount] = useState(0);
@@ -115,6 +115,7 @@ export default function StudentDashboard() {
 
     // Update current time every minute for report availability check
     useEffect(() => {
+        setCurrentTime(new Date());
         const interval = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(interval);
     }, []);
@@ -170,6 +171,7 @@ export default function StudentDashboard() {
 
     // Check if report is available (instantly available up to 24 hours after submission)
     const isReportAvailable = (result: TestResult): boolean => {
+        if (!currentTime) return true;
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
         const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000); // 24 hours
         return currentTime < twentyFourHoursLater;
@@ -177,6 +179,7 @@ export default function StudentDashboard() {
 
     // Check if report has expired (after 24 hours)
     const isReportExpired = (result: TestResult): boolean => {
+        if (!currentTime) return false;
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
         const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000);
         return currentTime >= twentyFourHoursLater;
@@ -187,9 +190,9 @@ export default function StudentDashboard() {
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
         const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000);
 
-        if (currentTime < twentyFourHoursLater) {
+        if (!currentTime || currentTime < twentyFourHoursLater) {
             // Available, show expiry time
-            const diff = twentyFourHoursLater.getTime() - currentTime.getTime();
+            const diff = currentTime ? twentyFourHoursLater.getTime() - currentTime.getTime() : 0;
             const hours = Math.floor(diff / 3600000);
             const minutes = Math.ceil((diff % 3600000) / 60000);
             if (hours > 0) {
@@ -852,10 +855,10 @@ export default function StudentDashboard() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-2xl">
-                                    {new Date().getHours() < 12 ? '🌅' : new Date().getHours() < 17 ? '☀️' : '🌙'}
+                                    {!currentTime ? '👋' : currentTime.getHours() < 12 ? '🌅' : currentTime.getHours() < 17 ? '☀️' : '🌙'}
                                 </span>
                                 <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-                                    {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
+                                    {!currentTime ? 'Welcome' : currentTime.getHours() < 12 ? 'Good Morning' : currentTime.getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
                                 </span>
                             </div>
                             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
