@@ -67,6 +67,8 @@ import {
     deleteNote,
     updateNoteStatus,
     createAnnouncement,
+    createTestNotification,
+    createNoteNotification,
     subscribeToTeacherAnnouncements,
     deleteNotification,
     deleteRelatedAnnouncements
@@ -550,6 +552,12 @@ export default function TeacherDashboard() {
 
             await uploadQuestions(testId, questions);
 
+            // Send push notification to students in the target class
+            createTestNotification(
+                { id: testId, title: newTest.title, subject: newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
+                user!.name
+            ).catch(err => console.error('Error sending test notification:', err));
+
             setCreateSuccess(true);
             // Data updates automatically via real-time listener
 
@@ -810,7 +818,7 @@ export default function TeacherDashboard() {
         setNoteError(null);
 
         try {
-            await createNote({
+            const noteId = await createNote({
                 title: newNote.title,
                 subject: newNote.subject,
                 targetClass: newNote.targetClass,
@@ -820,6 +828,12 @@ export default function TeacherDashboard() {
                 createdBy: user!.uid,
                 isActive: true
             });
+
+            // Send push notification to students in the target class
+            createNoteNotification(
+                { id: noteId, title: newNote.title, subject: newNote.subject, targetClass: newNote.targetClass, createdBy: user!.uid },
+                user!.name
+            ).catch(err => console.error('Error sending note notification:', err));
 
             setNoteSuccess(true);
             setTimeout(() => {
