@@ -138,6 +138,14 @@ export default function TestPage() {
     const [showAntiCheatWarning, setShowAntiCheatWarning] = useState(false);
     const [warningMessage, setWarningMessage] = useState('');
 
+    // Auto-submit tracking: count total violations (tab switches + fullscreen exits)
+    // On non-mobile screens: 1st violation = warning, 2nd violation = auto-submit
+    const violationCountRef = useRef(0);
+    const [showViolationWarning, setShowViolationWarning] = useState(false);
+    const [violationWarningMessage, setViolationWarningMessage] = useState('');
+    const autoSubmitTriggeredRef = useRef(false);
+    const isNonMobileRef = useRef(false);
+
     // Instructions screen state
     const [showInstructionsScreen, setShowInstructionsScreen] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
@@ -199,6 +207,16 @@ export default function TestPage() {
         }
     }, [antiCheatEnabled]);
 
+    // Detect non-mobile screen on mount and resize
+    useEffect(() => {
+        const checkScreenSize = () => {
+            isNonMobileRef.current = window.innerWidth >= 768;
+        };
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
+
     // Anti-cheat: Visibility change detection
     useEffect(() => {
         if (!antiCheatEnabled || isSubmitted) return;
@@ -209,6 +227,21 @@ export default function TestPage() {
                 setWarningMessage('⚠️ Tab switch detected! This will be reported.');
                 setShowAntiCheatWarning(true);
                 setTimeout(() => setShowAntiCheatWarning(false), 3000);
+
+                // Auto-submit logic for non-mobile screens
+                if (isNonMobileRef.current && !autoSubmitTriggeredRef.current) {
+                    violationCountRef.current += 1;
+                    if (violationCountRef.current === 1) {
+                        // First violation: show blocking warning
+                        setViolationWarningMessage('⚠️ WARNING: Tab switch detected! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                        setShowViolationWarning(true);
+                    } else if (violationCountRef.current >= 2) {
+                        // Second violation: auto-submit
+                        autoSubmitTriggeredRef.current = true;
+                        setShowViolationWarning(false);
+                        handleFinalSubmit();
+                    }
+                }
             }
         };
 
@@ -309,6 +342,21 @@ export default function TestPage() {
                 setTimeout(() => setShowAntiCheatWarning(false), 3000);
                 // Remove body class when exiting fullscreen
                 document.body.classList.remove('modal-open');
+
+                // Auto-submit logic for non-mobile screens
+                if (isNonMobileRef.current && !autoSubmitTriggeredRef.current) {
+                    violationCountRef.current += 1;
+                    if (violationCountRef.current === 1) {
+                        // First violation: show blocking warning
+                        setViolationWarningMessage('⚠️ WARNING: You exited fullscreen! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                        setShowViolationWarning(true);
+                    } else if (violationCountRef.current >= 2) {
+                        // Second violation: auto-submit
+                        autoSubmitTriggeredRef.current = true;
+                        setShowViolationWarning(false);
+                        handleFinalSubmit();
+                    }
+                }
             } else if (document.fullscreenElement) {
                 setIsFullscreen(true);
                 // Add body class when entering fullscreen
@@ -725,6 +773,28 @@ export default function TestPage() {
                             </div>
                         )}
 
+                        {/* Auto-Submit Warning — shown on desktop/tablet only */}
+                        {antiCheatEnabled && (
+                            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                    <h4 className="font-semibold text-red-700 dark:text-red-400">⚠️ Auto-Submit Rule (Desktop & Tablet)</h4>
+                                </div>
+                                <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
+                                    <p>On desktop and tablet screens, the following rules apply:</p>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-bold">1st violation:</span>
+                                        <span>If you <strong>switch tabs</strong> or <strong>exit fullscreen</strong>, you will receive a <strong>warning</strong>.</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-bold">2nd violation:</span>
+                                        <span>Your test will be <strong>automatically submitted</strong> with whatever answers you have completed.</span>
+                                    </div>
+                                    <p className="mt-2 font-medium text-red-800 dark:text-red-300">⚠️ Stay in fullscreen and do not switch tabs during the test!</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Agreement Checkbox */}
                         <div className="flex items-start gap-3 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl">
                             <input
@@ -981,6 +1051,58 @@ export default function TestPage() {
                         className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
                         <AlertTriangle className="w-5 h-5" />
                         <span className="font-medium">{warningMessage}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Violation Warning Modal — blocking modal on first violation */}
+            <AnimatePresence>
+                {showViolationWarning && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+                        >
+                            {/* Red warning header */}
+                            <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-center">
+                                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <AlertTriangle className="w-8 h-8 text-white" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">⚠️ First Warning!</h3>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <p className="text-gray-700 dark:text-gray-300 text-center text-sm leading-relaxed">
+                                    {violationWarningMessage}
+                                </p>
+
+                                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+                                    <p className="text-red-700 dark:text-red-400 text-sm font-medium text-center">
+                                        🚨 This is your <strong>ONLY</strong> warning. Next violation = <strong>Automatic Submission</strong>.
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        setShowViolationWarning(false);
+                                        // Re-enter fullscreen if anti-cheat is enabled
+                                        if (antiCheatEnabled) {
+                                            setTimeout(() => enterFullscreen(), 300);
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-gradient-to-r from-[#1650EB] to-indigo-600 text-white rounded-xl font-semibold hover:from-[#1243c7] hover:to-indigo-700 transition-all shadow-lg"
+                                >
+                                    I Understand — Continue Test
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
