@@ -705,7 +705,81 @@ export async function createNotification(notification: Omit<Notification, 'id' |
         createdAt: Timestamp.now(),
         viewedBy: {}
     });
+
+    // Fire-and-forget: send FCM push notification to all students in the target class
+    sendPushToClassStudents(
+        notification.targetClass,
+        notification.title,
+        notification.message,
+        {
+            type: notification.type,
+            url: notification.type === 'test' ? '/dashboard/student' :
+                 notification.type === 'note' ? '/dashboard/student' : '/dashboard/student',
+            tag: `quizy-${notification.type}-${docRef.id}`,
+        }
+    ).catch(err => console.error('[Quizy Push] Failed to send push:', err));
+
     return docRef.id;
+}
+
+/**
+ * Send FCM push notification to all students in a specific class
+ * This enables real notifications even when the app is closed
+ */
+async function sendPushToClassStudents(
+    targetClass: number,
+    title: string,
+    body: string,
+    data?: Record<string, string>
+): Promise<void> {
+    try {
+        // Fetch all students in the target class who have FCM tokens
+        const usersRef = collection(db, COLLECTIONS.USERS);
+        const q = query(
+            usersRef,
+            where('role', '==', 'student'),
+            where('studentClass', '==', targetClass)
+        );
+        const snapshot = await getDocs(q);
+
+        // Collect valid FCM tokens
+        const tokens: string[] = [];
+        snapshot.docs.forEach(doc => {
+            const fcmToken = doc.data().fcmToken;
+            if (fcmToken && typeof fcmToken === 'string' && fcmToken.length > 0) {
+                tokens.push(fcmToken);
+            }
+        });
+
+        if (tokens.length === 0) {
+            console.log('[Quizy Push] No FCM tokens found for class', targetClass);
+            return;
+        }
+
+        console.log(`[Quizy Push] Sending push to ${tokens.length} students in class ${targetClass}`);
+
+        // Call the API route to send push notifications via Firebase Admin SDK
+        const response = await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tokens,
+                title,
+                body,
+                data: data || {},
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('[Quizy Push] API error:', errorData);
+        } else {
+            const result = await response.json();
+            console.log(`[Quizy Push] Sent: ${result.sent}, Failed: ${result.failed}`);
+        }
+    } catch (error) {
+        console.error('[Quizy Push] Error sending push notifications:', error);
+    }
 }
 
 /**
