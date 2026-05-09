@@ -516,7 +516,7 @@ body.modal-open {
 .scroll-smooth {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
+  /* DO NOT add transform here — it creates a containing block that breaks position:fixed on all child modals */
 }
 
 /* Mobile-optimized modal/overlay scrolling */

@@ -95,6 +95,17 @@ export default function StudentDashboard() {
     // Guided tour state
     const [tourActive, setTourActive] = useState(false);
 
+    // Lock body scroll when any modal is open
+    const isAnyModalOpen = showComingSoon || !!selectedReport || !!selectedNote || !!selectedNotification;
+    useEffect(() => {
+        if (isAnyModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isAnyModalOpen]);
+
     // Auto-close profile dropdown after 3 seconds
     useEffect(() => {
         if (showProfileDropdown) {
@@ -1329,7 +1340,7 @@ export default function StudentDashboard() {
             {/* Coming Soon Modal */}
             <AnimatePresence>
                 {showComingSoon && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowComingSoon(false)}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setShowComingSoon(false)}>
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="w-16 h-16 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Sparkles className="w-8 h-8 text-white" />
@@ -1353,14 +1364,14 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedReport(null)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-3xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Modal Header */}
@@ -1457,14 +1468,14 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedNote(null)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-3xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Modal Header */}
@@ -1614,14 +1625,14 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedNotification(null)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full sm:max-w-md sm:rounded-2xl overflow-hidden sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header with type-specific color */}

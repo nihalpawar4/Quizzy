@@ -272,6 +272,17 @@ export default function TeacherDashboard() {
     const [loadingPending, setLoadingPending] = useState(false);
     const [moderatingId, setModeratingId] = useState<string | null>(null);
 
+    // Lock body scroll when any modal is open
+    const isAnyModalOpen = showCreateModal || showEditModal || showNotesModal || showDetailedAnalytics || showTestsModal || showStudentsModal || showSubmissionsModal || showScoreModal || !!selectedProctoringResult || showAnnouncementModal || showManageAnnouncementsModal;
+    useEffect(() => {
+        if (isAnyModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isAnyModalOpen]);
+
     const loadStudents = useCallback(async () => {
         try {
             const studentsData = await getAllStudents();
@@ -1786,14 +1797,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => { setShowCreateModal(false); resetCreateForm(); }}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {createSuccess ? (
@@ -2297,14 +2308,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setShowDetailedAnalytics(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-5xl w-full my-8 max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-5xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
@@ -2407,8 +2418,8 @@ export default function TeacherDashboard() {
             {/* Tests Modal */}
             <AnimatePresence>
                 {showTestsModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTestsModal(false)}>
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8" onClick={() => setShowTestsModal(false)}>
+                        <motion.div initial={{ scale: 0.98 }} animate={{ scale: 1 }} exit={{ scale: 0.98 }} className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-3xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
@@ -2459,8 +2470,8 @@ export default function TeacherDashboard() {
             {/* Students Modal */}
             <AnimatePresence>
                 {showStudentsModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowStudentsModal(false)}>
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8" onClick={() => setShowStudentsModal(false)}>
+                        <motion.div initial={{ scale: 0.98 }} animate={{ scale: 1 }} exit={{ scale: 0.98 }} className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-3xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
@@ -2584,8 +2595,8 @@ export default function TeacherDashboard() {
             {/* Submissions Modal */}
             <AnimatePresence>
                 {showSubmissionsModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSubmissionsModal(false)}>
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8" onClick={() => setShowSubmissionsModal(false)}>
+                        <motion.div initial={{ scale: 0.98 }} animate={{ scale: 1 }} exit={{ scale: 0.98 }} className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-4xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
@@ -2643,8 +2654,8 @@ export default function TeacherDashboard() {
             {/* Score Breakdown Modal */}
             <AnimatePresence>
                 {showScoreModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowScoreModal(false)}>
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8" onClick={() => setShowScoreModal(false)}>
+                        <motion.div initial={{ scale: 0.98 }} animate={{ scale: 1 }} exit={{ scale: 0.98 }} className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-2xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center">
@@ -2717,14 +2728,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={closeEditModal}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {editSuccess ? (
@@ -2887,14 +2898,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => { setShowNotesModal(false); resetNoteForm(); }}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {noteSuccess ? (
@@ -3096,14 +3107,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedProctoringResult(null)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-lg sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
@@ -3264,14 +3275,14 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => !isCreatingAnnouncement && setShowAnnouncementModal(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-lg sm:max-h-[90vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {announcementSuccess ? (
@@ -3374,17 +3385,17 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => {
                             setShowManageAnnouncementsModal(false);
                             setSelectedAnnouncementForDelete(null);
                         }}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.98, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col"
+                            exit={{ scale: 0.98, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-2xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
