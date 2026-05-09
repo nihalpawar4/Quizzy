@@ -490,9 +490,7 @@ body {
 /* Prevent body scroll when modal is open */
 body.modal-open {
   overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
+  /* Do NOT use position:fixed here — it causes the page to jump to top */
 }
 
 /* Mobile-first touch targets - minimum 44px for accessibility */
@@ -601,14 +599,16 @@ body.modal-open {
   -webkit-backdrop-filter: blur(4px);
 }
 
-/* Modal content - mobile optimized */
+/* Modal content - uses flex-col for header/content/footer layout */
 .modal-content {
   position: relative;
   background: white;
   border-radius: 16px;
   max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   -webkit-overflow-scrolling: touch;
   width: 100%;
   max-width: 600px;
