@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
+import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
 import type { Homework } from '@/types/homework';
@@ -214,40 +215,10 @@ export default function StudentDashboard() {
         return 'Expired';
     };
 
-    // Download report as text file
+    // Download report as PDF file
     const downloadReport = (result: TestResult) => {
         if (!result.detailedAnswers) return;
-
-        const scorePercent = Math.round((result.score / result.totalQuestions) * 100);
-        let content = `QUIZY TEST REPORT\n${'='.repeat(50)}\n\n`;
-        content += `Test: ${result.testTitle}\n`;
-        content += `Subject: ${result.subject}\n`;
-        content += `Date: ${new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
-        content += `Score: ${result.score}/${result.totalQuestions} (${scorePercent}%)\n\n`;
-        content += `${'='.repeat(50)}\nDETAILED ANSWERS\n${'='.repeat(50)}\n\n`;
-
-        result.detailedAnswers.forEach((answer, index) => {
-            content += `Q${index + 1}: ${answer.questionText}\n`;
-            content += `Your Answer: ${answer.userAnswer || 'Not answered'}\n`;
-            content += `Correct Answer: ${answer.correctAnswer}\n`;
-            content += `Result: ${answer.isCorrect ? '✓ Correct' : '✗ Incorrect'}\n`;
-            content += `${'-'.repeat(40)}\n`;
-        });
-
-        content += `\n${'='.repeat(50)}\nSUMMARY\n${'='.repeat(50)}\n`;
-        content += `Correct: ${result.score}\n`;
-        content += `Incorrect: ${result.totalQuestions - result.score}\n`;
-        content += `Percentage: ${scorePercent}%\n`;
-
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Quizy_Report_${result.testTitle.replace(/\s+/g, '_')}_${new Date(result.timestamp).toISOString().split('T')[0]}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        generateStudentReportPDF(result);
     };
 
 
@@ -1138,7 +1109,7 @@ export default function StudentDashboard() {
                                                             <button
                                                                 onClick={() => downloadReport(result)}
                                                                 className="flex items-center gap-2 px-3 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
-                                                                title="Download Report"
+                                                                title="Download PDF Report"
                                                             >
                                                                 <Download className="w-4 h-4" />
                                                             </button>
@@ -1452,9 +1423,18 @@ export default function StudentDashboard() {
                                         <span className="text-sm text-gray-600 dark:text-gray-400">{selectedReport.totalQuestions - selectedReport.score} Incorrect</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
-                                    Close Report
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => downloadReport(selectedReport)}
+                                        className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Download PDF</span>
+                                    </button>
+                                    <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                                        Close Report
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

@@ -74,6 +74,7 @@ import {
     deleteRelatedAnnouncements
 } from '@/lib/services';
 import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
+import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User, SubjectNote, Notification } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
@@ -649,6 +650,12 @@ export default function TeacherDashboard() {
     const handleDownloadResults = () => {
         const filteredResults = getFilteredResults();
         downloadAnalyticsCSV(filteredResults, `quizy-results-${new Date().toISOString().split('T')[0]}`);
+    };
+
+    // Download results as PDF
+    const handleDownloadResultsPDF = () => {
+        const filteredResults = getFilteredResults();
+        generateAnalyticsResultsPDF(filteredResults);
     };
 
     // Restrict a student account
@@ -1461,6 +1468,13 @@ export default function TeacherDashboard() {
                                     <option key={s} value={s}>{s}</option>
                                 ))}
                             </select>
+                            <button
+                                onClick={handleDownloadResultsPDF}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                            >
+                                <Download className="w-5 h-5" />
+                                Download PDF
+                            </button>
                             <button
                                 onClick={handleDownloadResults}
                                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
@@ -2419,7 +2433,19 @@ export default function TeacherDashboard() {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end flex-shrink-0">
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+                                <button
+                                    onClick={() => generateTeacherResponsesPDF(
+                                        selectedTest.title,
+                                        selectedTest.subject,
+                                        selectedTest.targetClass,
+                                        detailedResults
+                                    )}
+                                    className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Download PDF
+                                </button>
                                 <button onClick={() => setShowDetailedAnalytics(false)} className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                     Close
                                 </button>
