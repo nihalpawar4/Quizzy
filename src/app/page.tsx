@@ -31,7 +31,7 @@ import { db } from '@/lib/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostQuestionButton, PostQuestionModal, QuestionList } from '@/components/qa';
-import { GuidedTour, landingPageSteps } from '@/components/tour';
+
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 
@@ -569,7 +569,6 @@ export default function HomePage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2"
-            data-tour="landing-logo"
           >
             <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
@@ -581,7 +580,7 @@ export default function HomePage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
-            data-tour="landing-nav-actions"
+
           >
             {/* Theme Toggle Button */}
             <motion.button
@@ -590,7 +589,7 @@ export default function HomePage() {
               whileTap={{ scale: 0.95 }}
               className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#6D6D6D] dark:text-gray-400 hover:bg-[#1650EB]/10 dark:hover:bg-[#1650EB]/20 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors"
               aria-label="Toggle theme"
-              data-tour="landing-theme-toggle"
+
             >
               <AnimatePresence mode="wait">
                 {resolvedTheme === 'dark' ? (
@@ -1188,12 +1187,7 @@ export default function HomePage() {
       {/* AI Chatbot — Powered by Gemini + RAG */}
       <ChatWidget user={user} />
 
-      {/* Guided Tour — Premium onboarding for first-time visitors */}
-      <GuidedTour
-        steps={landingPageSteps}
-        tourId="landing-page"
-        autoStart={true}
-      />
+
     </div>
   );
 }

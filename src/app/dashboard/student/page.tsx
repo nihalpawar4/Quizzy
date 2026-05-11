@@ -49,7 +49,7 @@ import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
 
 import { useChat } from '@/contexts/ChatContext';
-import { GuidedTour, studentDashboardSteps } from '@/components/tour';
+
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function StudentDashboard() {
@@ -93,8 +93,7 @@ export default function StudentDashboard() {
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-    // Guided tour state
-    const [tourActive, setTourActive] = useState(false);
+
 
     // Lock body scroll when any modal is open
     const isAnyModalOpen = showComingSoon || !!selectedReport || !!selectedNote || !!selectedNotification;
@@ -623,7 +622,7 @@ export default function StudentDashboard() {
             {/* Header */}
             <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3" data-tour="dashboard-logo">
+                    <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
                             <GraduationCap className="w-6 h-6 text-white" />
                         </div>
@@ -638,13 +637,13 @@ export default function StudentDashboard() {
                             href="/"
                             className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                             title="Go to Home"
-                            data-tour="dashboard-home"
+
                         >
                             <Home className="w-4 h-4 sm:w-5 sm:h-5" />
                             <span className="hidden md:inline text-sm font-medium">Home</span>
                         </Link>
                         {/* Notification Bell */}
-                        <div className="relative" data-tour="dashboard-notifications">
+                        <div className="relative">
                             <button
                                 onClick={() => setShowNotificationPanel(!showNotificationPanel)}
                                 className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -753,7 +752,7 @@ export default function StudentDashboard() {
                             href="/chat"
                             className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
                             title="Chat with Teacher"
-                            data-tour="dashboard-chat"
+
                         >
                             <div className="relative">
                                 <MessageSquare className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
@@ -766,7 +765,7 @@ export default function StudentDashboard() {
                             <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
                         </Link>
 
-                        <div className="relative" data-tour="dashboard-profile">
+                        <div className="relative">
                             <button
                                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
@@ -1692,14 +1691,7 @@ export default function StudentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Guided Tour — Premium onboarding for first-time dashboard users */}
-            <GuidedTour
-                steps={studentDashboardSteps}
-                tourId="student-dashboard"
-                autoStart={true}
-                isActive={tourActive ? true : undefined}
-                onActiveChange={(active) => setTourActive(active)}
-            />
+
 
         </div>
     );

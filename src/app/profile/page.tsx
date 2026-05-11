@@ -24,8 +24,7 @@ import {
     Download,
     Trash2,
     X,
-    Camera,
-    RotateCcw
+    Camera
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext'
@@ -35,7 +34,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, delete
 import { auth, db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePictureService';
-import { resetTour } from '@/components/tour';
+
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function ProfilePage() {
@@ -406,46 +405,7 @@ export default function ProfilePage() {
                         </div>
                     </motion.div>
 
-                    {/* Guided Tour Settings */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.27 }} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
-                                <RotateCcw className="w-5 h-5 text-[#1650EB] dark:text-indigo-400" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white">Guided Tour</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Replay the onboarding walkthrough</p>
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <button
-                                onClick={() => {
-                                    resetTour('landing-page');
-                                    router.push('/');
-                                }}
-                                className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                <RotateCcw className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900 dark:text-white">Replay Landing Page Tour</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Re-experience the homepage walkthrough</p>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    resetTour('student-dashboard');
-                                    router.push('/dashboard/student');
-                                }}
-                                className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                <RotateCcw className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900 dark:text-white">Replay Dashboard Tour</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Re-experience the dashboard walkthrough</p>
-                                </div>
-                            </button>
-                        </div>
-                    </motion.div>
+
 
                     {/* Privacy Settings - Only for teachers */}
                     {user.role === 'teacher' && (
