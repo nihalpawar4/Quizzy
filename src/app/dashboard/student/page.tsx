@@ -41,7 +41,7 @@ import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
 import type { Homework } from '@/types/homework';
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import { subscribeToHomework } from '@/services/homeworkService';
@@ -53,7 +53,7 @@ import { useChat } from '@/contexts/ChatContext';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 export default function StudentDashboard() {
-    const { user, loading: authLoading, signOut, refreshUser: _refreshUser } = useAuth();
+    const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { totalUnreadCount } = useChat();
     const router = useRouter();
 
@@ -432,6 +432,31 @@ export default function StudentDashboard() {
             requestAndStoreFCMToken(user.uid).catch(console.error);
         }
     }, [user?.uid]);
+
+    // Real-time listener for user profile changes (class change from profile settings)
+    // When studentClass is changed in Firestore, this triggers refreshUser() which updates
+    // the AuthContext user object, causing all dependent listeners to re-subscribe instantly
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const userDocRef = firestoreDoc(db, COLLECTIONS.USERS, user.uid);
+        let currentClass = user.studentClass;
+
+        const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const newClass = data.studentClass;
+                // Only refresh if the class has actually changed
+                if (newClass && newClass !== currentClass) {
+                    currentClass = newClass;
+                    console.log('[Quizy] Class changed to', newClass, '- refreshing data...');
+                    refreshUser();
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [user?.uid, user?.studentClass, refreshUser]);
 
     // Real-time listener for notifications (filtered by student's class)
     useEffect(() => {
@@ -968,10 +993,15 @@ export default function StudentDashboard() {
                                                     <div className="absolute -bottom-8 -left-4 w-32 h-32 bg-white/5 rounded-full" />
                                                 </div>
                                                 {/* Subject Badge */}
-                                                <div className="absolute top-4 left-4">
+                                                <div className="absolute top-4 left-4 flex items-center gap-1.5">
                                                     <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
-                                                        {test.subject}
+                                                        {test.isCombinedSubject ? '📚 Combined' : test.subject}
                                                     </span>
+                                                    {test.difficultyLevel && (
+                                                        <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
+                                                            {test.difficultyLevel}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {/* Progress Circle (for completed tests) */}
                                                 {hasTaken && result && (
@@ -998,6 +1028,11 @@ export default function StudentDashboard() {
                                             {/* Card Content */}
                                             <div className="p-5">
                                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#1650EB] transition-colors">{test.title}</h4>
+                                                {test.isCombinedSubject && test.combinedSubjects && test.combinedSubjects.length > 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                        {test.combinedSubjects.join(' • ')}
+                                                    </p>
+                                                )}
                                                 <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
                                                     <span className="flex items-center gap-1">
                                                         <BookOpen className="w-4 h-4" />

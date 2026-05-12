@@ -41,7 +41,13 @@ export interface Test {
     // Anti-cheat settings
     enableAntiCheat?: boolean; // Enable anti-cheat mechanisms
     showInstructions?: boolean; // Show instructions screen before test starts
-
+    // Difficulty level
+    difficultyLevel?: string; // Easy, Moderate, Difficult, HOTS, Mixed
+    // Combined subject test
+    isCombinedSubject?: boolean; // If true, this is a combined subject test
+    combinedSubjects?: string[]; // List of subjects included in the combined test
+    // Schedule control
+    isScheduleEnabled?: boolean; // Enable/disable the scheduled start time
 }
 
 // Question Types - supports multiple formats

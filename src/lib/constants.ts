@@ -29,6 +29,34 @@ export const SUBJECTS = [
     'Social Studies',
     'Computer Science',
     'General Knowledge',
+    'Combined',
+] as const;
+
+// Difficulty levels for tests
+export const DIFFICULTY_LEVELS = [
+    'Easy',
+    'Moderate',
+    'Difficult',
+    'HOTS',
+    'Mixed',
+] as const;
+
+// Combined subject options (when subject is 'Combined')
+export const COMBINED_SUBJECT_OPTIONS = [
+    'Mathematics',
+    'Science',
+    'English',
+    'Hindi',
+    'Social Studies',
+    'Computer Science',
+    'General Knowledge',
+    'EVS',
+    'Geography',
+    'History',
+    'Civics',
+    'Physics',
+    'Chemistry',
+    'Biology',
 ] as const;
 
 // Admin code for teacher registration (alternative to email list)

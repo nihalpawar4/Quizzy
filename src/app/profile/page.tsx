@@ -83,6 +83,8 @@ export default function ProfilePage() {
         setClassSuccess(false);
         try {
             await updateUserClass(user.uid, studentClass);
+            // Refresh user in AuthContext so dashboard listeners re-subscribe to new class data instantly
+            await refreshUser();
             setClassSuccess(true);
             setTimeout(() => setClassSuccess(false), 3000);
         } catch {

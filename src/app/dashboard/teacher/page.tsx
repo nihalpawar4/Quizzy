@@ -77,7 +77,7 @@ import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User, SubjectNote, Notification } from '@/types';
-import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS } from '@/lib/constants';
+import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
@@ -154,6 +154,10 @@ export default function TeacherDashboard() {
         negativeMarksPerQuestion: number;
         enableAntiCheat: boolean;
         showInstructions: boolean;
+        difficultyLevel: typeof DIFFICULTY_LEVELS[number];
+        isCombinedSubject: boolean;
+        combinedSubjects: string[];
+        isScheduleEnabled: boolean;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -166,6 +170,10 @@ export default function TeacherDashboard() {
         negativeMarksPerQuestion: 0.25,
         enableAntiCheat: false,
         showInstructions: true,
+        difficultyLevel: 'Moderate',
+        isCombinedSubject: false,
+        combinedSubjects: [],
+        isScheduleEnabled: false,
     });
 
     // Proctoring report modal state
@@ -537,7 +545,7 @@ export default function TeacherDashboard() {
         try {
             const testId = await createTest({
                 title: newTest.title,
-                subject: newTest.subject,
+                subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
                 targetClass: newTest.targetClass,
                 duration: newTest.duration,
                 createdBy: user!.uid,
@@ -548,14 +556,18 @@ export default function TeacherDashboard() {
                 negativeMarksPerQuestion: newTest.negativeMarksPerQuestion,
                 enableAntiCheat: newTest.enableAntiCheat,
                 showInstructions: newTest.showInstructions,
-                ...(newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
+                difficultyLevel: newTest.difficultyLevel,
+                isCombinedSubject: newTest.isCombinedSubject,
+                combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
+                isScheduleEnabled: newTest.isScheduleEnabled,
+                ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
             });
 
             await uploadQuestions(testId, questions);
 
             // Send push notification to students in the target class
             createTestNotification(
-                { id: testId, title: newTest.title, subject: newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
+                { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
                 user!.name
             ).catch(err => console.error('Error sending test notification:', err));
 
@@ -588,6 +600,10 @@ export default function TeacherDashboard() {
             negativeMarksPerQuestion: 0.25,
             enableAntiCheat: false,
             showInstructions: true,
+            difficultyLevel: 'Moderate',
+            isCombinedSubject: false,
+            combinedSubjects: [],
+            isScheduleEnabled: false,
         });
         setCsvFile(null);
         setJsonInput('');
@@ -1350,11 +1366,25 @@ export default function TeacherDashboard() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                         <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
-                                                            {test.subject}
+                                                            {test.isCombinedSubject ? '📚 Combined' : test.subject}
                                                         </span>
                                                         <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
                                                             Class {test.targetClass}
                                                         </span>
+                                                        {test.difficultyLevel && (() => {
+                                                            const diffColors: Record<string, string> = {
+                                                                'Easy': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+                                                                'Moderate': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+                                                                'Difficult': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+                                                                'HOTS': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+                                                                'Mixed': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+                                                            };
+                                                            return (
+                                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${diffColors[test.difficultyLevel] || 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>
+                                                                    {test.difficultyLevel}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         {isScheduled && (
                                                             <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full flex items-center gap-1">
                                                                 <Timer className="w-3 h-3" />
@@ -1363,6 +1393,11 @@ export default function TeacherDashboard() {
                                                         )}
                                                     </div>
                                                     <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
+                                                    {test.isCombinedSubject && test.combinedSubjects && test.combinedSubjects.length > 0 && (
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            {test.combinedSubjects.join(' • ')}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <button
                                                     onClick={() => handleToggleStatus(test.id, test.isActive)}
@@ -1880,9 +1915,15 @@ export default function TeacherDashboard() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
-                                                        <select value={newTest.subject} onChange={(e) => setNewTest({ ...newTest, subject: e.target.value as typeof SUBJECTS[number] })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
-                                                            {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                                                        </select>
+                                                        {!newTest.isCombinedSubject ? (
+                                                            <select value={newTest.subject} onChange={(e) => setNewTest({ ...newTest, subject: e.target.value as typeof SUBJECTS[number] })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
+                                                                {SUBJECTS.filter(s => s !== 'Combined').map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            <div className="w-full px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl text-indigo-700 dark:text-indigo-300 font-medium">
+                                                                📚 Combined Subject Test
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class *</label>
@@ -1896,48 +1937,153 @@ export default function TeacherDashboard() {
                                                     </div>
                                                 </div>
 
-                                                {/* Scheduled Start Time Section */}
+                                                {/* Combined Subject Toggle & Selector */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                                                            <BookMarked className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Combined Subject Test</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Create a test with multiple subjects combined</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, isCombinedSubject: !newTest.isCombinedSubject, combinedSubjects: [], subject: SUBJECTS[0] })}
+                                                            className={`w-12 h-6 rounded-full transition-colors flex-shrink-0 ${newTest.isCombinedSubject ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                        >
+                                                            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.isCombinedSubject ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                                        </button>
+                                                    </div>
+                                                    {newTest.isCombinedSubject && (
+                                                        <div className="mt-3">
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select Subjects *</label>
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                                {COMBINED_SUBJECT_OPTIONS.map(subj => {
+                                                                    const isSelected = newTest.combinedSubjects.includes(subj);
+                                                                    return (
+                                                                        <button
+                                                                            key={subj}
+                                                                            onClick={() => {
+                                                                                const updated = isSelected
+                                                                                    ? newTest.combinedSubjects.filter(s => s !== subj)
+                                                                                    : [...newTest.combinedSubjects, subj];
+                                                                                setNewTest({ ...newTest, combinedSubjects: updated });
+                                                                            }}
+                                                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                                                                                isSelected
+                                                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                                                                                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                                                            }`}
+                                                                        >
+                                                                            {isSelected ? '✓ ' : ''}{subj}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {newTest.combinedSubjects.length > 0 && (
+                                                                <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                                                                    <p className="text-sm text-indigo-700 dark:text-indigo-400">
+                                                                        📚 <strong>{newTest.combinedSubjects.length}</strong> subjects selected: {newTest.combinedSubjects.join(', ')}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Difficulty Level */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                                                            <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Difficulty Level</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set the difficulty level of this test paper</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                                        {DIFFICULTY_LEVELS.map(level => {
+                                                            const isSelected = newTest.difficultyLevel === level;
+                                                            const colorMap: Record<string, string> = {
+                                                                'Easy': 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+                                                                'Moderate': 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+                                                                'Difficult': 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+                                                                'HOTS': 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+                                                                'Mixed': 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+                                                            };
+                                                            const emojiMap: Record<string, string> = {
+                                                                'Easy': '🟢', 'Moderate': '🔵', 'Difficult': '🟠', 'HOTS': '🔴', 'Mixed': '🟣',
+                                                            };
+                                                            return (
+                                                                <button
+                                                                    key={level}
+                                                                    onClick={() => setNewTest({ ...newTest, difficultyLevel: level })}
+                                                                    className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-center ${
+                                                                        isSelected ? colorMap[level] : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                                                    }`}
+                                                                >
+                                                                    {emojiMap[level]} {level}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                {/* Scheduled Start Time Section with Enable/Disable Toggle */}
                                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                                                     <div className="flex items-center gap-3 mb-4">
                                                         <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
                                                             <CalendarClock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                                                         </div>
-                                                        <div>
-                                                            <h4 className="font-medium text-gray-900 dark:text-white">Schedule Test Start Time (Optional)</h4>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set a specific time when students can start taking this test</p>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Schedule Test Start Time</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set a specific time when students can start</p>
                                                         </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                                <Timer className="w-4 h-4 inline mr-1" />
-                                                                Scheduled Start Date & Time
-                                                            </label>
-                                                            <input
-                                                                type="datetime-local"
-                                                                value={newTest.scheduledStartTime}
-                                                                onChange={(e) => setNewTest({ ...newTest, scheduledStartTime: e.target.value })}
-                                                                min={new Date().toISOString().slice(0, 16)}
-                                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
-                                                            />
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                Leave empty to make test available immediately
-                                                            </p>
-                                                        </div>
-                                                        {newTest.scheduledStartTime && (
-                                                            <div className="flex items-center">
-                                                                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 w-full">
-                                                                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
-                                                                        <Timer className="w-4 h-4" />
-                                                                        <span className="font-medium">Students will see countdown</span>
-                                                                    </div>
-                                                                    <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-                                                                        Test starts: {new Date(newTest.scheduledStartTime).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                                    </p>
-                                                                </div>
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, isScheduleEnabled: !newTest.isScheduleEnabled, scheduledStartTime: '' })}
+                                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 flex items-center gap-2 ${
+                                                                newTest.isScheduleEnabled
+                                                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+                                                                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-8 h-4 rounded-full transition-colors ${newTest.isScheduleEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                                <div className={`w-3.5 h-3.5 rounded-full bg-white shadow transform transition-transform mt-[1px] ${newTest.isScheduleEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                                                             </div>
-                                                        )}
+                                                            {newTest.isScheduleEnabled ? 'Enabled' : 'Disabled'}
+                                                        </button>
                                                     </div>
+                                                    {newTest.isScheduleEnabled && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                    <Timer className="w-4 h-4 inline mr-1" />
+                                                                    Scheduled Start Date & Time
+                                                                </label>
+                                                                <input
+                                                                    type="datetime-local"
+                                                                    value={newTest.scheduledStartTime}
+                                                                    onChange={(e) => setNewTest({ ...newTest, scheduledStartTime: e.target.value })}
+                                                                    min={new Date().toISOString().slice(0, 16)}
+                                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                                />
+                                                            </div>
+                                                            {newTest.scheduledStartTime && (
+                                                                <div className="flex items-center">
+                                                                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 w-full">
+                                                                        <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                                                                            <Timer className="w-4 h-4" />
+                                                                            <span className="font-medium">Students will see countdown</span>
+                                                                        </div>
+                                                                        <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                                                                            Test starts: {new Date(newTest.scheduledStartTime).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
 
 
