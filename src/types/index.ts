@@ -61,6 +61,7 @@ export interface Question {
     options: string[]; // For MCQ, True/False
     correctOption: number; // 0-indexed, for MCQ
     correctAnswer?: string; // For fill_blank, short_answer
+    explanation?: string; // Explanation for the correct answer
     matchPairs?: { left: string; right: string }[]; // For match type
     order?: number;
     points?: number; // Points for this question
@@ -85,6 +86,7 @@ export interface TestResult {
         userAnswer: string;
         correctAnswer: string;
         isCorrect: boolean;
+        explanation?: string; // Explanation for the correct answer
     }[];
     timestamp: Date;
     // Timing data

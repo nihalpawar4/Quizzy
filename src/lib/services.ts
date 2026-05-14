@@ -325,6 +325,7 @@ export async function uploadQuestions(
             correctOption: q.correctOption,
             type: q.type || 'mcq', // Default to MCQ if not specified
             correctAnswer: q.correctAnswer || '', // For text-based questions
+            explanation: q.explanation || '', // Explanation for correct answer
             order: index
         });
     });
@@ -604,6 +605,7 @@ export async function updateTestQuestions(
             correctOption: q.correctOption,
             type: q.type || 'mcq',
             correctAnswer: q.correctAnswer || '',
+            explanation: q.explanation || '',
             order: index
         });
     });

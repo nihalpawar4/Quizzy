@@ -1429,6 +1429,18 @@ export default function StudentDashboard() {
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        {/* Explanation */}
+                                                        {answer.explanation && (
+                                                            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="text-base mt-0.5">💡</span>
+                                                                    <div>
+                                                                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Explanation</p>
+                                                                        <p className="text-sm text-amber-800 dark:text-amber-300">{answer.explanation}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

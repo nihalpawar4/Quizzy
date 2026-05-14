@@ -205,12 +205,14 @@ export default function TeacherDashboard() {
         correctOption: number;
         type: QuestionType;
         correctAnswer: string;
+        explanation: string;
     }>({
         text: '',
         options: ['', '', '', ''],
         correctOption: 0,
         type: 'mcq',
-        correctAnswer: ''
+        correctAnswer: '',
+        explanation: ''
     });
 
     // Edit test states
@@ -515,7 +517,8 @@ export default function TeacherDashboard() {
                 ? (currentQuestion.correctAnswer.toLowerCase() === 'false' ? 1 : 0)
                 : currentQuestion.correctOption,
             type: questionType as ParsedQuestion['type'],
-            correctAnswer
+            correctAnswer,
+            explanation: currentQuestion.explanation.trim() || undefined
         };
 
         setManualQuestions([...manualQuestions, newQuestion]);
@@ -524,7 +527,8 @@ export default function TeacherDashboard() {
             options: ['', '', '', ''],
             correctOption: 0,
             type: questionType as ParsedQuestion['type'], // Keep matching the test type
-            correctAnswer: ''
+            correctAnswer: '',
+            explanation: ''
         });
         setParseError(null);
     };
@@ -612,7 +616,7 @@ export default function TeacherDashboard() {
         setParseError(null);
         setUploadMethod('csv');
         setCreateStep(1);
-        setCurrentQuestion({ text: '', options: ['', '', '', ''], correctOption: 0, type: 'mcq', correctAnswer: '' });
+        setCurrentQuestion({ text: '', options: ['', '', '', ''], correctOption: 0, type: 'mcq', correctAnswer: '', explanation: '' });
     };
 
     // Delete test
@@ -752,7 +756,8 @@ export default function TeacherDashboard() {
                 options: q.options,
                 correctOption: q.correctOption,
                 type: q.type as ParsedQuestion['type'],
-                correctAnswer: q.correctAnswer
+                correctAnswer: q.correctAnswer,
+                explanation: q.explanation
             }));
             setEditQuestions(parsedQuestions);
         } catch (error) {
@@ -1000,28 +1005,28 @@ export default function TeacherDashboard() {
         switch (newTest.questionType) {
             case 'mcq':
                 return `[
-  { "question": "What is 2 + 2?", "options": ["3", "4", "5", "6"], "correct": 1 },
-  { "question": "Capital of India?", "options": ["Mumbai", "Delhi", "Chennai", "Kolkata"], "correct": 1 }
+  { "question": "What is 2 + 2?", "options": ["3", "4", "5", "6"], "correct": 1, "explanation": "2 + 2 = 4, which is option B" },
+  { "question": "Capital of India?", "options": ["Mumbai", "Delhi", "Chennai", "Kolkata"], "correct": 1, "explanation": "New Delhi is the capital of India" }
 ]`;
             case 'true_false':
                 return `[
-  { "question": "The Earth is flat.", "answer": "False" },
-  { "question": "Water boils at 100°C.", "answer": "True" }
+  { "question": "The Earth is flat.", "answer": "False", "explanation": "Earth is approximately spherical in shape" },
+  { "question": "Water boils at 100°C.", "answer": "True", "explanation": "Water boils at 100°C at standard atmospheric pressure" }
 ]`;
             case 'fill_blank':
                 return `[
-  { "question": "The capital of France is ___.", "answer": "Paris" },
-  { "question": "H2O is commonly known as ___.", "answer": "Water" }
+  { "question": "The capital of France is ___.", "answer": "Paris", "explanation": "Paris is the capital and largest city of France" },
+  { "question": "H2O is commonly known as ___.", "answer": "Water", "explanation": "H2O is the chemical formula for water" }
 ]`;
             case 'one_word':
                 return `[
-  { "question": "What is the smallest planet?", "answer": "Mercury" },
-  { "question": "What gas do plants produce?", "answer": "Oxygen" }
+  { "question": "What is the smallest planet?", "answer": "Mercury", "explanation": "Mercury is the smallest planet in our solar system" },
+  { "question": "What gas do plants produce?", "answer": "Oxygen", "explanation": "Plants produce oxygen during photosynthesis" }
 ]`;
             case 'short_answer':
                 return `[
-  { "question": "Explain photosynthesis briefly.", "answer": "Process by which plants make food using sunlight" },
-  { "question": "What causes rain?", "answer": "Water evaporates and condenses in clouds" }
+  { "question": "Explain photosynthesis briefly.", "answer": "Process by which plants make food using sunlight", "explanation": "Plants use CO2, water and sunlight to produce glucose and oxygen" },
+  { "question": "What causes rain?", "answer": "Water evaporates and condenses in clouds", "explanation": "The water cycle involves evaporation, condensation and precipitation" }
 ]`;
             case 'mixed':
                 return `[
@@ -1029,31 +1034,36 @@ export default function TeacherDashboard() {
     "type": "mcq",
     "question": "What is the capital of India?",
     "options": ["Mumbai", "Delhi", "Chennai", "Kolkata"],
-    "correct": 1
+    "correct": 1,
+    "explanation": "New Delhi is the capital of India"
   },
   {
     "type": "true_false",
     "question": "The Earth revolves around the Sun.",
-    "answer": "True"
+    "answer": "True",
+    "explanation": "Earth takes about 365.25 days to orbit the Sun"
   },
   {
     "type": "fill_blank",
     "question": "The chemical formula for water is ___.",
-    "answer": "H2O"
+    "answer": "H2O",
+    "explanation": "Water molecule consists of 2 hydrogen atoms and 1 oxygen atom"
   },
   {
     "type": "one_word",
     "question": "What is the largest planet in our solar system?",
-    "answer": "Jupiter"
+    "answer": "Jupiter",
+    "explanation": "Jupiter has a mass of 1.898 × 10^27 kg, more than twice all other planets combined"
   },
   {
     "type": "short_answer",
     "question": "Explain the process of photosynthesis in 2-3 sentences.",
-    "answer": "Photosynthesis is the process by which plants make food. They use sunlight, water, and carbon dioxide to produce glucose and oxygen."
+    "answer": "Photosynthesis is the process by which plants make food. They use sunlight, water, and carbon dioxide to produce glucose and oxygen.",
+    "explanation": "6CO2 + 6H2O + Light → C6H12O6 + 6O2 is the overall equation"
   }
 ]`;
             default:
-                return `[{ "question": "Your question?", "answer": "Answer" }]`;
+                return `[{ "question": "Your question?", "answer": "Answer", "explanation": "Why this is correct" }]`;
         }
     };
     const sampleJSON = getSampleJSON();
@@ -2413,6 +2423,21 @@ export default function TeacherDashboard() {
                                                                     )}
                                                                 </div>
                                                             )}
+
+                                                            {/* Explanation Field */}
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                    💡 Explanation
+                                                                    <span className="text-gray-400 font-normal ml-2">(optional — shown to students after test)</span>
+                                                                </label>
+                                                                <textarea
+                                                                    value={currentQuestion.explanation}
+                                                                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })}
+                                                                    placeholder="Why is this the correct answer? This helps students learn..."
+                                                                    rows={2}
+                                                                    className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none resize-none text-sm"
+                                                                />
+                                                            </div>
 
                                                             <button onClick={addManualQuestion} disabled={!currentQuestion.text.trim()} className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                                 <Plus className="w-4 h-4" /> Add Question

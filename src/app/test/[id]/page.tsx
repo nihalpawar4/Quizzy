@@ -537,7 +537,7 @@ export default function TestPage() {
         try {
             let correctCount = 0;
             let wrongCount = 0;
-            const detailedAnswers: { questionId: string; questionText: string; userAnswer: string; correctAnswer: string; isCorrect: boolean }[] = [];
+            const detailedAnswers: { questionId: string; questionText: string; userAnswer: string; correctAnswer: string; isCorrect: boolean; explanation?: string }[] = [];
 
             questions.forEach((q, index) => {
                 const userAnswer = answers[index];
@@ -571,7 +571,8 @@ export default function TestPage() {
                     questionText: q.text,
                     userAnswer: userAnswerStr,
                     correctAnswer: correctAnswerStr,
-                    isCorrect
+                    isCorrect,
+                    explanation: q.explanation || undefined
                 });
             });
 

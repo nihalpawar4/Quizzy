@@ -12,6 +12,7 @@ export interface ParsedQuestion {
     correctOption: number; // 0-indexed (0 = A, 1 = B, 2 = C, 3 = D) - for MCQ/True-False
     type: QuestionType; // Type of question
     correctAnswer?: string; // For text-based questions (fill_blank, one_word, short_answer)
+    explanation?: string; // Explanation for the correct answer (shown to students after test)
 }
 
 export interface ParseResult {
@@ -307,12 +308,16 @@ export function parseJSON(jsonText: string): ParseResult {
             correctOption = (answerStr === 'false' || answerStr === 'f' || answerStr === '1') ? 1 : 0;
         }
 
+        // Extract explanation
+        const explanation = (q.explanation || q.explain || q.reason || q.hint || '') as string;
+
         questions.push({
             text,
             options,
             correctOption,
             type: questionType,
-            correctAnswer: questionType !== 'mcq' && questionType !== 'true_false' ? String(correctValue) : undefined
+            correctAnswer: questionType !== 'mcq' && questionType !== 'true_false' ? String(correctValue) : undefined,
+            explanation: explanation || undefined
         });
     });
 
@@ -341,12 +346,14 @@ export function getSampleJSON(): string {
         {
             question: "What is the capital of France?",
             options: ["Paris", "London", "Berlin", "Madrid"],
-            correctAnswer: 0
+            correctAnswer: 0,
+            explanation: "Paris is the capital and largest city of France."
         },
         {
             question: "Which planet is closest to the Sun?",
             options: ["Venus", "Mercury", "Mars", "Jupiter"],
-            correctAnswer: 1
+            correctAnswer: 1,
+            explanation: "Mercury is the closest planet to the Sun at about 58 million km."
         }
     ], null, 2);
 }
