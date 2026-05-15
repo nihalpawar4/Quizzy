@@ -24,6 +24,7 @@ export default function ChatPage() {
         presenceMap,
         isLoading,
         isSending,
+        replyingTo,
         setCurrentChat,
         sendMessage,
         startTyping,
@@ -31,6 +32,10 @@ export default function ChatPage() {
         deleteChat,
         clearChatHistory,
         startNewChat,
+        pinChat,
+        unpinChat,
+        setReplyingTo,
+        deleteMessage,
         getParticipantPresence,
         isUserTyping,
         availableTeachers,
@@ -86,9 +91,9 @@ export default function ChatPage() {
     };
 
     // Handle send message wrapper
-    const handleSendMessage = async (text: string) => {
+    const handleSendMessage = async (text: string, replyTo?: { id: string; text: string; senderName: string }) => {
         try {
-            await sendMessage(text);
+            await sendMessage(text, replyTo);
         } catch (error) {
             console.error('Error sending message:', error);
         }
@@ -114,6 +119,9 @@ export default function ChatPage() {
                     onStopTyping={stopTyping}
                     onBack={() => setCurrentChat(null)}
                     onClearHistory={() => clearChatHistory(currentChat.id)}
+                    replyingTo={replyingTo}
+                    onSetReplyingTo={setReplyingTo}
+                    onDeleteMessage={deleteMessage}
                 />
             </div>
         );
@@ -149,6 +157,8 @@ export default function ChatPage() {
                         onSelectChat={setCurrentChat}
                         onDeleteChat={deleteChat}
                         onNewChat={() => setShowNewChatModal(true)}
+                        onPinChat={pinChat}
+                        onUnpinChat={unpinChat}
                         isLoading={isLoading}
                     />
                 </div>
@@ -171,6 +181,9 @@ export default function ChatPage() {
                                     onStopTyping={stopTyping}
                                     onBack={() => setCurrentChat(null)}
                                     onClearHistory={() => clearChatHistory(currentChat.id)}
+                                    replyingTo={replyingTo}
+                                    onSetReplyingTo={setReplyingTo}
+                                    onDeleteMessage={deleteMessage}
                                 />
                             </div>
                         ) : (

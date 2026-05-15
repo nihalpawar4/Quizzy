@@ -2,11 +2,11 @@
 
 /**
  * Chat List Component
- * Shows all conversations with last message preview
+ * Shows all conversations with last message preview, pin support
  */
 
 import React from 'react';
-import { MessageCircle, Search, Plus, Trash2 } from 'lucide-react';
+import { MessageCircle, Search, Plus, Trash2, Pin, PinOff } from 'lucide-react';
 import type { Chat, UserPresence } from '@/types';
 import { formatLastSeen } from '@/lib/chatServices';
 import OnlineStatus from './OnlineStatus';
@@ -20,6 +20,8 @@ interface ChatListProps {
     onSelectChat: (chat: Chat) => void;
     onDeleteChat: (chatId: string) => void;
     onNewChat: () => void;
+    onPinChat?: (chatId: string) => void;
+    onUnpinChat?: (chatId: string) => void;
     isLoading?: boolean;
 }
 
@@ -32,6 +34,8 @@ export default function ChatList({
     onSelectChat,
     onDeleteChat,
     onNewChat,
+    onPinChat,
+    onUnpinChat,
     isLoading = false
 }: ChatListProps) {
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -53,6 +57,15 @@ export default function ChatList({
         return participant.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
+    // Sort: pinned chats first, then by last message time
+    const sortedChats = [...filteredChats].sort((a, b) => {
+        const aPinned = a.pinnedBy?.includes(currentUserId) || false;
+        const bPinned = b.pinnedBy?.includes(currentUserId) || false;
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        return 0; // keep original order (already sorted by updatedAt)
+    });
+
     // Handle delete confirmation
     const handleDeleteClick = (e: React.MouseEvent, chatId: string) => {
         e.stopPropagation();
@@ -63,6 +76,17 @@ export default function ChatList({
             setDeleteConfirm(chatId);
             // Auto-reset after 3 seconds
             setTimeout(() => setDeleteConfirm(null), 3000);
+        }
+    };
+
+    // Handle pin toggle
+    const handlePinToggle = (e: React.MouseEvent, chat: Chat) => {
+        e.stopPropagation();
+        const isPinned = chat.pinnedBy?.includes(currentUserId);
+        if (isPinned) {
+            onUnpinChat?.(chat.id);
+        } else {
+            onPinChat?.(chat.id);
         }
     };
 
@@ -115,7 +139,7 @@ export default function ChatList({
 
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto">
-                {filteredChats.length === 0 ? (
+                {sortedChats.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center p-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-[#1650EB]/10 flex items-center justify-center mb-4">
                             <MessageCircle className="w-8 h-8 text-[#1650EB]" />
@@ -135,24 +159,33 @@ export default function ChatList({
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {filteredChats.map(chat => {
+                        {sortedChats.map(chat => {
                             const participant = getOtherParticipant(chat);
                             const presence = presenceMap[participant.id];
                             const isSelected = currentChatId === chat.id;
                             const unreadCount = chat.unreadCount[currentUserId] || 0;
+                            const isPinned = chat.pinnedBy?.includes(currentUserId) || false;
 
                             return (
                                 <div
                                     key={chat.id}
                                     onClick={() => onSelectChat(chat)}
                                     className={`
-                                        flex items-center gap-3 p-4 cursor-pointer transition-all duration-200
+                                        flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 relative
                                         ${isSelected
                                             ? 'bg-[#1650EB]/10 border-l-4 border-[#1650EB]'
                                             : 'hover:bg-gray-50 dark:hover:bg-gray-900 border-l-4 border-transparent'
                                         }
+                                        ${isPinned ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}
                                     `}
                                 >
+                                    {/* Pin indicator */}
+                                    {isPinned && (
+                                        <div className="absolute top-2 right-2">
+                                            <Pin className="w-3 h-3 text-amber-500 rotate-45" />
+                                        </div>
+                                    )}
+
                                     {/* Avatar with profile picture */}
                                     <div className="relative flex-shrink-0">
                                         {chat.participantPhotoURLs?.[participant.id] ? (
@@ -178,28 +211,44 @@ export default function ChatList({
                                     {/* Chat Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
-                                            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                            <h3 className={`font-semibold truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 {participant.name}
                                             </h3>
                                             {chat.lastMessage && (
-                                                <span className="text-[10px] text-gray-500 flex-shrink-0 ml-2">
+                                                <span className={`text-[10px] flex-shrink-0 ml-2 ${unreadCount > 0 ? 'text-[#1650EB] font-semibold' : 'text-gray-500'}`}>
                                                     {formatLastSeen(chat.lastMessage.timestamp)}
                                                 </span>
                                             )}
                                         </div>
 
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                                            <p className={`text-sm truncate max-w-[180px] ${unreadCount > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {chat.lastMessage?.text || 'No messages yet'}
                                             </p>
 
-                                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                                 {/* Unread badge */}
                                                 {unreadCount > 0 && (
-                                                    <span className="min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center text-[10px] text-white font-bold">
+                                                    <span className="min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
                                                         {unreadCount > 99 ? '99+' : unreadCount}
                                                     </span>
                                                 )}
+
+                                                {/* Pin/Unpin button */}
+                                                <button
+                                                    onClick={(e) => handlePinToggle(e, chat)}
+                                                    className={`
+                                                        p-1.5 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100
+                                                        ${isPinned
+                                                            ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                                            : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                                        }
+                                                    `}
+                                                    style={{ opacity: 1 }}
+                                                    title={isPinned ? 'Unpin chat' : 'Pin chat'}
+                                                >
+                                                    {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                                                </button>
 
                                                 {/* Delete button */}
                                                 <button

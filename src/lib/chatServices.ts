@@ -392,7 +392,8 @@ export function subscribeToUserChats(
                     deletedFor: data.deletedFor,
                     deletedAt: data.deletedAt,
                     teacherHidesContactInfo: data.teacherHidesContactInfo || false,
-                    participantPhotoURLs: data.participantPhotoURLs || {}
+                    participantPhotoURLs: data.participantPhotoURLs || {},
+                    pinnedBy: data.pinnedBy || []
                 } as Chat;
             })
             // Filter out deleted chats for this user
@@ -460,11 +461,12 @@ export async function sendMessage(
     senderName: string,
     senderRole: 'student' | 'teacher',
     text: string,
-    recipientId: string
+    recipientId: string,
+    replyTo?: { id: string; text: string; senderName: string }
 ): Promise<Message> {
     const messagesRef = collection(db, COLLECTIONS.MESSAGES);
 
-    const messageData = {
+    const messageData: Record<string, unknown> = {
         chatId,
         senderId,
         senderName,
@@ -473,6 +475,15 @@ export async function sendMessage(
         timestamp: Timestamp.now(),
         status: 'sent' as MessageStatus
     };
+
+    // Include reply-to reference if provided
+    if (replyTo) {
+        messageData.replyTo = {
+            id: replyTo.id,
+            text: replyTo.text.substring(0, 100),
+            senderName: replyTo.senderName,
+        };
+    }
 
     const docRef = await addDoc(messagesRef, messageData);
 
@@ -510,9 +521,35 @@ export async function sendMessage(
 
     return {
         id: docRef.id,
-        ...messageData,
-        timestamp: new Date()
+        chatId,
+        senderId,
+        senderName,
+        senderRole,
+        text: text.trim(),
+        timestamp: new Date(),
+        status: 'sent',
+        ...(replyTo ? { replyTo } : {}),
     };
+}
+
+/**
+ * Pin a chat for a user
+ */
+export async function pinChat(chatId: string, userId: string): Promise<void> {
+    const chatRef = doc(db, COLLECTIONS.CHATS, chatId);
+    await updateDoc(chatRef, {
+        pinnedBy: arrayUnion(userId)
+    });
+}
+
+/**
+ * Unpin a chat for a user
+ */
+export async function unpinChat(chatId: string, userId: string): Promise<void> {
+    const chatRef = doc(db, COLLECTIONS.CHATS, chatId);
+    await updateDoc(chatRef, {
+        pinnedBy: arrayRemove(userId)
+    });
 }
 
 /**
@@ -598,7 +635,8 @@ export async function getChatMessages(
                 status: data.status,
                 deliveredAt: data.deliveredAt?.toDate(),
                 seenAt: data.seenAt?.toDate(),
-                deletedFor: data.deletedFor
+                deletedFor: data.deletedFor,
+                replyTo: data.replyTo || undefined
             } as Message;
         })
         // Filter out deleted messages for this user
@@ -636,7 +674,8 @@ export function subscribeToChatMessages(
                     status: data.status,
                     deliveredAt: data.deliveredAt?.toDate(),
                     seenAt: data.seenAt?.toDate(),
-                    deletedFor: data.deletedFor
+                    deletedFor: data.deletedFor,
+                    replyTo: data.replyTo || undefined
                 } as Message;
             })
             // Filter out deleted messages for this user

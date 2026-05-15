@@ -24,7 +24,10 @@ import {
     deleteChatForUser,
     deleteAllChatMessages,
     getAllTeachers,
-    getAllStudentsForChat
+    getAllStudentsForChat,
+    pinChat as pinChatService,
+    unpinChat as unpinChatService,
+    deleteMessageForUser,
 } from '@/lib/chatServices';
 import type { Chat, Message, UserPresence, ChatNotification } from '@/types';
 import { CHAT_CONSTANTS } from '@/types';
@@ -39,16 +42,21 @@ interface ChatContextType {
     presenceMap: { [userId: string]: UserPresence };
     isLoading: boolean;
     isSending: boolean;
+    replyingTo: Message | null;
 
     // Actions
     setCurrentChat: (chat: Chat | null) => void;
-    sendMessage: (text: string) => Promise<void>;
+    sendMessage: (text: string, replyTo?: { id: string; text: string; senderName: string }) => Promise<void>;
     startTyping: () => void;
     stopTyping: () => void;
     markAsRead: () => Promise<void>;
     deleteChat: (chatId: string) => Promise<void>;
     clearChatHistory: (chatId: string) => Promise<void>;
     startNewChat: (participantId: string, participantName: string, participantClass?: number) => Promise<Chat>;
+    pinChat: (chatId: string) => Promise<void>;
+    unpinChat: (chatId: string) => Promise<void>;
+    setReplyingTo: (message: Message | null) => void;
+    deleteMessage: (messageId: string) => Promise<void>;
 
     // Helpers
     getParticipantPresence: (userId: string) => UserPresence | null;
@@ -74,6 +82,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [presenceMap, setPresenceMap] = useState<{ [userId: string]: UserPresence }>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
     // Available users for starting new chats
     const [availableTeachers, setAvailableTeachers] = useState<{ uid: string; name: string; email: string; hideContactInfo?: boolean }[]>([]);
@@ -108,6 +117,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const setCurrentChat = useCallback((chat: Chat | null) => {
         // Clear messages immediately when changing chat
         setMessages([]);
+        setReplyingTo(null);
         setCurrentChatState(chat);
     }, []);
 
@@ -251,7 +261,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Send message
-    const sendMessage = useCallback(async (text: string) => {
+    const sendMessage = useCallback(async (text: string, replyTo?: { id: string; text: string; senderName: string }) => {
         if (!user || !currentChat || !text.trim() || isSending) return;
 
         setIsSending(true);
@@ -265,11 +275,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 user.name,
                 user.role,
                 text,
-                recipientId
+                recipientId,
+                replyTo
             );
 
             // Stop typing after sending
             await updateTypingStatus(user.uid, null);
+            // Clear reply state
+            setReplyingTo(null);
         } catch (error) {
             console.error('Error sending message:', error);
             throw error;
@@ -332,6 +345,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const clearChatHistory = useCallback(async (chatId: string) => {
         if (!user) return;
         await deleteAllChatMessages(chatId, user.uid);
+    }, [user]);
+
+    // Pin chat
+    const pinChat = useCallback(async (chatId: string) => {
+        if (!user) return;
+        await pinChatService(chatId, user.uid);
+    }, [user]);
+
+    // Unpin chat
+    const unpinChat = useCallback(async (chatId: string) => {
+        if (!user) return;
+        await unpinChatService(chatId, user.uid);
+    }, [user]);
+
+    // Delete message
+    const deleteMessage = useCallback(async (messageId: string) => {
+        if (!user) return;
+        await deleteMessageForUser(messageId, user.uid);
     }, [user]);
 
     // Start new chat
@@ -411,6 +442,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         presenceMap,
         isLoading,
         isSending,
+        replyingTo,
         setCurrentChat,
         sendMessage,
         startTyping,
@@ -419,6 +451,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteChat,
         clearChatHistory,
         startNewChat,
+        pinChat,
+        unpinChat,
+        setReplyingTo,
+        deleteMessage,
         getParticipantPresence,
         isUserTyping,
         availableTeachers,

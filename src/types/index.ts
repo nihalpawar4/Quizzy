@@ -222,6 +222,8 @@ export interface Chat {
     };
     // Privacy setting
     teacherHidesContactInfo?: boolean; // If true, teacher's email is hidden from student
+    // Pinning
+    pinnedBy?: string[]; // User IDs who pinned this chat
 }
 
 // Individual message in a chat
@@ -238,6 +240,12 @@ export interface Message {
     seenAt?: Date;
     // For deletion
     deletedFor?: string[]; // User IDs who deleted this message
+    // For reply
+    replyTo?: {
+        id: string;
+        text: string;
+        senderName: string;
+    };
 }
 
 // User presence/online status

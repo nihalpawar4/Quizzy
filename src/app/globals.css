@@ -368,6 +368,37 @@ body {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Chat message animations */
+@keyframes slideInMessage {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideUpSheet {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideInMessage {
+  animation: slideInMessage 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-slideUpSheet {
+  animation: slideUpSheet 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Enrollment countdown & popup animations */
 @keyframes countdown-shimmer {
   0% {

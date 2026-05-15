@@ -5,8 +5,8 @@
  * Main chat interface with messages and input - WhatsApp-like features
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MoreVertical, Trash2, X, Palette, Check, Search, Volume2, VolumeX, Star, Copy, Info, Phone, Video } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { ArrowLeft, MoreVertical, Trash2, X, Palette, Check, Search, Volume2, VolumeX, Star, Copy, Info, Phone, Video, Reply } from 'lucide-react';
 import type { Chat, Message, UserPresence } from '@/types';
 import { groupMessagesByDate } from '@/lib/chatServices';
 import OnlineStatus from './OnlineStatus';
@@ -23,11 +23,14 @@ interface ChatWindowProps {
     presence: UserPresence | null;
     isTyping: boolean;
     isSending: boolean;
-    onSendMessage: (text: string) => Promise<void>;
+    onSendMessage: (text: string, replyTo?: { id: string; text: string; senderName: string }) => Promise<void>;
     onTyping: () => void;
     onStopTyping: () => void;
     onBack: () => void;
     onClearHistory: () => void;
+    replyingTo?: Message | null;
+    onSetReplyingTo?: (message: Message | null) => void;
+    onDeleteMessage?: (messageId: string) => void;
 }
 
 // Solid background color options - many more solid colors
@@ -68,7 +71,10 @@ export default function ChatWindow({
     onTyping,
     onStopTyping,
     onBack,
-    onClearHistory
+    onClearHistory,
+    replyingTo,
+    onSetReplyingTo,
+    onDeleteMessage,
 }: ChatWindowProps) {
     void _isSending; // Part of interface contract, used by parent
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +89,50 @@ export default function ChatWindow({
     const [showContactInfo, setShowContactInfo] = useState(false);
     const [customBgColor, setCustomBgColor] = useState<string | null>(null);
     const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+    const [showForwardModal, setShowForwardModal] = useState(false);
+    const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+    const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
+    const prevMessageCountRef = useRef(messages.length);
+
+    // Track new messages for animation
+    useEffect(() => {
+        if (messages.length > prevMessageCountRef.current) {
+            const newIds = new Set<string>();
+            for (let i = prevMessageCountRef.current; i < messages.length; i++) {
+                newIds.add(messages[i].id);
+            }
+            setNewMessageIds(newIds);
+            // Clear new flags after animation
+            setTimeout(() => setNewMessageIds(new Set()), 600);
+        }
+        prevMessageCountRef.current = messages.length;
+    }, [messages.length]);
+
+    // Handle reply
+    const handleReply = useCallback((msg: Message) => {
+        onSetReplyingTo?.(msg);
+    }, [onSetReplyingTo]);
+
+    // Handle delete
+    const handleDeleteMessage = useCallback((messageId: string) => {
+        onDeleteMessage?.(messageId);
+    }, [onDeleteMessage]);
+
+    // Handle forward
+    const handleForward = useCallback((msg: Message) => {
+        setForwardMessage(msg);
+        setShowForwardModal(true);
+    }, []);
+
+    // Handle send with reply
+    const handleSendMessage = useCallback(async (text: string) => {
+        const reply = replyingTo ? {
+            id: replyingTo.id,
+            text: replyingTo.text,
+            senderName: replyingTo.senderName,
+        } : undefined;
+        await onSendMessage(text, reply);
+    }, [onSendMessage, replyingTo]);
 
     // Call hook
     const { initiateCall, isInCall } = useCall();
@@ -477,6 +527,7 @@ export default function ChatWindow({
 
                                         // Highlight if searching
                                         const isHighlighted = searchQuery && message.text.toLowerCase().includes(searchQuery.toLowerCase());
+                                        const isNewMsg = newMessageIds.has(message.id);
 
                                         return (
                                             <div key={message.id} className={isHighlighted ? 'bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-1 -m-1' : ''}>
@@ -485,6 +536,10 @@ export default function ChatWindow({
                                                     isOwn={isOwn}
                                                     showAvatar={showAvatar}
                                                     senderInitial={participant.name.charAt(0)}
+                                                    isNew={isNewMsg}
+                                                    onReply={handleReply}
+                                                    onDelete={handleDeleteMessage}
+                                                    onForward={handleForward}
                                                 />
                                             </div>
                                         );
@@ -502,14 +557,36 @@ export default function ChatWindow({
                 )}
             </div>
 
+            {/* Reply Bar */}
+            {replyingTo && (
+                <div className="flex-shrink-0 px-4 py-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3 animate-fadeIn">
+                    <div className="w-1 h-10 bg-[#1650EB] rounded-full flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[#1650EB]">
+                            <Reply className="w-3 h-3 inline mr-1" />
+                            Replying to {replyingTo.senderName}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {replyingTo.text}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => onSetReplyingTo?.(null)}
+                        className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-all"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
             {/* Input - Fixed at bottom */}
             <div className="flex-shrink-0">
                 <ChatInput
-                    onSend={onSendMessage}
+                    onSend={handleSendMessage}
                     onTyping={onTyping}
                     onStopTyping={onStopTyping}
                     disabled={false}
-                    placeholder={`Message ${participant.name}...`}
+                    placeholder={replyingTo ? `Reply to ${replyingTo.senderName}...` : `Message ${participant.name}...`}
                 />
             </div>
 
