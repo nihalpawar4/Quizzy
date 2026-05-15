@@ -494,11 +494,76 @@ export async function sendMessage(
     // Create chat notification for recipient
     await createChatNotification(chatId, senderId, senderName, text.trim(), recipientId);
 
+    // Fire-and-forget: send FCM push notification to the recipient
+    sendPushToUser(
+        recipientId,
+        `💬 ${senderName}`,
+        text.trim().substring(0, 100),
+        {
+            type: 'chat_message',
+            url: '/chat',
+            tag: `quizy-chat-${chatId}`,
+            chatId,
+            senderId,
+        }
+    ).catch(err => console.error('[Quizy Chat Push] Failed to send push:', err));
+
     return {
         id: docRef.id,
         ...messageData,
         timestamp: new Date()
     };
+}
+
+/**
+ * Send FCM push notification to a single user by their user ID
+ * Fetches the user's FCM token from Firestore and dispatches the push
+ * This enables real notifications even when the app is closed
+ */
+async function sendPushToUser(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>
+): Promise<void> {
+    try {
+        // Fetch the recipient's FCM token from their user document
+        const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, userId));
+        if (!userDoc.exists()) {
+            console.log('[Quizy Chat Push] Recipient user not found:', userId);
+            return;
+        }
+
+        const fcmToken = userDoc.data()?.fcmToken;
+        if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.length === 0) {
+            console.log('[Quizy Chat Push] No FCM token for user:', userId);
+            return;
+        }
+
+        console.log(`[Quizy Chat Push] Sending push to user ${userId}`);
+
+        // Call the API route to send push notification via Firebase Admin SDK
+        const response = await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tokens: [fcmToken],
+                title,
+                body,
+                data: data || {},
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('[Quizy Chat Push] API error:', errorData);
+        } else {
+            const result = await response.json();
+            console.log(`[Quizy Chat Push] Sent: ${result.sent}, Failed: ${result.failed}`);
+        }
+    } catch (error) {
+        console.error('[Quizy Chat Push] Error sending push notification:', error);
+    }
 }
 
 /**

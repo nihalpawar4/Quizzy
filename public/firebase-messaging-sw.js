@@ -110,7 +110,9 @@ self.addEventListener('notificationclick', (event) => {
     // Determine target URL based on notification type
     let targetUrl = '/dashboard';
 
-    if (data?.type === 'test') {
+    if (data?.type === 'chat_message') {
+        targetUrl = '/chat';
+    } else if (data?.type === 'test') {
         targetUrl = `/test/${data.testId}`;
     } else if (data?.type === 'report') {
         targetUrl = '/dashboard/student';
