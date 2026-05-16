@@ -150,3 +150,48 @@ export async function deleteHomework(homeworkId: string): Promise<void> {
     const homeworkRef = doc(db, HOMEWORK_COLLECTION, homeworkId);
     await deleteDoc(homeworkRef);
 }
+
+/**
+ * Mark homework as completed by a student
+ */
+export async function markHomeworkComplete(
+    homeworkId: string,
+    studentId: string,
+    studentName: string
+): Promise<void> {
+    const completionsRef = collection(db, 'homeworkCompletions');
+    // Check if already completed
+    const q = query(
+        completionsRef,
+        where('homeworkId', '==', homeworkId),
+        where('studentId', '==', studentId)
+    );
+    const existing = await getDocs(q);
+    if (!existing.empty) return; // Already marked
+
+    await addDoc(completionsRef, {
+        homeworkId,
+        studentId,
+        studentName,
+        completedAt: Timestamp.now(),
+    });
+}
+
+/**
+ * Get all homework completion records for a student
+ */
+export async function getStudentHomeworkCompletions(
+    studentId: string
+): Promise<Set<string>> {
+    const completionsRef = collection(db, 'homeworkCompletions');
+    const q = query(
+        completionsRef,
+        where('studentId', '==', studentId)
+    );
+    const snapshot = await getDocs(q);
+    const completed = new Set<string>();
+    snapshot.docs.forEach(doc => {
+        completed.add(doc.data().homeworkId);
+    });
+    return completed;
+}

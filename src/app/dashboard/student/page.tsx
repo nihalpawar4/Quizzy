@@ -1401,7 +1401,7 @@ export default function StudentDashboard() {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             📝 Homework for Class {user.studentClass}
                         </h3>
-                        <HomeworkList homeworks={homeworks} loading={homeworkLoading} />
+                        <HomeworkList homeworks={homeworks} loading={homeworkLoading} studentId={user?.uid} studentName={user?.name} />
                     </motion.div>
                 )}
 

@@ -167,7 +167,7 @@ export default function StudentHomeworkPage() {
                 </div>
 
                 {/* Homework List */}
-                <HomeworkList homeworks={homeworks} loading={loading} />
+                <HomeworkList homeworks={homeworks} loading={loading} studentId={user.uid} studentName={user.name} />
             </main>
         </div>
     );

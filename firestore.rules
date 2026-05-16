@@ -115,6 +115,15 @@ service cloud.firestore {
       allow delete: if isTeacher();
     }
     
+    // ==================== HOMEWORK COMPLETIONS ====================
+    
+    match /homeworkCompletions/{completionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if isTeacher();
+    }
+    
     // ==================== CREDIT ECONOMY COLLECTIONS ====================
     
     match /wallets/{walletId} {

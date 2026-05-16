@@ -1119,8 +1119,9 @@ export default function TeacherDashboard() {
 
     // Stats
     const totalTests = tests.length;
-    const averageScore = results.length > 0
-        ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / results.length)
+    const scorableResults = results.filter(r => !r.isPdfTest && r.totalQuestions > 0);
+    const averageScore = scorableResults.length > 0
+        ? Math.round(scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / scorableResults.length)
         : 0;
 
     const filteredResults = getFilteredResults();
@@ -1485,8 +1486,9 @@ export default function TeacherDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {tests.map((test) => {
                                     const testResults = results.filter(r => r.testId === test.id);
-                                    const avgTestScore = testResults.length > 0
-                                        ? Math.round(testResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / testResults.length)
+                                    const nonPdfResults = testResults.filter(r => !r.isPdfTest && r.totalQuestions > 0);
+                                    const avgTestScore = nonPdfResults.length > 0
+                                        ? Math.round(nonPdfResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / nonPdfResults.length)
                                         : null;
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
 
@@ -2961,7 +2963,7 @@ export default function TeacherDashboard() {
                                 ) : (
                                     <div className="space-y-3">
                                         {students.map((student) => {
-                                            const studentResults = results.filter(r => r.studentId === student.uid);
+                                            const studentResults = results.filter(r => r.studentId === student.uid && !r.isPdfTest && r.totalQuestions > 0);
                                             const avgScore = studentResults.length > 0 ? Math.round(studentResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / studentResults.length) : null;
                                             const isLoading = studentActionLoading === student.uid;
                                             const showDeleteConfirm = confirmDeleteStudent === student.uid;
@@ -3149,15 +3151,15 @@ export default function TeacherDashboard() {
                                             <h4 className="font-medium text-gray-900 dark:text-white mb-3">Score Distribution</h4>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl text-center">
-                                                    <p className="text-2xl font-bold text-green-600">{results.filter(r => (r.score / r.totalQuestions) >= 0.7).length}</p>
+                                                    <p className="text-2xl font-bold text-green-600">{results.filter(r => !r.isPdfTest && r.totalQuestions > 0 && (r.score / r.totalQuestions) >= 0.7).length}</p>
                                                     <p className="text-sm text-green-700 dark:text-green-400">Excellent (≥70%)</p>
                                                 </div>
                                                 <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl text-center">
-                                                    <p className="text-2xl font-bold text-yellow-600">{results.filter(r => (r.score / r.totalQuestions) >= 0.4 && (r.score / r.totalQuestions) < 0.7).length}</p>
+                                                    <p className="text-2xl font-bold text-yellow-600">{results.filter(r => !r.isPdfTest && r.totalQuestions > 0 && (r.score / r.totalQuestions) >= 0.4 && (r.score / r.totalQuestions) < 0.7).length}</p>
                                                     <p className="text-sm text-yellow-700 dark:text-yellow-400">Average (40-69%)</p>
                                                 </div>
                                                 <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl text-center">
-                                                    <p className="text-2xl font-bold text-red-600">{results.filter(r => (r.score / r.totalQuestions) < 0.4).length}</p>
+                                                    <p className="text-2xl font-bold text-red-600">{results.filter(r => !r.isPdfTest && r.totalQuestions > 0 && (r.score / r.totalQuestions) < 0.4).length}</p>
                                                     <p className="text-sm text-red-700 dark:text-red-400">Needs Work (&lt;40%)</p>
                                                 </div>
                                             </div>
@@ -3167,7 +3169,7 @@ export default function TeacherDashboard() {
                                             <h4 className="font-medium text-gray-900 dark:text-white mb-3">Average by Subject</h4>
                                             <div className="space-y-2">
                                                 {SUBJECTS.map(subject => {
-                                                    const subjectResults = results.filter(r => r.subject === subject);
+                                                    const subjectResults = results.filter(r => r.subject === subject && !r.isPdfTest && r.totalQuestions > 0);
                                                     if (subjectResults.length === 0) return null;
                                                     const avgSubjectScore = Math.round(subjectResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / subjectResults.length);
                                                     return (
