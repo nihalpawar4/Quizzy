@@ -44,7 +44,7 @@ import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
-import { subscribeToHomework } from '@/services/homeworkService';
+import { subscribeToHomework, getStudentHomeworkCompletions } from '@/services/homeworkService';
 import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
 
@@ -91,6 +91,7 @@ export default function StudentDashboard() {
     // Homework state
     const [homeworks, setHomeworks] = useState<Homework[]>([]);
     const [homeworkLoading, setHomeworkLoading] = useState(true);
+    const [completedHomeworkIds, setCompletedHomeworkIds] = useState<Set<string>>(new Set());
 
     // Notification state
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -500,6 +501,12 @@ export default function StudentDashboard() {
         });
         return () => unsub();
     }, [user?.studentClass]);
+
+    // Load homework completions for badge count
+    useEffect(() => {
+        if (!user?.uid) return;
+        getStudentHomeworkCompletions(user.uid).then(setCompletedHomeworkIds).catch(console.error);
+    }, [user?.uid]);
 
     // Request FCM token for push notifications
     useEffect(() => {
@@ -1029,11 +1036,14 @@ export default function StudentDashboard() {
                             <BookOpen className="w-5 h-5" />
                             <span className="hidden sm:inline">Homework</span>
                             <span className="sm:hidden">HW</span>
-                            {homeworks.length > 0 && (
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'homework' ? 'bg-white text-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'}`}>
-                                    {homeworks.length}
-                                </span>
-                            )}
+                            {(() => {
+                                const pendingHwCount = homeworks.filter(h => !completedHomeworkIds.has(h.id)).length;
+                                return pendingHwCount > 0 ? (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold animate-pulse ${activeTab === 'homework' ? 'bg-white text-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'}`}>
+                                        {pendingHwCount}
+                                    </span>
+                                ) : null;
+                            })()}
                         </button>
 
                     </div>
