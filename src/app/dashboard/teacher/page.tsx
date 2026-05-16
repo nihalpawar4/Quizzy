@@ -83,6 +83,7 @@ import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuestion } from '@/lib/qaService';
 import { validatePDF, convertPDFToBase64, getMaxPDFSizeKB } from '@/lib/pdfUploadService';
+import { saveLastRoute } from '@/lib/routePersistence';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed' | 'pdf_upload';
@@ -108,6 +109,11 @@ export default function TeacherDashboard() {
     const { user, loading: authLoading, signOut } = useAuth();
     const { totalUnreadCount } = useChat();
     const router = useRouter();
+
+    // Save current route for persistence
+    useEffect(() => {
+        saveLastRoute('/dashboard/teacher');
+    }, []);
 
     // Data states
     const [tests, setTests] = useState<Test[]>([]);

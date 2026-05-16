@@ -34,6 +34,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, delete
 import { auth, db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePictureService';
+import { saveLastRoute } from '@/lib/routePersistence';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
@@ -75,6 +76,11 @@ export default function ProfilePage() {
             setStudentClass(user.studentClass);
         }
     }, [user, authLoading, router]);
+
+    // Save current route for persistence
+    useEffect(() => {
+        saveLastRoute('/profile');
+    }, []);
 
     const handleUpdateClass = async () => {
         if (!user) return;

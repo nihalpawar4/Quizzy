@@ -20,6 +20,7 @@ import { auth, googleProvider, getSessionBackup, clearSessionBackup, ensurePersi
 import { createUserProfile, getUserProfile } from '@/lib/services';
 import { ADMIN_EMAILS, ADMIN_CODE } from '@/lib/constants';
 import { saveUserSessionCookie, getUserSessionCookie, deleteUserSessionCookie } from '@/lib/cookieSession';
+import { clearLastRoute } from '@/lib/routePersistence';
 import type { User } from '@/types';
 
 // Remembered user info from cookie
@@ -294,6 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         clearSessionBackup(); // Clear stored session data
         deleteUserSessionCookie(); // Clear cookie
+        clearLastRoute(); // Clear saved route
         setRememberedUser(null); // Clear remembered user
         setUser(null); // Clear user state first
         await firebaseSignOut(auth);

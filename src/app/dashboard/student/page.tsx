@@ -49,6 +49,9 @@ import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
 
 import { useChat } from '@/contexts/ChatContext';
+import { saveLastRoute } from '@/lib/routePersistence';
+import { generatePDFWithCover } from '@/lib/utils/generatePDFCover';
+import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
@@ -56,6 +59,11 @@ export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { totalUnreadCount } = useChat();
     const router = useRouter();
+
+    // Save current route for persistence
+    useEffect(() => {
+        saveLastRoute('/dashboard/student');
+    }, []);
 
     const [tests, setTests] = useState<Test[]>([]);
     const [results, setResults] = useState<TestResult[]>([]);
@@ -223,6 +231,54 @@ export default function StudentDashboard() {
         generateStudentReportPDF(result);
     };
 
+    // Download PDF test with branded cover page
+    const downloadPdfTest = async (test: Test) => {
+        if (!test.pdfUrl) return;
+
+        try {
+            // Fetch teacher name
+            let teacherName = 'Teacher';
+            try {
+                const teacherProfile = await getUserProfile(test.createdBy);
+                if (teacherProfile) teacherName = teacherProfile.name;
+            } catch {
+                // Use default
+            }
+
+            // Generate PDF with cover page
+            const blob = await generatePDFWithCover(test.pdfUrl, {
+                testTitle: test.title,
+                subject: test.subject,
+                targetClass: test.targetClass,
+                teacherName,
+                createdAt: test.createdAt instanceof Date ? test.createdAt : new Date(),
+                duration: test.duration,
+                marksPerQuestion: test.marksPerQuestion,
+                questionCount: test.questionCount,
+                difficultyLevel: test.difficultyLevel,
+                pdfFileName: test.pdfFileName,
+            });
+
+            // Download with test title as filename
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${test.title.replace(/[^a-zA-Z0-9\s]/g, '').trim()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            // Fallback: download without cover page
+            const link = document.createElement('a');
+            link.href = test.pdfUrl;
+            link.download = test.pdfFileName || `${test.title}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
 
 
     const loadData = useCallback(async (testsData?: Test[]) => {
@@ -1090,14 +1146,7 @@ export default function StudentDashboard() {
                                                         </button>
                                                         {test.pdfUrl && (
                                                             <button
-                                                                onClick={() => {
-                                                                    const link = document.createElement('a');
-                                                                    link.href = test.pdfUrl!;
-                                                                    link.download = test.pdfFileName || `${test.title}.pdf`;
-                                                                    document.body.appendChild(link);
-                                                                    link.click();
-                                                                    document.body.removeChild(link);
-                                                                }}
+                                                                onClick={() => downloadPdfTest(test)}
                                                                 className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                                                                 title="Download PDF"
                                                             >
@@ -1849,14 +1898,7 @@ export default function StudentDashboard() {
                                     </button>
                                     {selectedPdfTest.pdfUrl && (
                                         <button
-                                            onClick={() => {
-                                                const link = document.createElement('a');
-                                                link.href = selectedPdfTest.pdfUrl!;
-                                                link.download = selectedPdfTest.pdfFileName || `${selectedPdfTest.title}.pdf`;
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                document.body.removeChild(link);
-                                            }}
+                                            onClick={() => downloadPdfTest(selectedPdfTest)}
                                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
                                         >
                                             <Download className="w-4 h-4" /> Download PDF
