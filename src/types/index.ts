@@ -107,6 +107,13 @@ export interface TestResult {
     rightClickAttempts?: number; // Number of right-click attempts
     fullscreenExits?: number; // Number of times fullscreen was exited
     antiCheatEnabled?: boolean; // Whether anti-cheat was enabled for this test
+    // PDF test data
+    isPdfTest?: boolean; // Whether this is a PDF test result
+    pdfDownloadedAt?: Date; // When the student downloaded the PDF
+    pdfMarksAwarded?: number; // Marks assigned by teacher for PDF test
+    pdfMaxMarks?: number; // Maximum marks for PDF test
+    pdfTeacherRemarks?: string; // Teacher's remarks/feedback
+    pdfEvaluated?: boolean; // Whether teacher has evaluated this
 }
 
 // Auth Context Types

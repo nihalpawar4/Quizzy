@@ -36,7 +36,7 @@ import {
     Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification } from '@/lib/services';
+import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload } from '@/lib/services';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
@@ -233,7 +233,7 @@ export default function StudentDashboard() {
 
     // Download PDF test with branded cover page
     const downloadPdfTest = async (test: Test) => {
-        if (!test.pdfUrl) return;
+        if (!test.pdfUrl || !user) return;
 
         try {
             // Fetch teacher name
@@ -268,6 +268,22 @@ export default function StudentDashboard() {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
+
+            // Mark as completed — submit result to Firestore
+            await submitPdfTestDownload({
+                studentId: user.uid,
+                studentName: user.name,
+                studentEmail: user.email,
+                studentClass: user.studentClass || 0,
+                testId: test.id,
+                testTitle: test.title,
+                subject: test.subject,
+            });
+
+            // Update local state immediately
+            setTakenTests(prev => new Set([...prev, test.id]));
+            const updatedResults = await getResultsByStudent(user.uid);
+            setResults(updatedResults);
         } catch (error) {
             console.error('Error downloading PDF:', error);
             // Fallback: download without cover page
@@ -1136,25 +1152,76 @@ export default function StudentDashboard() {
                                                 )}
 
                                                 {/* PDF Test Actions */}
-                                                {test.isPdfTest ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => setSelectedPdfTest(test)}
-                                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
-                                                        >
-                                                            <ExternalLink className="w-4 h-4" /> View PDF
-                                                        </button>
-                                                        {test.pdfUrl && (
-                                                            <button
-                                                                onClick={() => downloadPdfTest(test)}
-                                                                className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-                                                                title="Download PDF"
-                                                            >
-                                                                <Download className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ) : hasTaken && result ? (
+                                                {test.isPdfTest ? (() => {
+                                                    const pdfResult = results.find(r => r.testId === test.id && r.isPdfTest);
+                                                    const hasDownloaded = hasTaken && pdfResult;
+
+                                                    if (hasDownloaded && pdfResult?.pdfEvaluated) {
+                                                        // Evaluated by teacher — show marks
+                                                        return (
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                                                                    <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                                                    <div className="flex-1">
+                                                                        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                                                                            Marks: {pdfResult.pdfMarksAwarded}/{pdfResult.pdfMaxMarks}
+                                                                        </span>
+                                                                        {pdfResult.pdfTeacherRemarks && (
+                                                                            <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
+                                                                                &quot;{pdfResult.pdfTeacherRemarks}&quot;
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => downloadPdfTest(test)}
+                                                                    className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                                >
+                                                                    <Download className="w-3.5 h-3.5" /> Re-download PDF
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    } else if (hasDownloaded) {
+                                                        // Downloaded but not yet evaluated
+                                                        return (
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+                                                                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                                                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                                                        Completed • Awaiting marks
+                                                                    </span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => downloadPdfTest(test)}
+                                                                    className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                                >
+                                                                    <Download className="w-3.5 h-3.5" /> Re-download PDF
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        // Not downloaded yet — show actions
+                                                        return (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => setSelectedPdfTest(test)}
+                                                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
+                                                                >
+                                                                    <ExternalLink className="w-4 h-4" /> View PDF
+                                                                </button>
+                                                                {test.pdfUrl && (
+                                                                    <button
+                                                                        onClick={() => downloadPdfTest(test)}
+                                                                        className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                                                                        title="Download PDF"
+                                                                    >
+                                                                        <Download className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+                                                })() : hasTaken && result ? (
                                                     <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
                                                         <Trophy className="w-5 h-5" />
                                                         <span className="text-sm font-medium">Completed • {result.score}/{result.totalQuestions} correct</span>

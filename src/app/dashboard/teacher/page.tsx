@@ -71,7 +71,8 @@ import {
     createNoteNotification,
     subscribeToTeacherAnnouncements,
     deleteNotification,
-    deleteRelatedAnnouncements
+    deleteRelatedAnnouncements,
+    evaluatePdfTestResult
 } from '@/lib/services';
 import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
@@ -136,6 +137,14 @@ export default function TeacherDashboard() {
 
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+    // PDF evaluation modal state
+    const [showPdfEvalModal, setShowPdfEvalModal] = useState(false);
+    const [evalResult, setEvalResult] = useState<TestResult | null>(null);
+    const [evalMarks, setEvalMarks] = useState('');
+    const [evalMaxMarks, setEvalMaxMarks] = useState('');
+    const [evalRemarks, setEvalRemarks] = useState('');
+    const [isEvaluating, setIsEvaluating] = useState(false);
 
     // Auto-close profile dropdown after 3 seconds
     useEffect(() => {
@@ -498,6 +507,32 @@ export default function TeacherDashboard() {
         } catch (error) {
             setPdfUploadError(error instanceof Error ? error.message : 'Failed to process PDF');
             setPdfFile(null);
+        }
+    };
+
+    // Handle PDF test evaluation
+    const handleEvaluatePdf = async () => {
+        if (!evalResult) return;
+        const marks = parseFloat(evalMarks);
+        const maxMarks = parseFloat(evalMaxMarks);
+        if (isNaN(marks) || isNaN(maxMarks) || marks < 0 || maxMarks <= 0) return;
+
+        setIsEvaluating(true);
+        try {
+            await evaluatePdfTestResult(evalResult.id, marks, maxMarks, evalRemarks);
+            // Refresh results
+            const { getAllResults } = await import('@/lib/services');
+            const updatedResults = await getAllResults();
+            setResults(updatedResults);
+            setShowPdfEvalModal(false);
+            setEvalResult(null);
+            setEvalMarks('');
+            setEvalMaxMarks('');
+            setEvalRemarks('');
+        } catch (error) {
+            console.error('Error evaluating PDF test:', error);
+        } finally {
+            setIsEvaluating(false);
         }
     };
 
@@ -1540,12 +1575,51 @@ export default function TeacherDashboard() {
                                                 <span className="text-gray-500 dark:text-gray-400">
                                                     {testResults.length} submissions
                                                 </span>
-                                                {avgTestScore !== null && (
+                                                {test.isPdfTest ? (() => {
+                                                    const unevaluated = testResults.filter(r => r.isPdfTest && !r.pdfEvaluated).length;
+                                                    return unevaluated > 0 ? (
+                                                        <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-full">
+                                                            {unevaluated} to grade
+                                                        </span>
+                                                    ) : testResults.length > 0 ? (
+                                                        <span className="text-green-600 dark:text-green-400 font-medium text-xs">All graded ✓</span>
+                                                    ) : null;
+                                                })() : avgTestScore !== null && (
                                                     <span className="font-medium text-gray-900 dark:text-white">
                                                         Avg: {avgTestScore}%
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* PDF Submissions List for grading */}
+                                            {test.isPdfTest && testResults.length > 0 && (
+                                                <div className="mb-4 max-h-40 overflow-y-auto space-y-1.5">
+                                                    {testResults.filter(r => r.isPdfTest).map(r => (
+                                                        <div key={r.id} className={`flex items-center justify-between p-2 rounded-lg text-xs ${r.pdfEvaluated ? 'bg-green-50 dark:bg-green-900/10' : 'bg-amber-50 dark:bg-amber-900/10'}`}>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="font-medium text-gray-900 dark:text-white truncate block">{r.studentName}</span>
+                                                                {r.pdfEvaluated ? (
+                                                                    <span className="text-green-600 dark:text-green-400">{r.pdfMarksAwarded}/{r.pdfMaxMarks} marks</span>
+                                                                ) : (
+                                                                    <span className="text-amber-600 dark:text-amber-400">Not graded</span>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEvalResult(r);
+                                                                    setEvalMarks(r.pdfEvaluated ? String(r.pdfMarksAwarded || '') : '');
+                                                                    setEvalMaxMarks(r.pdfEvaluated ? String(r.pdfMaxMarks || '') : '');
+                                                                    setEvalRemarks(r.pdfTeacherRemarks || '');
+                                                                    setShowPdfEvalModal(true);
+                                                                }}
+                                                                className={`ml-2 px-3 py-1 rounded-lg font-medium transition-colors ${r.pdfEvaluated ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200'}`}
+                                                            >
+                                                                {r.pdfEvaluated ? 'Edit' : 'Grade'}
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
 
                                             <div className="flex gap-2">
                                                 <button
@@ -3951,6 +4025,100 @@ export default function TeacherDashboard() {
                                         Close
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* PDF Evaluation Modal */}
+            <AnimatePresence>
+                {showPdfEvalModal && evalResult && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+                        onClick={() => setShowPdfEvalModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                        {evalResult.pdfEvaluated ? 'Edit Marks' : 'Grade PDF Test'}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{evalResult.testTitle}</p>
+                                </div>
+                                <button onClick={() => setShowPdfEvalModal(false)} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl mb-4">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{evalResult.studentName}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{evalResult.studentEmail}</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Marks Obtained</label>
+                                        <input
+                                            type="number"
+                                            value={evalMarks}
+                                            onChange={(e) => setEvalMarks(e.target.value)}
+                                            placeholder="e.g. 35"
+                                            min="0"
+                                            step="0.5"
+                                            className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Marks</label>
+                                        <input
+                                            type="number"
+                                            value={evalMaxMarks}
+                                            onChange={(e) => setEvalMaxMarks(e.target.value)}
+                                            placeholder="e.g. 50"
+                                            min="1"
+                                            step="0.5"
+                                            className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Remarks (optional)</label>
+                                    <textarea
+                                        value={evalRemarks}
+                                        onChange={(e) => setEvalRemarks(e.target.value)}
+                                        placeholder="Good work! / Needs improvement..."
+                                        rows={2}
+                                        className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => setShowPdfEvalModal(false)}
+                                    className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleEvaluatePdf}
+                                    disabled={isEvaluating || !evalMarks || !evalMaxMarks}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isEvaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                    {isEvaluating ? 'Saving...' : 'Save Marks'}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

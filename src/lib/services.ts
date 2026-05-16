@@ -399,6 +399,63 @@ export async function submitTestResult(result: Omit<TestResult, 'id' | 'timestam
 }
 
 /**
+ * Submit a PDF test download as a completed result
+ */
+export async function submitPdfTestDownload(data: {
+    studentId: string;
+    studentName: string;
+    studentEmail: string;
+    studentClass: number;
+    testId: string;
+    testTitle: string;
+    subject: string;
+}): Promise<string> {
+    // Check if already submitted
+    const resultsRef = collection(db, COLLECTIONS.RESULTS);
+    const existingQuery = query(
+        resultsRef,
+        where('studentId', '==', data.studentId),
+        where('testId', '==', data.testId)
+    );
+    const existing = await getDocs(existingQuery);
+    if (!existing.empty) {
+        return existing.docs[0].id; // Already downloaded
+    }
+
+    const resultData = {
+        ...data,
+        score: 0,
+        totalQuestions: 0,
+        answers: [],
+        timestamp: Timestamp.now(),
+        isPdfTest: true,
+        pdfDownloadedAt: Timestamp.now(),
+        pdfEvaluated: false,
+    };
+
+    const docRef = await addDoc(resultsRef, resultData);
+    return docRef.id;
+}
+
+/**
+ * Evaluate a PDF test result (teacher assigns marks)
+ */
+export async function evaluatePdfTestResult(
+    resultId: string,
+    marks: number,
+    maxMarks: number,
+    remarks?: string
+): Promise<void> {
+    const resultRef = doc(db, COLLECTIONS.RESULTS, resultId);
+    await updateDoc(resultRef, {
+        pdfMarksAwarded: marks,
+        pdfMaxMarks: maxMarks,
+        pdfTeacherRemarks: remarks || '',
+        pdfEvaluated: true,
+    });
+}
+
+/**
  * Get all results (for teachers)
  */
 export async function getAllResults(): Promise<TestResult[]> {
