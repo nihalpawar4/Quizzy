@@ -648,8 +648,16 @@ export default function StudentDashboard() {
     }
 
     const _totalTests = results.length;
-    const averageScore = results.length > 0
-        ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / results.length)
+    const scorableResults = results.filter(r => !r.isPdfTest && r.totalQuestions > 0);
+    const pdfEvaluatedResults = results.filter(r => r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0);
+    const totalScorable = scorableResults.length + pdfEvaluatedResults.length;
+    const averageScore = totalScorable > 0
+        ? Math.round(
+            (
+                scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) +
+                pdfEvaluatedResults.reduce((acc, r) => acc + ((r.pdfMarksAwarded || 0) / (r.pdfMaxMarks || 1)) * 100, 0)
+            ) / totalScorable
+        )
         : 0;
 
     // Quick actions - Leaderboard is now functional, others coming soon
@@ -708,7 +716,9 @@ export default function StudentDashboard() {
                         <div>
                             <p className="font-bold">New Report Available! 📊</p>
                             <p className="text-sm text-white/90">
-                                {newReportNotification.testTitle} - Score: {newReportNotification.score}/{newReportNotification.totalQuestions} ({Math.round((newReportNotification.score / newReportNotification.totalQuestions) * 100)}%)
+                                {newReportNotification.isPdfTest
+                                    ? (newReportNotification.pdfEvaluated ? `${newReportNotification.testTitle} - Marks: ${newReportNotification.pdfMarksAwarded}/${newReportNotification.pdfMaxMarks}` : `${newReportNotification.testTitle} - Awaiting evaluation`)
+                                    : `${newReportNotification.testTitle} - Score: ${newReportNotification.score}/${newReportNotification.totalQuestions} (${newReportNotification.totalQuestions > 0 ? Math.round((newReportNotification.score / newReportNotification.totalQuestions) * 100) : 0}%)`}
                             </p>
                             <p className="text-xs text-white/70 mt-1">Click to view</p>
                         </div>
@@ -1085,24 +1095,31 @@ export default function StudentDashboard() {
                                                     )}
                                                 </div>
                                                 {/* Progress Circle (for completed tests) */}
-                                                {hasTaken && result && (
-                                                    <div className="absolute top-3 right-3">
-                                                        <div className="relative w-14 h-14">
-                                                            <svg className="w-14 h-14 transform -rotate-90">
-                                                                <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.3)" strokeWidth="4" fill="none" />
-                                                                <circle
-                                                                    cx="28" cy="28" r="24"
-                                                                    stroke="white" strokeWidth="4" fill="none"
-                                                                    strokeLinecap="round"
-                                                                    strokeDasharray={`${(result.score / result.totalQuestions) * 150.8} 150.8`}
-                                                                />
-                                                            </svg>
-                                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                                <span className="text-white text-sm font-bold">{Math.round((result.score / result.totalQuestions) * 100)}%</span>
+                                                {hasTaken && result && (() => {
+                                                    const isPdf = result.isPdfTest;
+                                                    const scorePercent = isPdf
+                                                        ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : null)
+                                                        : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : null);
+                                                    if (scorePercent === null) return null;
+                                                    return (
+                                                        <div className="absolute top-3 right-3">
+                                                            <div className="relative w-14 h-14">
+                                                                <svg className="w-14 h-14 transform -rotate-90">
+                                                                    <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.3)" strokeWidth="4" fill="none" />
+                                                                    <circle
+                                                                        cx="28" cy="28" r="24"
+                                                                        stroke="white" strokeWidth="4" fill="none"
+                                                                        strokeLinecap="round"
+                                                                        strokeDasharray={`${(scorePercent / 100) * 150.8} 150.8`}
+                                                                    />
+                                                                </svg>
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    <span className="text-white text-sm font-bold">{scorePercent}%</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    );
+                                                })()}
 
                                             </div>
 
@@ -1264,7 +1281,9 @@ export default function StudentDashboard() {
                                 {results.map((result, index) => {
                                     const reportAvailable = isReportAvailable(result);
                                     const reportExpired = isReportExpired(result);
-                                    const scorePercent = Math.round((result.score / result.totalQuestions) * 100);
+                                    const scorePercent = result.isPdfTest
+                                        ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : 0)
+                                        : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : 0);
                                     return (
                                         <motion.div
                                             key={result.id}
@@ -1289,7 +1308,12 @@ export default function StudentDashboard() {
                                                     </div>
                                                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{result.testTitle}</h4>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        Score: {result.score}/{result.totalQuestions} • {new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        {result.isPdfTest
+                                                            ? (result.pdfEvaluated
+                                                                ? `Marks: ${result.pdfMarksAwarded}/${result.pdfMaxMarks}`
+                                                                : 'Awaiting evaluation')
+                                                            : `Score: ${result.score}/${result.totalQuestions}`
+                                                        } • {new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -1480,14 +1504,24 @@ export default function StudentDashboard() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(result.score / result.totalQuestions) >= 0.7
-                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                        : (result.score / result.totalQuestions) >= 0.4
-                                                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                        }`}>
-                                                        {result.score}/{result.totalQuestions} ({Math.round((result.score / result.totalQuestions) * 100)}%)
-                                                    </span>
+                                                    {(() => {
+                                                        const pct = result.isPdfTest
+                                                            ? (result.pdfEvaluated && result.pdfMaxMarks ? ((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) : 0)
+                                                            : (result.totalQuestions > 0 ? result.score / result.totalQuestions : 0);
+                                                        const label = result.isPdfTest
+                                                            ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Pending')
+                                                            : `${result.score}/${result.totalQuestions}`;
+                                                        return (
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pct >= 0.7
+                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                                : pct >= 0.4
+                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                                }`}>
+                                                                {label} ({Math.round(pct * 100)}%)
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                                     {result.timestamp.toLocaleDateString()}
@@ -1544,7 +1578,9 @@ export default function StudentDashboard() {
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedReport.testTitle}</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        {selectedReport.subject} • Score: {selectedReport.score}/{selectedReport.totalQuestions} ({Math.round((selectedReport.score / selectedReport.totalQuestions) * 100)}%)
+                                        {selectedReport.subject} • {selectedReport.isPdfTest
+                                            ? (selectedReport.pdfEvaluated ? `Marks: ${selectedReport.pdfMarksAwarded}/${selectedReport.pdfMaxMarks} (${Math.round(((selectedReport.pdfMarksAwarded || 0) / (selectedReport.pdfMaxMarks || 1)) * 100)}%)` : 'Awaiting evaluation')
+                                            : `Score: ${selectedReport.score}/${selectedReport.totalQuestions} (${selectedReport.totalQuestions > 0 ? Math.round((selectedReport.score / selectedReport.totalQuestions) * 100) : 0}%)`}
                                     </p>
                                 </div>
                                 <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
@@ -1611,7 +1647,9 @@ export default function StudentDashboard() {
                                         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                         <p className="text-gray-600 dark:text-gray-400">Detailed answer breakdown is not available for this test.</p>
                                         <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                                            Your score: {selectedReport.score}/{selectedReport.totalQuestions} ({Math.round((selectedReport.score / selectedReport.totalQuestions) * 100)}%)
+                                            {selectedReport.isPdfTest
+                                                ? (selectedReport.pdfEvaluated ? `Your marks: ${selectedReport.pdfMarksAwarded}/${selectedReport.pdfMaxMarks} (${Math.round(((selectedReport.pdfMarksAwarded || 0) / (selectedReport.pdfMaxMarks || 1)) * 100)}%)` : 'Awaiting teacher evaluation')
+                                                : `Your score: ${selectedReport.score}/${selectedReport.totalQuestions} (${selectedReport.totalQuestions > 0 ? Math.round((selectedReport.score / selectedReport.totalQuestions) * 100) : 0}%)`}
                                         </p>
                                     </div>
                                 )}
