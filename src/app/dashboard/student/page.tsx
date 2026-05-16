@@ -93,10 +93,13 @@ export default function StudentDashboard() {
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+    // PDF Test viewer state
+    const [selectedPdfTest, setSelectedPdfTest] = useState<Test | null>(null);
+
 
 
     // Lock body scroll when any modal is open
-    const isAnyModalOpen = showComingSoon || !!selectedReport || !!selectedNote || !!selectedNotification;
+    const isAnyModalOpen = showComingSoon || !!selectedReport || !!selectedNote || !!selectedNotification || !!selectedPdfTest;
     useEffect(() => {
         if (isAnyModalOpen) {
             document.body.style.overflow = 'hidden';
@@ -980,12 +983,13 @@ export default function StudentDashboard() {
                                     return (
                                         <div
                                             key={test.id}
-                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
+                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : test.isPdfTest ? 'border-rose-200 dark:border-rose-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
                                         >
                                             {/* Gradient Header */}
                                             <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
                                                 isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
-                                                    'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
+                                                    test.isPdfTest ? 'bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-500' :
+                                                        'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
                                                 }`}>
                                                 {/* Decorative Elements */}
                                                 <div className="absolute inset-0 overflow-hidden">
@@ -1000,6 +1004,11 @@ export default function StudentDashboard() {
                                                     {test.difficultyLevel && (
                                                         <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
                                                             {test.difficultyLevel}
+                                                        </span>
+                                                    )}
+                                                    {test.isPdfTest && (
+                                                        <span className="inline-block px-2 py-1 bg-white/30 backdrop-blur-sm text-white text-xs font-medium rounded-full">
+                                                            📋 PDF
                                                         </span>
                                                     )}
                                                 </div>
@@ -1034,15 +1043,24 @@ export default function StudentDashboard() {
                                                     </p>
                                                 )}
                                                 <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                                    <span className="flex items-center gap-1">
-                                                        <BookOpen className="w-4 h-4" />
-                                                        {test.questionCount || '?'} Questions
-                                                    </span>
-                                                    {test.duration && (
+                                                    {test.isPdfTest ? (
                                                         <span className="flex items-center gap-1">
-                                                            <Clock className="w-4 h-4" />
-                                                            {test.duration} min
+                                                            <FileText className="w-4 h-4" />
+                                                            PDF Test Paper
                                                         </span>
+                                                    ) : (
+                                                        <>
+                                                            <span className="flex items-center gap-1">
+                                                                <BookOpen className="w-4 h-4" />
+                                                                {test.questionCount || '?'} Questions
+                                                            </span>
+                                                            {test.duration && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock className="w-4 h-4" />
+                                                                    {test.duration} min
+                                                                </span>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
 
@@ -1061,7 +1079,28 @@ export default function StudentDashboard() {
                                                     </div>
                                                 )}
 
-                                                {hasTaken && result ? (
+                                                {/* PDF Test Actions */}
+                                                {test.isPdfTest ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedPdfTest(test)}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
+                                                        >
+                                                            <ExternalLink className="w-4 h-4" /> View PDF
+                                                        </button>
+                                                        {test.pdfUrl && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    window.open(test.pdfUrl!, '_blank');
+                                                                }}
+                                                                className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                                                                title="Download PDF"
+                                                            >
+                                                                <Download className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ) : hasTaken && result ? (
                                                     <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
                                                         <Trophy className="w-5 h-5" />
                                                         <span className="text-sm font-medium">Completed • {result.score}/{result.totalQuestions} correct</span>
@@ -1732,6 +1771,88 @@ export default function StudentDashboard() {
                                 >
                                     Close
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* PDF Test Viewer Modal */}
+            <AnimatePresence>
+                {selectedPdfTest && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+                        onClick={() => setSelectedPdfTest(null)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-white dark:bg-gray-900 shadow-2xl w-full max-w-4xl max-h-[95vh] rounded-2xl overflow-hidden flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-rose-400 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <FileText className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{selectedPdfTest.title}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedPdfTest.subject} • Class {selectedPdfTest.targetClass}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedPdfTest(null)} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors flex-shrink-0">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* PDF Content */}
+                            <div className="flex-1 overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                {selectedPdfTest.pdfUrl ? (
+                                    <iframe
+                                        src={selectedPdfTest.pdfUrl}
+                                        className="w-full h-full min-h-[60vh]"
+                                        title={`PDF: ${selectedPdfTest.title}`}
+                                        style={{ border: 'none' }}
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full min-h-[60vh]">
+                                        <div className="text-center">
+                                            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                                            <p className="text-gray-500 dark:text-gray-400">PDF not available</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
+                                    {selectedPdfTest.pdfFileName || 'test-paper.pdf'}
+                                </p>
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setSelectedPdfTest(null)}
+                                        className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                    {selectedPdfTest.pdfUrl && (
+                                        <button
+                                            onClick={() => {
+                                                window.open(selectedPdfTest.pdfUrl!, '_blank');
+                                            }}
+                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
+                                        >
+                                            <Download className="w-4 h-4" /> Download PDF
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

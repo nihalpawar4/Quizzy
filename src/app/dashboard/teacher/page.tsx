@@ -82,9 +82,10 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuestion } from '@/lib/qaService';
+import { uploadTestPDF, getMaxPDFSizeMB } from '@/lib/pdfUploadService';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
-type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed';
+type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed' | 'pdf_upload';
 
 interface QuestionTypeOption {
     value: QuestionType;
@@ -100,6 +101,7 @@ const QUESTION_TYPES: QuestionTypeOption[] = [
     { value: 'one_word', label: 'One Word', description: 'Single word answer', icon: '💬' },
     { value: 'short_answer', label: 'Short Answer', description: '2-3 sentence response', icon: '📄' },
     { value: 'mixed', label: 'Comprehensive', description: 'All types via JSON (AI-friendly)', icon: '🎯' },
+    { value: 'pdf_upload', label: 'PDF Test Paper', description: 'Upload PDF for students to view & download', icon: '📋' },
 ];
 
 export default function TeacherDashboard() {
@@ -185,6 +187,11 @@ export default function TeacherDashboard() {
     const [parseError, setParseError] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [createSuccess, setCreateSuccess] = useState(false);
+
+    // PDF Test upload states
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [pdfBase64, setPdfBase64] = useState<string>('');
+    const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
 
     // Analytics states
     const [searchQuery, setSearchQuery] = useState('');
@@ -466,6 +473,27 @@ export default function TeacherDashboard() {
         }
     };
 
+    // Handle PDF file upload for PDF Test type
+    const handlePDFUpload = async (file: File) => {
+        setPdfUploadError(null);
+
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            setPdfUploadError('Only PDF files are allowed.');
+            return;
+        }
+
+        // Max 50MB via Firebase Storage
+        const maxSize = getMaxPDFSizeMB();
+        if (file.size > maxSize * 1024 * 1024) {
+            setPdfUploadError(`PDF file must be less than ${maxSize}MB. Current size: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+            return;
+        }
+
+        setPdfFile(file);
+        setPdfBase64('ready'); // Flag that file is ready (actual upload happens on create)
+    };
+
     // Handle JSON paste
     const handleJSONParse = () => {
         setParseError(null);
@@ -535,6 +563,60 @@ export default function TeacherDashboard() {
 
     // Create test
     const handleCreateTest = async () => {
+        // Handle PDF test creation separately
+        if (newTest.questionType === 'pdf_upload') {
+            if (!newTest.title.trim()) {
+                setParseError('Please provide a test title');
+                return;
+            }
+            if (!pdfFile) {
+                setPdfUploadError('Please upload a PDF file');
+                return;
+            }
+
+            setIsCreating(true);
+            try {
+                // Upload PDF to Firebase Storage first
+                const pdfDownloadUrl = await uploadTestPDF(pdfFile, newTest.title, user!.uid);
+
+                const testId = await createTest({
+                    title: newTest.title,
+                    subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
+                    targetClass: newTest.targetClass,
+                    createdBy: user!.uid,
+                    isActive: true,
+                    questionCount: 0,
+                    isPdfTest: true,
+                    pdfUrl: pdfDownloadUrl,
+                    pdfFileName: pdfFile.name || 'test-paper.pdf',
+                    difficultyLevel: newTest.difficultyLevel,
+                    isCombinedSubject: newTest.isCombinedSubject,
+                    combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
+                    isScheduleEnabled: newTest.isScheduleEnabled,
+                    ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
+                });
+
+                // Send push notification to students in the target class
+                createTestNotification(
+                    { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
+                    user!.name
+                ).catch(err => console.error('Error sending test notification:', err));
+
+                setCreateSuccess(true);
+                setTimeout(() => {
+                    setShowCreateModal(false);
+                    setCreateSuccess(false);
+                    resetCreateForm();
+                }, 2000);
+            } catch (error) {
+                console.error('Error creating PDF test:', error);
+                setPdfUploadError(error instanceof Error ? error.message : 'Failed to create PDF test. Please try again.');
+            } finally {
+                setIsCreating(false);
+            }
+            return;
+        }
+
         // For mixed type, always use parsedQuestions; for manual mode use manualQuestions
         const questions = newTest.questionType === 'mixed'
             ? parsedQuestions
@@ -617,6 +699,10 @@ export default function TeacherDashboard() {
         setUploadMethod('csv');
         setCreateStep(1);
         setCurrentQuestion({ text: '', options: ['', '', '', ''], correctOption: 0, type: 'mcq', correctAnswer: '', explanation: '' });
+        // Clear PDF states
+        setPdfFile(null);
+        setPdfBase64('');
+        setPdfUploadError(null);
     };
 
     // Delete test
@@ -1401,6 +1487,11 @@ export default function TeacherDashboard() {
                                                                 Scheduled
                                                             </span>
                                                         )}
+                                                        {test.isPdfTest && (
+                                                            <span className="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                📋 PDF Paper
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                                     {test.isCombinedSubject && test.combinedSubjects && test.combinedSubjects.length > 0 && (
@@ -1421,8 +1512,14 @@ export default function TeacherDashboard() {
                                             </div>
 
                                             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                                <span>{test.questionCount || 0} Questions</span>
-                                                {test.duration && <span>{test.duration} min</span>}
+                                                {test.isPdfTest ? (
+                                                    <span className="flex items-center gap-1">📄 {test.pdfFileName || 'PDF Paper'}</span>
+                                                ) : (
+                                                    <>
+                                                        <span>{test.questionCount || 0} Questions</span>
+                                                        {test.duration && <span>{test.duration} min</span>}
+                                                    </>
+                                                )}
                                             </div>
 
                                             {/* Scheduled Start Time Info */}
@@ -2271,15 +2368,98 @@ export default function TeacherDashboard() {
                                                 <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 flex items-center gap-3">
                                                     <span className="text-2xl">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.icon}</span>
                                                     <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.label} Questions</p>
+                                                        <p className="font-medium text-gray-900 dark:text-white">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.label}{newTest.questionType !== 'pdf_upload' ? ' Questions' : ''}</p>
                                                         <p className="text-sm text-gray-600 dark:text-gray-400">
                                                             {newTest.questionType === 'mixed'
                                                                 ? 'Paste JSON with mixed question types (MCQ, True/False, Fill Blank, etc.)'
-                                                                : `Upload or enter your ${newTest.questionType.replace('_', ' ')} questions`
+                                                                : newTest.questionType === 'pdf_upload'
+                                                                    ? 'Upload a PDF test paper for students to view and download'
+                                                                    : `Upload or enter your ${newTest.questionType.replace('_', ' ')} questions`
                                                             }
                                                         </p>
                                                     </div>
                                                 </div>
+
+                                                {/* PDF Upload Section */}
+                                                {newTest.questionType === 'pdf_upload' ? (
+                                                    <div className="space-y-4">
+                                                        <div
+                                                            className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all ${pdfFile ? 'border-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-[#1650EB] dark:hover:border-[#6095DB] bg-gray-50 dark:bg-gray-800/50'}`}
+                                                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                const file = e.dataTransfer.files[0];
+                                                                if (file) handlePDFUpload(file);
+                                                            }}
+                                                        >
+                                                            {pdfFile ? (
+                                                                <div className="space-y-3">
+                                                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-2xl flex items-center justify-center mx-auto">
+                                                                        <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-gray-900 dark:text-white">{pdfFile.name}</p>
+                                                                        <p className="text-sm text-gray-500 dark:text-gray-400">{(pdfFile.size / 1024).toFixed(1)} KB</p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => { setPdfFile(null); setPdfBase64(''); setPdfUploadError(null); }}
+                                                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                                    >
+                                                                        <X className="w-4 h-4" /> Remove & Upload Different File
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-3">
+                                                                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center mx-auto">
+                                                                        <Upload className="w-8 h-8 text-[#1650EB] dark:text-[#6095DB]" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-gray-900 dark:text-white">Drag & drop your PDF here</p>
+                                                                        <p className="text-sm text-gray-500 dark:text-gray-400">or click to browse (max 50MB)</p>
+                                                                    </div>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept=".pdf,application/pdf"
+                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) handlePDFUpload(file);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {pdfUploadError && (
+                                                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                                                                <p className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2"><AlertCircle className="w-4 h-4" />{pdfUploadError}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {pdfFile && (
+                                                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                                                                <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2"><CheckCircle className="w-4 h-4" />PDF ready to upload! Students will be able to view and download this file.</p>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                                                            <div className="flex items-start gap-3">
+                                                                <span className="text-xl">💡</span>
+                                                                <div>
+                                                                    <p className="font-medium text-amber-900 dark:text-amber-200">How it works</p>
+                                                                    <ul className="text-sm text-amber-700 dark:text-amber-300 mt-1 space-y-1 list-disc list-inside">
+                                                                        <li>The PDF test will appear in the student&apos;s test list like regular tests</li>
+                                                                        <li>Students can view the PDF directly or download it</li>
+                                                                        <li>This is ideal for handwritten tests or printed question papers</li>
+                                                                        <li>Files up to 50MB are supported</li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                <>
 
                                                 {/* AI Tip for Mixed/Comprehensive */}
                                                 {newTest.questionType === 'mixed' && (
@@ -2474,6 +2654,8 @@ export default function TeacherDashboard() {
                                                         <p className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2"><AlertCircle className="w-4 h-4" />{parseError}</p>
                                                     </div>
                                                 )}
+                                                </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -2488,7 +2670,7 @@ export default function TeacherDashboard() {
                                                 Next <ArrowRight className="w-4 h-4" />
                                             </button>
                                         ) : (
-                                            <button onClick={handleCreateTest} disabled={isCreating || (newTest.questionType === 'mixed' ? parsedQuestions.length === 0 : (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0))} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button onClick={handleCreateTest} disabled={isCreating || (newTest.questionType === 'pdf_upload' ? !pdfFile : (newTest.questionType === 'mixed' ? parsedQuestions.length === 0 : (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)))} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><CheckCircle className="w-4 h-4" /> Create Test</>}
                                             </button>
                                         )}
