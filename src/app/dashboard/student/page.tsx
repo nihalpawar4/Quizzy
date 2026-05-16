@@ -1091,7 +1091,12 @@ export default function StudentDashboard() {
                                                         {test.pdfUrl && (
                                                             <button
                                                                 onClick={() => {
-                                                                    window.open(test.pdfUrl!, '_blank');
+                                                                    const link = document.createElement('a');
+                                                                    link.href = test.pdfUrl!;
+                                                                    link.download = test.pdfFileName || `${test.title}.pdf`;
+                                                                    document.body.appendChild(link);
+                                                                    link.click();
+                                                                    document.body.removeChild(link);
                                                                 }}
                                                                 className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                                                                 title="Download PDF"
@@ -1845,7 +1850,12 @@ export default function StudentDashboard() {
                                     {selectedPdfTest.pdfUrl && (
                                         <button
                                             onClick={() => {
-                                                window.open(selectedPdfTest.pdfUrl!, '_blank');
+                                                const link = document.createElement('a');
+                                                link.href = selectedPdfTest.pdfUrl!;
+                                                link.download = selectedPdfTest.pdfFileName || `${selectedPdfTest.title}.pdf`;
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
                                             }}
                                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
                                         >

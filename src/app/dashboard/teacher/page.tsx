@@ -82,7 +82,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuestion } from '@/lib/qaService';
-import { uploadTestPDF, getMaxPDFSizeMB } from '@/lib/pdfUploadService';
+import { validatePDF, convertPDFToBase64, getMaxPDFSizeKB } from '@/lib/pdfUploadService';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed' | 'pdf_upload';
@@ -477,21 +477,22 @@ export default function TeacherDashboard() {
     const handlePDFUpload = async (file: File) => {
         setPdfUploadError(null);
 
-        // Validate file type
-        if (file.type !== 'application/pdf') {
-            setPdfUploadError('Only PDF files are allowed.');
-            return;
-        }
-
-        // Max 50MB via Firebase Storage
-        const maxSize = getMaxPDFSizeMB();
-        if (file.size > maxSize * 1024 * 1024) {
-            setPdfUploadError(`PDF file must be less than ${maxSize}MB. Current size: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+        // Validate file type and size
+        const validationError = validatePDF(file);
+        if (validationError) {
+            setPdfUploadError(validationError);
             return;
         }
 
         setPdfFile(file);
-        setPdfBase64('ready'); // Flag that file is ready (actual upload happens on create)
+
+        try {
+            const base64 = await convertPDFToBase64(file);
+            setPdfBase64(base64);
+        } catch (error) {
+            setPdfUploadError(error instanceof Error ? error.message : 'Failed to process PDF');
+            setPdfFile(null);
+        }
     };
 
     // Handle JSON paste
@@ -569,16 +570,13 @@ export default function TeacherDashboard() {
                 setParseError('Please provide a test title');
                 return;
             }
-            if (!pdfFile) {
+            if (!pdfBase64) {
                 setPdfUploadError('Please upload a PDF file');
                 return;
             }
 
             setIsCreating(true);
             try {
-                // Upload PDF to Firebase Storage first
-                const pdfDownloadUrl = await uploadTestPDF(pdfFile, newTest.title, user!.uid);
-
                 const testId = await createTest({
                     title: newTest.title,
                     subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
@@ -587,8 +585,8 @@ export default function TeacherDashboard() {
                     isActive: true,
                     questionCount: 0,
                     isPdfTest: true,
-                    pdfUrl: pdfDownloadUrl,
-                    pdfFileName: pdfFile.name || 'test-paper.pdf',
+                    pdfUrl: pdfBase64,
+                    pdfFileName: pdfFile?.name || 'test-paper.pdf',
                     difficultyLevel: newTest.difficultyLevel,
                     isCombinedSubject: newTest.isCombinedSubject,
                     combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
@@ -2416,7 +2414,7 @@ export default function TeacherDashboard() {
                                                                     </div>
                                                                     <div>
                                                                         <p className="font-semibold text-gray-900 dark:text-white">Drag & drop your PDF here</p>
-                                                                        <p className="text-sm text-gray-500 dark:text-gray-400">or click to browse (max 50MB)</p>
+                                                                        <p className="text-sm text-gray-500 dark:text-gray-400">or click to browse (max 750KB)</p>
                                                                     </div>
                                                                     <input
                                                                         type="file"
@@ -2437,7 +2435,7 @@ export default function TeacherDashboard() {
                                                             </div>
                                                         )}
 
-                                                        {pdfFile && (
+                                                        {pdfBase64 && (
                                                             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
                                                                 <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2"><CheckCircle className="w-4 h-4" />PDF ready to upload! Students will be able to view and download this file.</p>
                                                             </div>
@@ -2452,7 +2450,7 @@ export default function TeacherDashboard() {
                                                                         <li>The PDF test will appear in the student&apos;s test list like regular tests</li>
                                                                         <li>Students can view the PDF directly or download it</li>
                                                                         <li>This is ideal for handwritten tests or printed question papers</li>
-                                                                        <li>Files up to 50MB are supported</li>
+                                                                        <li>Max file size: 750KB (compress at smallpdf.com if needed)</li>
                                                                     </ul>
                                                                 </div>
                                                             </div>
@@ -2670,7 +2668,7 @@ export default function TeacherDashboard() {
                                                 Next <ArrowRight className="w-4 h-4" />
                                             </button>
                                         ) : (
-                                            <button onClick={handleCreateTest} disabled={isCreating || (newTest.questionType === 'pdf_upload' ? !pdfFile : (newTest.questionType === 'mixed' ? parsedQuestions.length === 0 : (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)))} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button onClick={handleCreateTest} disabled={isCreating || (newTest.questionType === 'pdf_upload' ? !pdfBase64 : (newTest.questionType === 'mixed' ? parsedQuestions.length === 0 : (uploadMethod === 'manual' ? manualQuestions.length === 0 : parsedQuestions.length === 0)))} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><CheckCircle className="w-4 h-4" /> Create Test</>}
                                             </button>
                                         )}

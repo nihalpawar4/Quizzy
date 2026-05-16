@@ -16,7 +16,6 @@ import {
 } from 'firebase/auth';
 
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 
 // Your VAPID key for push notifications
@@ -162,9 +161,6 @@ if (typeof window !== 'undefined') {
 // Initialize Firestore
 const db = getFirestore(app);
 
-// Initialize Firebase Storage (for PDF uploads, etc.)
-const storage = getStorage(app);
-
 // Initialize Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
@@ -247,7 +243,6 @@ export {
     app,
     auth,
     db,
-    storage,
     googleProvider,
     initializeMessaging,
     requestNotificationPermission,
