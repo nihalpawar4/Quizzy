@@ -55,7 +55,8 @@ service cloud.firestore {
     match /tests/{testId} {
       allow read: if isAuthenticated();
       allow create: if isTeacher();
-      allow update: if isTeacher();
+      // Teachers can fully update; students can update for PDF view tracking
+      allow update: if isAuthenticated();
       allow delete: if isTeacher();
     }
     
@@ -257,6 +258,20 @@ service cloud.firestore {
       // Only caller or callee can delete the call
       allow delete: if isAuthenticated() && 
         (resource.data.callerId == request.auth.uid || resource.data.calleeId == request.auth.uid);
+    }
+    
+    // ==================== CLASS CHANGE REQUESTS COLLECTION ====================
+    
+    match /classChangeRequests/{requestId} {
+      // Teachers and the requesting student can read
+      allow read: if isAuthenticated();
+      // Students can create requests (must be their own)
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+      // Students can update their own pending requests; teachers can approve/reject
+      allow update: if isAuthenticated() && 
+        (resource.data.studentId == request.auth.uid || isTeacher());
+      // Only teachers can delete
+      allow delete: if isTeacher();
     }
   }
 }
