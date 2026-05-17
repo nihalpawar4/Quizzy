@@ -22,7 +22,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { COLLECTIONS } from './constants';
-import type { User, Test, Question, TestResult } from '@/types';
+import type { User, Test, Question, TestResult, ClassChangeRequest } from '@/types';
 import type { ParsedQuestion } from './utils/parseQuestions';
 
 
@@ -62,7 +62,7 @@ export async function getUserProfile(uid: string): Promise<User | null> {
  */
 export async function updateUserClass(uid: string, studentClass: number) {
     const userRef = doc(db, COLLECTIONS.USERS, uid);
-    await updateDoc(userRef, { studentClass });
+    await updateDoc(userRef, { studentClass, pendingClassChange: null });
 }
 
 /**
@@ -1013,4 +1013,180 @@ export async function deleteRelatedAnnouncements(
     }
 
     return deletedCount;
+}
+
+// ==================== PDF VIEW TRACKING ====================
+
+/**
+ * Mark a PDF test as viewed by a student (tracked on the test document)
+ */
+export async function markPdfTestViewed(
+    testId: string,
+    studentId: string,
+    studentName: string
+): Promise<void> {
+    const testRef = doc(db, COLLECTIONS.TESTS, testId);
+    await updateDoc(testRef, {
+        [`pdfViewedBy.${studentId}`]: {
+            name: studentName,
+            viewedAt: Timestamp.now()
+        }
+    });
+}
+
+// ==================== CLASS CHANGE REQUEST OPERATIONS ====================
+
+/**
+ * Submit a class change request (instead of directly changing class)
+ */
+export async function requestClassChange(
+    studentId: string,
+    studentName: string,
+    studentEmail: string,
+    currentClass: number,
+    requestedClass: number
+): Promise<string> {
+    // Check for existing pending request
+    const requestsRef = collection(db, COLLECTIONS.CLASS_CHANGE_REQUESTS);
+    const existingQuery = query(
+        requestsRef,
+        where('studentId', '==', studentId),
+        where('status', '==', 'pending')
+    );
+    const existing = await getDocs(existingQuery);
+    if (!existing.empty) {
+        // Update existing request instead of creating a new one
+        const existingDoc = existing.docs[0];
+        await updateDoc(existingDoc.ref, {
+            requestedClass,
+            createdAt: Timestamp.now()
+        });
+        // Update pendingClassChange on user profile
+        const userRef = doc(db, COLLECTIONS.USERS, studentId);
+        await updateDoc(userRef, { pendingClassChange: requestedClass });
+        return existingDoc.id;
+    }
+
+    const docRef = await addDoc(requestsRef, {
+        studentId,
+        studentName,
+        studentEmail,
+        currentClass,
+        requestedClass,
+        status: 'pending',
+        createdAt: Timestamp.now()
+    });
+
+    // Also set pendingClassChange on user profile so student sees pending status
+    const userRef = doc(db, COLLECTIONS.USERS, studentId);
+    await updateDoc(userRef, { pendingClassChange: requestedClass });
+
+    return docRef.id;
+}
+
+/**
+ * Get all pending class change requests (for teachers)
+ */
+export async function getPendingClassChangeRequests(): Promise<ClassChangeRequest[]> {
+    const requestsRef = collection(db, COLLECTIONS.CLASS_CHANGE_REQUESTS);
+    const q = query(
+        requestsRef,
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        resolvedAt: doc.data().resolvedAt?.toDate() || undefined
+    })) as ClassChangeRequest[];
+}
+
+/**
+ * Subscribe to pending class change requests (real-time for teachers)
+ */
+export function subscribeToPendingClassChangeRequests(
+    callback: (requests: ClassChangeRequest[]) => void
+): Unsubscribe {
+    const requestsRef = collection(db, COLLECTIONS.CLASS_CHANGE_REQUESTS);
+    const q = query(
+        requestsRef,
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const requests: ClassChangeRequest[] = [];
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            requests.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                resolvedAt: data.resolvedAt?.toDate() || undefined
+            } as ClassChangeRequest);
+        });
+        callback(requests);
+    });
+}
+
+/**
+ * Approve a class change request
+ */
+export async function approveClassChange(
+    requestId: string,
+    teacherId: string,
+    teacherName: string
+): Promise<void> {
+    const requestRef = doc(db, COLLECTIONS.CLASS_CHANGE_REQUESTS, requestId);
+    const requestSnap = await getDoc(requestRef);
+
+    if (!requestSnap.exists()) throw new Error('Request not found');
+
+    const data = requestSnap.data();
+
+    // Update the request status
+    await updateDoc(requestRef, {
+        status: 'approved',
+        resolvedAt: Timestamp.now(),
+        resolvedBy: teacherId,
+        resolvedByName: teacherName
+    });
+
+    // Actually update the student's class
+    const userRef = doc(db, COLLECTIONS.USERS, data.studentId);
+    await updateDoc(userRef, {
+        studentClass: data.requestedClass,
+        pendingClassChange: null
+    });
+}
+
+/**
+ * Reject a class change request
+ */
+export async function rejectClassChange(
+    requestId: string,
+    teacherId: string,
+    teacherName: string
+): Promise<void> {
+    const requestRef = doc(db, COLLECTIONS.CLASS_CHANGE_REQUESTS, requestId);
+    const requestSnap = await getDoc(requestRef);
+
+    if (!requestSnap.exists()) throw new Error('Request not found');
+
+    const data = requestSnap.data();
+
+    // Update the request status
+    await updateDoc(requestRef, {
+        status: 'rejected',
+        resolvedAt: Timestamp.now(),
+        resolvedBy: teacherId,
+        resolvedByName: teacherName
+    });
+
+    // Clear the pending change on user profile
+    const userRef = doc(db, COLLECTIONS.USERS, data.studentId);
+    await updateDoc(userRef, { pendingClassChange: null });
 }

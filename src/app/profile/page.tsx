@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext'
-import { updateUserClass } from '@/lib/services';
+import { requestClassChange } from '@/lib/services';
 import { CLASS_OPTIONS } from '@/lib/constants';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -88,13 +88,19 @@ export default function ProfilePage() {
         setClassError(null);
         setClassSuccess(false);
         try {
-            await updateUserClass(user.uid, studentClass);
-            // Refresh user in AuthContext so dashboard listeners re-subscribe to new class data instantly
+            await requestClassChange(
+                user.uid,
+                user.name,
+                user.email,
+                user.studentClass || 0,
+                studentClass
+            );
+            // Refresh user in AuthContext so pendingClassChange is reflected
             await refreshUser();
             setClassSuccess(true);
-            setTimeout(() => setClassSuccess(false), 3000);
+            setTimeout(() => setClassSuccess(false), 5000);
         } catch {
-            setClassError('Failed to update class. Please try again.');
+            setClassError('Failed to submit class change request. Please try again.');
         } finally {
             setIsUpdatingClass(false);
         }
@@ -364,19 +370,40 @@ export default function ProfilePage() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-900 dark:text-white">Class Selection</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Update your current class</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Request a class change (requires teacher approval)</p>
                                 </div>
                             </div>
                             {classError && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-700 dark:text-red-400">{classError}</p></div>}
-                            {classSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Class updated successfully!</p></div>}
+                            {classSuccess && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-sm text-green-700 dark:text-green-400">Class change request submitted! Your teacher will review it shortly.</p></div>}
+
+                            {/* Pending Request Banner */}
+                            {user.pendingClassChange && (
+                                <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                                            Pending Approval
+                                        </p>
+                                    </div>
+                                    <p className="text-sm text-amber-600 dark:text-amber-500">
+                                        Your request to change to <strong>Class {user.pendingClassChange}</strong> is awaiting teacher approval.
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="flex gap-4">
-                                <select value={studentClass} onChange={(e) => setStudentClass(Number(e.target.value))} className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all">
+                                <select value={studentClass} onChange={(e) => setStudentClass(Number(e.target.value))} className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all" disabled={!!user.pendingClassChange}>
                                     {CLASS_OPTIONS.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
                                 </select>
-                                <button onClick={handleUpdateClass} disabled={isUpdatingClass || studentClass === user.studentClass} className="flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                    {isUpdatingClass ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Save
+                                <button onClick={handleUpdateClass} disabled={isUpdatingClass || studentClass === user.studentClass || !!user.pendingClassChange} className="flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    {isUpdatingClass ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} {user.pendingClassChange ? 'Pending' : 'Request'}
                                 </button>
                             </div>
+
+                            <p className="mt-3 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                <Shield className="w-3 h-3" />
+                                Class changes require teacher approval for integrity and privacy.
+                            </p>
                         </motion.div>
                     )}
 

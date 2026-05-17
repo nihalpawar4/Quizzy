@@ -20,6 +20,23 @@ export interface User {
     isRestricted?: boolean; // If true, student cannot login
     // Privacy settings (for teachers)
     hideContactInfo?: boolean; // If true, hide email from students
+    // Pending class change (awaiting teacher approval)
+    pendingClassChange?: number; // Requested class number
+}
+
+// Class change request (requires teacher approval)
+export interface ClassChangeRequest {
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentEmail: string;
+    currentClass: number;
+    requestedClass: number;
+    status: 'pending' | 'approved' | 'rejected';
+    createdAt: Date;
+    resolvedAt?: Date;
+    resolvedBy?: string; // teacher uid
+    resolvedByName?: string;
 }
 
 // Test Types
@@ -52,6 +69,8 @@ export interface Test {
     isPdfTest?: boolean; // If true, this test is a PDF upload (no interactive questions)
     pdfUrl?: string; // Base64 data URL of the uploaded PDF file
     pdfFileName?: string; // Original filename of the uploaded PDF
+    // PDF view tracking: map of studentId -> { name, viewedAt }
+    pdfViewedBy?: { [studentId: string]: { name: string; viewedAt: Date } };
 }
 
 // Question Types - supports multiple formats

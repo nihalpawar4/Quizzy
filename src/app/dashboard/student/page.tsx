@@ -36,7 +36,7 @@ import {
     Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload } from '@/lib/services';
+import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
 import type { Test, TestResult, SubjectNote, Notification } from '@/types';
@@ -117,6 +117,15 @@ export default function StudentDashboard() {
         }
         return () => { document.body.style.overflow = ''; };
     }, [isAnyModalOpen]);
+
+    // Track PDF views when student opens viewer
+    useEffect(() => {
+        if (selectedPdfTest && user?.uid && user?.name) {
+            markPdfTestViewed(selectedPdfTest.id, user.uid, user.name).catch(err =>
+                console.error('[Quizy] Error marking PDF as viewed:', err)
+            );
+        }
+    }, [selectedPdfTest, user?.uid, user?.name]);
 
     // Auto-close profile dropdown after 3 seconds
     useEffect(() => {

@@ -82,5 +82,7 @@ export const COLLECTIONS = {
     CHAT_NOTIFICATIONS: 'chatNotifications',
     // WebRTC Call collections
     CALLS: 'calls',
+    // Class change requests (teacher approval)
+    CLASS_CHANGE_REQUESTS: 'classChangeRequests',
 } as const;
 

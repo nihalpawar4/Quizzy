@@ -72,12 +72,15 @@ import {
     subscribeToTeacherAnnouncements,
     deleteNotification,
     deleteRelatedAnnouncements,
-    evaluatePdfTestResult
+    evaluatePdfTestResult,
+    subscribeToPendingClassChangeRequests,
+    approveClassChange,
+    rejectClassChange
 } from '@/lib/services';
 import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
-import type { Test, TestResult, User, SubjectNote, Notification } from '@/types';
+import type { Test, TestResult, User, SubjectNote, Notification, ClassChangeRequest } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -307,6 +310,10 @@ export default function TeacherDashboard() {
     const [loadingPending, setLoadingPending] = useState(false);
     const [moderatingId, setModeratingId] = useState<string | null>(null);
 
+    // Class change request states
+    const [classChangeRequests, setClassChangeRequests] = useState<ClassChangeRequest[]>([]);
+    const [processingClassChange, setProcessingClassChange] = useState<string | null>(null);
+
     // Lock body scroll when any modal is open
     const isAnyModalOpen = showCreateModal || showEditModal || showNotesModal || showDetailedAnalytics || showTestsModal || showStudentsModal || showSubmissionsModal || showScoreModal || !!selectedProctoringResult || showAnnouncementModal || showManageAnnouncementsModal;
     useEffect(() => {
@@ -427,6 +434,17 @@ export default function TeacherDashboard() {
         return () => unsubscribe();
     }, [user?.uid]);
 
+    // Real-time listener for class change requests
+    useEffect(() => {
+        if (!user) return;
+
+        const unsubscribe = subscribeToPendingClassChangeRequests((requests) => {
+            setClassChangeRequests(requests);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
     // Load pending questions when Q&A tab is active
     const loadPendingQuestions = useCallback(async () => {
         setLoadingPending(true);
@@ -466,6 +484,34 @@ export default function TeacherDashboard() {
             console.error('Error rejecting question:', err);
         } finally {
             setModeratingId(null);
+        }
+    };
+
+    // Handle class change approval
+    const handleApproveClassChange = async (requestId: string) => {
+        if (!user) return;
+        setProcessingClassChange(requestId);
+        try {
+            await approveClassChange(requestId, user.uid, user.name);
+            // Refresh students list
+            await loadStudents();
+        } catch (err) {
+            console.error('Error approving class change:', err);
+        } finally {
+            setProcessingClassChange(null);
+        }
+    };
+
+    // Handle class change rejection
+    const handleRejectClassChange = async (requestId: string) => {
+        if (!user) return;
+        setProcessingClassChange(requestId);
+        try {
+            await rejectClassChange(requestId, user.uid, user.name);
+        } catch (err) {
+            console.error('Error rejecting class change:', err);
+        } finally {
+            setProcessingClassChange(null);
         }
     };
 
@@ -1378,18 +1424,25 @@ export default function TeacherDashboard() {
                     </button>
                     <button
                         onClick={() => { setShowStudentsModal(true); }}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group border-gray-200 dark:border-gray-800`}
+                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${classChangeRequests.length > 0 ? 'border-amber-300 dark:border-amber-700 ring-2 ring-amber-300/30' : 'border-gray-200 dark:border-gray-800'}`}
                     >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <div className="relative w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                {classChangeRequests.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                                        {classChangeRequests.length}
+                                    </span>
+                                )}
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{students.length}</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Students</p>
                             </div>
                         </div>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all students →</p>
+                        <p className={`text-xs mt-3 ${classChangeRequests.length > 0 ? 'text-amber-600 dark:text-amber-400 font-medium opacity-100' : 'text-green-600 dark:text-green-400 opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                            {classChangeRequests.length > 0 ? `${classChangeRequests.length} class change request${classChangeRequests.length > 1 ? 's' : ''} pending →` : 'Click to view all students →'}
+                        </p>
                     </button>
                     <button
                         onClick={() => { setActiveTab('analytics'); setShowSubmissionsModal(true); }}
@@ -1592,6 +1645,32 @@ export default function TeacherDashboard() {
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* PDF Viewed By Tracking */}
+                                            {test.isPdfTest && test.pdfViewedBy && Object.keys(test.pdfViewedBy).length > 0 && (
+                                                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Eye className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                                                            {Object.keys(test.pdfViewedBy).length} student{Object.keys(test.pdfViewedBy).length > 1 ? 's' : ''} viewed
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                                                        {Object.entries(test.pdfViewedBy).map(([studentId, info]) => (
+                                                            <div key={studentId} className="flex items-center justify-between text-xs">
+                                                                <span className="text-blue-800 dark:text-blue-300 truncate">{(info as { name: string; viewedAt: { toDate?: () => Date } }).name}</span>
+                                                                <span className="text-blue-500 dark:text-blue-400 flex-shrink-0 ml-2">
+                                                                    {(() => {
+                                                                        const viewedAt = (info as { name: string; viewedAt: { toDate?: () => Date } }).viewedAt;
+                                                                        const date = viewedAt?.toDate ? viewedAt.toDate() : (viewedAt instanceof Date ? viewedAt : new Date(viewedAt as unknown as string));
+                                                                        return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                                                                    })()}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* PDF Submissions List for grading */}
                                             {test.isPdfTest && testResults.length > 0 && (
@@ -2958,6 +3037,63 @@ export default function TeacherDashboard() {
                                 <button onClick={() => setShowStudentsModal(false)} className="p-2 text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-6">
+                                {/* Class Change Requests Section */}
+                                {classChangeRequests.length > 0 && (
+                                    <div className="mb-6">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                                                Pending Class Change Requests ({classChangeRequests.length})
+                                            </h4>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {classChangeRequests.map((request) => (
+                                                <div key={request.id} className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h5 className="font-semibold text-gray-900 dark:text-white text-sm">{request.studentName}</h5>
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400">{request.studentEmail}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full">
+                                                                    Class {request.currentClass}
+                                                                </span>
+                                                                <ArrowRight className="w-3 h-3 text-amber-500" />
+                                                                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-xs font-semibold rounded-full">
+                                                                    Class {request.requestedClass}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                                Requested {request.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => handleRejectClassChange(request.id)}
+                                                                disabled={processingClassChange === request.id}
+                                                                className="p-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                                                                title="Reject"
+                                                            >
+                                                                {processingClassChange === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleApproveClassChange(request.id)}
+                                                                disabled={processingClassChange === request.id}
+                                                                className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                                                                title="Approve"
+                                                            >
+                                                                {processingClassChange === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                                                Approve
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {students.length === 0 ? (
                                     <p className="text-center text-gray-500 py-8">No students registered yet.</p>
                                 ) : (
