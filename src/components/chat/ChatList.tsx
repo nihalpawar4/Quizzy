@@ -2,13 +2,14 @@
 
 /**
  * Chat List Component
- * Shows all conversations with last message preview, pin support
+ * WhatsApp-style conversation list with premium design
+ * Shows all conversations with last message preview, pin support, typing indicator
  */
 
 import React from 'react';
-import { MessageCircle, Search, Plus, Trash2, Pin, PinOff } from 'lucide-react';
+import { MessageCircle, Search, Plus, Trash2, Pin, PinOff, Check, CheckCheck } from 'lucide-react';
 import type { Chat, UserPresence } from '@/types';
-import { formatLastSeen } from '@/lib/chatServices';
+import { formatChatListTime } from '@/lib/chatServices';
 import OnlineStatus from './OnlineStatus';
 
 interface ChatListProps {
@@ -95,6 +96,40 @@ export default function ChatList({
         setDeleteConfirm(null);
     }, [currentChatId]);
 
+    // Get last message preview text
+    const getLastMessagePreview = (chat: Chat) => {
+        if (!chat.lastMessage) return 'No messages yet';
+
+        const participant = getOtherParticipant(chat);
+        const presence = presenceMap[participant.id];
+
+        // Show typing indicator instead of last message
+        if (presence?.typing?.chatId === chat.id) {
+            return null; // Will render typing indicator separately
+        }
+
+        const isMine = chat.lastMessage.senderId === currentUserId;
+        const prefix = isMine ? 'You: ' : '';
+        return `${prefix}${chat.lastMessage.text}`;
+    };
+
+    // Check if other user is typing in this chat
+    const isOtherTyping = (chat: Chat) => {
+        const participant = getOtherParticipant(chat);
+        const presence = presenceMap[participant.id];
+        return presence?.typing?.chatId === chat.id;
+    };
+
+    // Get message status icon for last message (own messages)
+    const getStatusIcon = (chat: Chat) => {
+        if (!chat.lastMessage || chat.lastMessage.senderId !== currentUserId) return null;
+        const status = chat.lastMessage.status;
+        if (status === 'seen') return <CheckCheck className="w-4 h-4 text-blue-400 flex-shrink-0" />;
+        if (status === 'delivered') return <CheckCheck className="w-4 h-4 text-gray-400 flex-shrink-0" />;
+        if (status === 'sent') return <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />;
+        return null;
+    };
+
     if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center bg-white dark:bg-gray-950">
@@ -158,44 +193,39 @@ export default function ChatList({
                         </button>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <div>
                         {sortedChats.map(chat => {
                             const participant = getOtherParticipant(chat);
                             const presence = presenceMap[participant.id];
                             const isSelected = currentChatId === chat.id;
                             const unreadCount = chat.unreadCount[currentUserId] || 0;
                             const isPinned = chat.pinnedBy?.includes(currentUserId) || false;
+                            const typing = isOtherTyping(chat);
+                            const lastMsgPreview = getLastMessagePreview(chat);
+                            const statusIcon = getStatusIcon(chat);
 
                             return (
                                 <div
                                     key={chat.id}
                                     onClick={() => onSelectChat(chat)}
                                     className={`
-                                        flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 relative
+                                        chat-list-item flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 relative
                                         ${isSelected
-                                            ? 'bg-[#1650EB]/10 border-l-4 border-[#1650EB]'
-                                            : 'hover:bg-gray-50 dark:hover:bg-gray-900 border-l-4 border-transparent'
+                                            ? 'chat-list-active'
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-900/70 border-l-3 border-transparent'
                                         }
-                                        ${isPinned ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}
                                     `}
                                 >
-                                    {/* Pin indicator */}
-                                    {isPinned && (
-                                        <div className="absolute top-2 right-2">
-                                            <Pin className="w-3 h-3 text-amber-500 rotate-45" />
-                                        </div>
-                                    )}
-
                                     {/* Avatar with profile picture */}
                                     <div className="relative flex-shrink-0">
                                         {chat.participantPhotoURLs?.[participant.id] ? (
                                             <img
                                                 src={chat.participantPhotoURLs[participant.id]}
                                                 alt={participant.name}
-                                                className="w-12 h-12 rounded-full object-cover"
+                                                className={`w-[52px] h-[52px] rounded-full object-cover ${isSelected ? 'ring-2 ring-[#1650EB]/30' : ''}`}
                                             />
                                         ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center text-white font-bold text-lg">
+                                            <div className={`w-[52px] h-[52px] rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center text-white font-bold text-lg ${isSelected ? 'ring-2 ring-[#1650EB]/30' : ''}`}>
                                                 {participant.name.charAt(0).toUpperCase()}
                                             </div>
                                         )}
@@ -210,70 +240,91 @@ export default function ChatList({
 
                                     {/* Chat Info */}
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <h3 className={`font-semibold truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        {/* Top row: Name + Time */}
+                                        <div className="flex items-center justify-between mb-0.5">
+                                            <h3 className={`font-semibold truncate text-[15px] ${unreadCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 {participant.name}
                                             </h3>
-                                            {chat.lastMessage && (
-                                                <span className={`text-[10px] flex-shrink-0 ml-2 ${unreadCount > 0 ? 'text-[#1650EB] font-semibold' : 'text-gray-500'}`}>
-                                                    {formatLastSeen(chat.lastMessage.timestamp)}
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                                {isPinned && (
+                                                    <Pin className="w-3 h-3 text-gray-400 rotate-45" />
+                                                )}
+                                                {chat.lastMessage && (
+                                                    <span className={`text-[11px] ${unreadCount > 0 ? 'text-[#1650EB] font-semibold' : 'text-gray-500 dark:text-gray-500'}`}>
+                                                        {formatChatListTime(chat.lastMessage.timestamp)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
+                                        {/* Bottom row: Message preview + Badge/Actions */}
                                         <div className="flex items-center justify-between">
-                                            <p className={`text-sm truncate max-w-[180px] ${unreadCount > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                                                {chat.lastMessage?.text || 'No messages yet'}
-                                            </p>
+                                            <div className="flex items-center gap-1 min-w-0 flex-1">
+                                                {statusIcon}
+                                                {typing ? (
+                                                    <p className="text-sm text-green-500 dark:text-green-400 font-medium italic truncate">
+                                                        typing...
+                                                    </p>
+                                                ) : (
+                                                    <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                        {lastMsgPreview}
+                                                    </p>
+                                                )}
+                                            </div>
 
-                                            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                                                 {/* Unread badge */}
                                                 {unreadCount > 0 && (
-                                                    <span className="min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
+                                                    <span className="min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center text-[10px] text-white font-bold">
                                                         {unreadCount > 99 ? '99+' : unreadCount}
                                                     </span>
                                                 )}
 
-                                                {/* Pin/Unpin button */}
-                                                <button
-                                                    onClick={(e) => handlePinToggle(e, chat)}
-                                                    className={`
-                                                        p-1.5 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100
-                                                        ${isPinned
-                                                            ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-                                                            : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-                                                        }
-                                                    `}
-                                                    style={{ opacity: 1 }}
-                                                    title={isPinned ? 'Unpin chat' : 'Pin chat'}
-                                                >
-                                                    {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-                                                </button>
+                                                {/* Actions — visible on hover (desktop) or always on mobile */}
+                                                <div className="chat-actions flex items-center gap-0.5">
+                                                    {/* Pin/Unpin button */}
+                                                    <button
+                                                        onClick={(e) => handlePinToggle(e, chat)}
+                                                        className={`
+                                                            p-1.5 rounded-full transition-all duration-200
+                                                            ${isPinned
+                                                                ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                                                : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                                            }
+                                                        `}
+                                                        title={isPinned ? 'Unpin chat' : 'Pin chat'}
+                                                    >
+                                                        {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                                                    </button>
 
-                                                {/* Delete button */}
-                                                <button
-                                                    onClick={(e) => handleDeleteClick(e, chat.id)}
-                                                    className={`
-                                                        p-1.5 rounded-full transition-all duration-200
-                                                        ${deleteConfirm === chat.id
-                                                            ? 'bg-red-500 text-white'
-                                                            : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                                        }
-                                                    `}
-                                                    title={deleteConfirm === chat.id ? 'Click again to confirm' : 'Delete chat'}
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
+                                                    {/* Delete button */}
+                                                    <button
+                                                        onClick={(e) => handleDeleteClick(e, chat.id)}
+                                                        className={`
+                                                            p-1.5 rounded-full transition-all duration-200
+                                                            ${deleteConfirm === chat.id
+                                                                ? 'bg-red-500 text-white'
+                                                                : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                                            }
+                                                        `}
+                                                        title={deleteConfirm === chat.id ? 'Click again to confirm' : 'Delete chat'}
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Class badge for teachers viewing students */}
                                         {currentUserRole === 'teacher' && 'class' in participant && (
-                                            <span className="inline-block mt-1 px-2 py-0.5 bg-[#1650EB]/10 text-[#1650EB] dark:text-[#6095DB] text-[10px] rounded-full">
+                                            <span className="inline-block mt-1 px-2 py-0.5 bg-[#1650EB]/10 text-[#1650EB] dark:text-[#6095DB] text-[10px] rounded-full font-medium">
                                                 Class {participant.class}
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* Separator line */}
+                                    <div className="absolute bottom-0 left-[76px] right-0 h-px bg-gray-100 dark:bg-gray-800/60" />
                                 </div>
                             );
                         })}

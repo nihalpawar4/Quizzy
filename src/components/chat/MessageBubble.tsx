@@ -2,7 +2,7 @@
 
 /**
  * Message Bubble Component
- * Individual message display with actions: copy, delete, reply, forward
+ * WhatsApp-style message display with premium design, tails, and selection mode
  * Long-press on mobile / right-click on desktop to show actions
  */
 
@@ -10,28 +10,39 @@ import React, { useState, useRef, useCallback } from 'react';
 import type { Message } from '@/types';
 import { formatMessageTime } from '@/lib/chatServices';
 import MessageStatusIcon from './MessageStatusIcon';
-import { Copy, Trash2, Reply, Forward, X } from 'lucide-react';
+import { Copy, Trash2, Reply, Forward, X, CheckSquare } from 'lucide-react';
 
 interface MessageBubbleProps {
     message: Message;
     isOwn: boolean;
     showAvatar?: boolean;
+    showTail?: boolean;
     senderInitial?: string;
     isNew?: boolean;
     onReply?: (message: Message) => void;
     onDelete?: (messageId: string) => void;
     onForward?: (message: Message) => void;
+    // Selection mode props
+    isSelectionMode?: boolean;
+    isSelected?: boolean;
+    onToggleSelect?: (messageId: string) => void;
+    onEnterSelectionMode?: (messageId: string) => void;
 }
 
 export default function MessageBubble({
     message,
     isOwn,
     showAvatar = false,
+    showTail = false,
     senderInitial,
     isNew = false,
     onReply,
     onDelete,
     onForward,
+    isSelectionMode = false,
+    isSelected = false,
+    onToggleSelect,
+    onEnterSelectionMode,
 }: MessageBubbleProps) {
     const [showActions, setShowActions] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -42,11 +53,12 @@ export default function MessageBubble({
     // Long press handlers for mobile
     const handleTouchStart = useCallback(() => {
         longPressTimerRef.current = setTimeout(() => {
+            if (isSelectionMode) return;
             setShowActions(true);
             // Haptic feedback on supported devices
             if (navigator.vibrate) navigator.vibrate(30);
         }, 500);
-    }, []);
+    }, [isSelectionMode]);
 
     const handleTouchEnd = useCallback(() => {
         if (longPressTimerRef.current) {
@@ -57,9 +69,17 @@ export default function MessageBubble({
 
     // Right click for desktop
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        if (isSelectionMode) return;
         e.preventDefault();
         setShowActions(true);
-    }, []);
+    }, [isSelectionMode]);
+
+    // Click handler - in selection mode, toggle select
+    const handleClick = useCallback(() => {
+        if (isSelectionMode) {
+            onToggleSelect?.(message.id);
+        }
+    }, [isSelectionMode, message.id, onToggleSelect]);
 
     // Copy message text
     const handleCopy = useCallback(() => {
@@ -93,49 +113,81 @@ export default function MessageBubble({
         setShowActions(false);
     }, [message, onForward]);
 
+    // Enter selection mode
+    const handleSelect = useCallback(() => {
+        onEnterSelectionMode?.(message.id);
+        setShowActions(false);
+    }, [message.id, onEnterSelectionMode]);
+
     return (
         <>
             <div
                 ref={bubbleRef}
                 className={`
-                    flex items-end gap-2 group relative
+                    flex items-end gap-2 group relative px-1 py-0.5 rounded-lg transition-colors duration-150
                     ${isOwn ? 'flex-row-reverse' : 'flex-row'}
-                    ${isNew ? 'animate-slideInMessage' : 'animate-fadeIn'}
+                    ${isNew ? 'animate-slideInMessage' : ''}
+                    ${isSelected ? 'msg-selected' : ''}
+                    ${isSelectionMode ? 'cursor-pointer' : ''}
                 `}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchEnd}
+                onTouchStart={isSelectionMode ? undefined : handleTouchStart}
+                onTouchEnd={isSelectionMode ? undefined : handleTouchEnd}
+                onTouchCancel={isSelectionMode ? undefined : handleTouchEnd}
                 onContextMenu={handleContextMenu}
+                onClick={handleClick}
             >
-                {/* Avatar (only for received messages) */}
+                {/* Selection checkbox */}
+                {isSelectionMode && (
+                    <div className="flex items-center flex-shrink-0 animate-checkboxPop">
+                        <div className={`
+                            w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
+                            ${isSelected
+                                ? 'bg-[#1650EB] border-[#1650EB] scale-110'
+                                : 'border-gray-400 dark:border-gray-600'
+                            }
+                        `}>
+                            {isSelected && (
+                                <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Avatar (only for received messages with tail) */}
                 {showAvatar && !isOwn && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center flex-shrink-0 text-white text-sm font-bold shadow-md">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold shadow-md mb-0.5">
                         {senderInitial || message.senderName.charAt(0).toUpperCase()}
                     </div>
+                )}
+                {/* Spacer for alignment when no avatar */}
+                {!showAvatar && !isOwn && !isSelectionMode && (
+                    <div className="w-7 flex-shrink-0" />
                 )}
 
                 {/* Message Content */}
                 <div
                     className={`
-                        max-w-[75%] md:max-w-[60%] relative
+                        max-w-[75%] md:max-w-[60%]
                         ${isOwn
-                            ? 'bg-gradient-to-br from-[#1650EB] to-[#4A7FE0] rounded-2xl rounded-br-sm'
-                            : 'bg-white dark:bg-gray-800 rounded-2xl rounded-bl-sm border border-gray-100 dark:border-gray-700'
+                            ? `msg-bubble-own ${showTail ? 'msg-bubble-tail' : ''} bg-gradient-to-br from-[#1650EB] to-[#4A7FE0] ${showTail ? 'rounded-2xl rounded-br-[4px]' : 'rounded-2xl rounded-br-sm'}`
+                            : `msg-bubble-other ${showTail ? 'msg-bubble-tail' : ''} bg-white dark:bg-gray-800 ${showTail ? 'rounded-2xl rounded-bl-[4px]' : 'rounded-2xl rounded-bl-sm'} border border-gray-100 dark:border-gray-700`
                         }
-                        px-4 py-2.5 shadow-sm hover:shadow-md transition-shadow duration-200
+                        px-3 py-2 shadow-sm hover:shadow-md transition-all duration-200
                         ${showActions ? 'ring-2 ring-[#1650EB]/40' : ''}
                     `}
                 >
                     {/* Reply preview if replying to another message */}
                     {message.replyTo && (
                         <div className={`
-                            mb-2 px-3 py-1.5 rounded-lg text-xs border-l-3
+                            mb-1.5 px-2.5 py-1.5 rounded-lg text-xs border-l-[3px]
                             ${isOwn
-                                ? 'bg-white/10 border-l-white/40 text-white/80'
-                                : 'bg-[#1650EB]/5 border-l-[#1650EB] text-gray-600 dark:text-gray-300'
+                                ? 'bg-white/15 border-l-white/50 text-white/85'
+                                : 'bg-[#1650EB]/5 dark:bg-[#1650EB]/10 border-l-[#1650EB] text-gray-600 dark:text-gray-300'
                             }
                         `}>
-                            <p className={`font-semibold text-[10px] ${isOwn ? 'text-white/90' : 'text-[#1650EB]'}`}>
+                            <p className={`font-semibold text-[10px] mb-0.5 ${isOwn ? 'text-white/90' : 'text-[#1650EB]'}`}>
                                 {message.replyTo.senderName}
                             </p>
                             <p className="truncate">{message.replyTo.text}</p>
@@ -143,16 +195,16 @@ export default function MessageBubble({
                     )}
 
                     {/* Message Text */}
-                    <p className={`text-sm md:text-[15px] break-words whitespace-pre-wrap leading-relaxed ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                    <p className={`text-[14.5px] break-words whitespace-pre-wrap leading-[1.45] ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                         {message.text}
                     </p>
 
-                    {/* Time and Status */}
+                    {/* Time and Status — WhatsApp-style inline bottom-right */}
                     <div className={`
-                        flex items-center gap-1.5 mt-1
+                        flex items-center gap-1 mt-0.5 float-right ml-3 -mb-0.5
                         ${isOwn ? 'justify-end' : 'justify-start'}
                     `}>
-                        <span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}`}>
+                        <span className={`text-[10px] leading-none ${isOwn ? 'text-white/55' : 'text-gray-400 dark:text-gray-500'}`}>
                             {formatMessageTime(message.timestamp)}
                         </span>
 
@@ -161,10 +213,12 @@ export default function MessageBubble({
                             <MessageStatusIcon status={message.status} size="small" />
                         )}
                     </div>
+                    {/* Clear float */}
+                    <div className="clear-both" />
 
                     {/* Copy feedback toast */}
                     {copyFeedback && (
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-full shadow-lg animate-fadeIn whitespace-nowrap">
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-full shadow-lg animate-fadeIn whitespace-nowrap z-50">
                             ✓ Copied
                         </div>
                     )}
@@ -223,6 +277,15 @@ export default function MessageBubble({
                                 Forward
                             </button>
 
+                            {/* Select for multi-select */}
+                            <button
+                                onClick={handleSelect}
+                                className="w-full flex items-center gap-3 px-4 py-3.5 md:py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm active:bg-gray-100 dark:active:bg-gray-700"
+                            >
+                                <CheckSquare className="w-4 h-4 text-purple-500" />
+                                Select
+                            </button>
+
                             <div className="border-t border-gray-100 dark:border-gray-800" />
 
                             <button
@@ -260,9 +323,9 @@ export default function MessageBubble({
  */
 export function DateSeparator({ date }: { date: string }) {
     return (
-        <div className="flex items-center justify-center my-4">
-            <div className="bg-gray-200/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full backdrop-blur-sm">
-                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+        <div className="flex items-center justify-center my-3">
+            <div className="bg-white/90 dark:bg-gray-800/90 px-4 py-1 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-700">
+                <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">
                     {date}
                 </span>
             </div>
@@ -275,9 +338,9 @@ export function DateSeparator({ date }: { date: string }) {
  */
 export function SystemMessage({ text }: { text: string }) {
     return (
-        <div className="flex items-center justify-center my-3">
-            <div className="bg-[#1650EB]/10 dark:bg-[#1650EB]/20 px-4 py-1.5 rounded-full">
-                <span className="text-xs text-[#1650EB] dark:text-[#6095DB]">
+        <div className="flex items-center justify-center my-2">
+            <div className="bg-[#1650EB]/8 dark:bg-[#1650EB]/15 px-4 py-1 rounded-lg">
+                <span className="text-[11px] text-[#1650EB] dark:text-[#6095DB] font-medium">
                     {text}
                 </span>
             </div>

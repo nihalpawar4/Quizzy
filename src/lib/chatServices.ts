@@ -988,6 +988,76 @@ export function formatLastSeen(date: Date): string {
 }
 
 /**
+ * Format last seen with full date + time context (WhatsApp-style)
+ * Within 24h: "Last seen today at 3:45 PM"
+ * Yesterday:  "Last seen yesterday at 8:12 PM"
+ * Older:      "Last seen 18 May at 2:30 PM"
+ */
+export function formatLastSeenFull(date: Date): string {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const timeStr = date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+
+    if (msgDay.getTime() === today.getTime()) {
+        return `Last seen today at ${timeStr}`;
+    }
+    if (msgDay.getTime() === yesterday.getTime()) {
+        return `Last seen yesterday at ${timeStr}`;
+    }
+
+    const dateStr = date.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {})
+    });
+    return `Last seen ${dateStr} at ${timeStr}`;
+}
+
+/**
+ * Format chat list timestamp (WhatsApp-style short format)
+ * Today: "3:45 PM"
+ * Yesterday: "Yesterday"
+ * This week: "Mon", "Tue", etc.
+ * Older: "18/05/2025"
+ */
+export function formatChatListTime(date: Date): string {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const oneWeekAgo = new Date(today);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
+    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (msgDay.getTime() === today.getTime()) {
+        return date.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    }
+    if (msgDay.getTime() === yesterday.getTime()) {
+        return 'Yesterday';
+    }
+    if (msgDay >= oneWeekAgo) {
+        return date.toLocaleDateString('en-IN', { weekday: 'short' });
+    }
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+    });
+}
+
+/**
  * Format message time
  */
 export function formatMessageTime(date: Date): string {

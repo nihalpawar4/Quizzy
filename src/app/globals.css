@@ -399,6 +399,86 @@ body {
   animation: slideUpSheet 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* ==================== WHATSAPP-STYLE CHAT BUBBLES ==================== */
+
+/* Own message bubble tail (right side) */
+.msg-bubble-own {
+  position: relative;
+}
+.msg-bubble-own.msg-bubble-tail::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 10px 8px;
+  border-color: transparent transparent transparent #4A7FE0;
+}
+
+/* Received message bubble tail (left side) */
+.msg-bubble-other {
+  position: relative;
+}
+.msg-bubble-other.msg-bubble-tail::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 10px 0;
+  border-color: transparent white transparent transparent;
+}
+.dark .msg-bubble-other.msg-bubble-tail::after {
+  border-color: transparent #1f2937 transparent transparent;
+}
+
+/* Selection mode checkbox animation */
+@keyframes checkboxPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-checkboxPop {
+  animation: checkboxPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Selection toolbar slide down */
+@keyframes slideDownToolbar {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slideDownToolbar {
+  animation: slideDownToolbar 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Message select highlight */
+.msg-selected {
+  background-color: rgba(22, 80, 235, 0.08);
+}
+.dark .msg-selected {
+  background-color: rgba(22, 80, 235, 0.15);
+}
+
+/* Chat list item hover reveal */
+.chat-list-item .chat-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.chat-list-item:hover .chat-actions {
+  opacity: 1;
+}
+
+/* Chat list item active state */
+.chat-list-active {
+  background: linear-gradient(90deg, rgba(22, 80, 235, 0.12) 0%, rgba(22, 80, 235, 0.04) 100%);
+  border-left: 3px solid #1650EB;
+}
+
+
 /* Enrollment countdown & popup animations */
 @keyframes countdown-shimmer {
   0% {
