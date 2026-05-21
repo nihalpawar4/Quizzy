@@ -743,7 +743,7 @@ export async function markChatMessagesAsSeen(
 }
 
 /**
- * Delete message for a user
+ * Delete message for a user (only hides from current user)
  */
 export async function deleteMessageForUser(
     messageId: string,
@@ -752,6 +752,27 @@ export async function deleteMessageForUser(
     const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
     await updateDoc(messageRef, {
         deletedFor: arrayUnion(userId)
+    });
+}
+
+/**
+ * Delete message for everyone (replaces text, visible to all as deleted)
+ */
+export async function deleteMessageForEveryone(
+    messageId: string,
+    senderId: string
+): Promise<void> {
+    const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
+    const messageSnap = await getDoc(messageRef);
+    if (!messageSnap.exists()) return;
+
+    const data = messageSnap.data();
+    // Only allow the sender to delete for everyone
+    if (data.senderId !== senderId) return;
+
+    await updateDoc(messageRef, {
+        text: '🚫 This message was deleted',
+        deletedForEveryone: true
     });
 }
 

@@ -32,6 +32,7 @@ interface ChatWindowProps {
     replyingTo?: Message | null;
     onSetReplyingTo?: (message: Message | null) => void;
     onDeleteMessage?: (messageId: string) => void;
+    onDeleteMessageForEveryone?: (messageId: string) => void;
 }
 
 // Solid background color options - many more solid colors
@@ -76,6 +77,7 @@ export default function ChatWindow({
     replyingTo,
     onSetReplyingTo,
     onDeleteMessage,
+    onDeleteMessageForEveryone,
 }: ChatWindowProps) {
     void _isSending; // Part of interface contract, used by parent
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -118,10 +120,15 @@ export default function ChatWindow({
         onSetReplyingTo?.(msg);
     }, [onSetReplyingTo]);
 
-    // Handle delete
+    // Handle delete for me
     const handleDeleteMessage = useCallback((messageId: string) => {
         onDeleteMessage?.(messageId);
     }, [onDeleteMessage]);
+
+    // Handle delete for everyone
+    const handleDeleteMessageForEveryone = useCallback((messageId: string) => {
+        onDeleteMessageForEveryone?.(messageId);
+    }, [onDeleteMessageForEveryone]);
 
     // Handle forward
     const handleForward = useCallback((msg: Message) => {
@@ -161,13 +168,21 @@ export default function ChatWindow({
         });
     }, []);
 
-    const handleDeleteSelected = useCallback(() => {
+    const handleDeleteSelectedForMe = useCallback(() => {
         selectedMessageIds.forEach(id => {
             onDeleteMessage?.(id);
         });
         setSelectedMessageIds(new Set());
         setIsSelectionMode(false);
     }, [selectedMessageIds, onDeleteMessage]);
+
+    const handleDeleteSelectedForEveryone = useCallback(() => {
+        selectedMessageIds.forEach(id => {
+            onDeleteMessageForEveryone?.(id);
+        });
+        setSelectedMessageIds(new Set());
+        setIsSelectionMode(false);
+    }, [selectedMessageIds, onDeleteMessageForEveryone]);
 
     const handleCancelSelection = useCallback(() => {
         setIsSelectionMode(false);
@@ -303,12 +318,20 @@ export default function ChatWindow({
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={handleDeleteSelected}
+                            onClick={handleDeleteSelectedForMe}
                             disabled={selectedMessageIds.size === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                         >
-                            <Trash2 className="w-4 h-4" />
-                            Delete ({selectedMessageIds.size})
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete for me
+                        </button>
+                        <button
+                            onClick={handleDeleteSelectedForEveryone}
+                            disabled={selectedMessageIds.size === 0}
+                            className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-xl text-xs font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete for everyone
                         </button>
                     </div>
                 </div>
@@ -604,6 +627,7 @@ export default function ChatWindow({
                                                     isNew={isNewMsg}
                                                     onReply={handleReply}
                                                     onDelete={handleDeleteMessage}
+                                                    onDeleteForEveryone={handleDeleteMessageForEveryone}
                                                     onForward={handleForward}
                                                     isSelectionMode={isSelectionMode}
                                                     isSelected={selectedMessageIds.has(message.id)}

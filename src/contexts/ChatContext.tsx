@@ -28,6 +28,7 @@ import {
     pinChat as pinChatService,
     unpinChat as unpinChatService,
     deleteMessageForUser,
+    deleteMessageForEveryone as deleteMessageForEveryoneService,
 } from '@/lib/chatServices';
 import type { Chat, Message, UserPresence, ChatNotification } from '@/types';
 import { CHAT_CONSTANTS } from '@/types';
@@ -57,6 +58,7 @@ interface ChatContextType {
     unpinChat: (chatId: string) => Promise<void>;
     setReplyingTo: (message: Message | null) => void;
     deleteMessage: (messageId: string) => Promise<void>;
+    deleteMessageForEveryone: (messageId: string) => Promise<void>;
 
     // Helpers
     getParticipantPresence: (userId: string) => UserPresence | null;
@@ -365,6 +367,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         await deleteMessageForUser(messageId, user.uid);
     }, [user]);
 
+    // Delete message for everyone (only works for own messages)
+    const deleteMessageForEveryone = useCallback(async (messageId: string) => {
+        if (!user) return;
+        await deleteMessageForEveryoneService(messageId, user.uid);
+    }, [user]);
+
     // Start new chat
     const startNewChat = useCallback(async (
         participantId: string,
@@ -455,6 +463,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         unpinChat,
         setReplyingTo,
         deleteMessage,
+        deleteMessageForEveryone,
         getParticipantPresence,
         isUserTyping,
         availableTeachers,

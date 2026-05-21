@@ -21,6 +21,7 @@ interface MessageBubbleProps {
     isNew?: boolean;
     onReply?: (message: Message) => void;
     onDelete?: (messageId: string) => void;
+    onDeleteForEveryone?: (messageId: string) => void;
     onForward?: (message: Message) => void;
     // Selection mode props
     isSelectionMode?: boolean;
@@ -38,6 +39,7 @@ export default function MessageBubble({
     isNew = false,
     onReply,
     onDelete,
+    onDeleteForEveryone,
     onForward,
     isSelectionMode = false,
     isSelected = false,
@@ -90,7 +92,7 @@ export default function MessageBubble({
         setShowActions(false);
     }, [message.text]);
 
-    // Delete message
+    // Delete message for me
     const handleDelete = useCallback(() => {
         if (showDeleteConfirm) {
             onDelete?.(message.id);
@@ -100,6 +102,12 @@ export default function MessageBubble({
             setShowDeleteConfirm(true);
         }
     }, [message.id, onDelete, showDeleteConfirm]);
+
+    // Delete message for everyone (only for own messages)
+    const handleDeleteForEveryone = useCallback(() => {
+        onDeleteForEveryone?.(message.id);
+        setShowActions(false);
+    }, [message.id, onDeleteForEveryone]);
 
     // Reply to message
     const handleReply = useCallback(() => {
@@ -293,12 +301,23 @@ export default function MessageBubble({
                                 className={`w-full flex items-center gap-3 px-4 py-3.5 md:py-2.5 transition-colors text-sm active:bg-red-100 dark:active:bg-red-900/30 ${
                                     showDeleteConfirm
                                         ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                                        : 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                             >
-                                <Trash2 className="w-4 h-4" />
-                                {showDeleteConfirm ? 'Tap again to delete' : 'Delete for me'}
+                                <Trash2 className="w-4 h-4 text-orange-500" />
+                                {showDeleteConfirm ? 'Tap again to confirm' : 'Delete for me'}
                             </button>
+
+                            {/* Delete for everyone — only shown for own messages */}
+                            {isOwn && (
+                                <button
+                                    onClick={handleDeleteForEveryone}
+                                    className="w-full flex items-center gap-3 px-4 py-3.5 md:py-2.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm active:bg-red-100 dark:active:bg-red-900/30"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete for everyone
+                                </button>
+                            )}
 
                             {/* Cancel button for mobile */}
                             <div className="md:hidden border-t border-gray-100 dark:border-gray-800">

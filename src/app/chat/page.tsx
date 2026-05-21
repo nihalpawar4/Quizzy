@@ -36,6 +36,7 @@ export default function ChatPage() {
         unpinChat,
         setReplyingTo,
         deleteMessage,
+        deleteMessageForEveryone,
         getParticipantPresence,
         isUserTyping,
         availableTeachers,
@@ -122,6 +123,7 @@ export default function ChatPage() {
                     replyingTo={replyingTo}
                     onSetReplyingTo={setReplyingTo}
                     onDeleteMessage={deleteMessage}
+                    onDeleteMessageForEveryone={deleteMessageForEveryone}
                 />
             </div>
         );
@@ -184,6 +186,7 @@ export default function ChatPage() {
                                     replyingTo={replyingTo}
                                     onSetReplyingTo={setReplyingTo}
                                     onDeleteMessage={deleteMessage}
+                                    onDeleteMessageForEveryone={deleteMessageForEveryone}
                                 />
                             </div>
                         ) : (
