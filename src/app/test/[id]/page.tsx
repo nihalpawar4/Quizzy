@@ -144,7 +144,10 @@ export default function TestPage() {
 
     // Auto-submit tracking: count total violations (tab switches + fullscreen exits)
     // 1st violation = warning, 2nd violation = auto-submit (works on ALL devices including mobile)
+    // Debounce: on mobile, a single tab switch can fire both visibilitychange AND fullscreenchange
+    // simultaneously, so we debounce to prevent double-counting within 1.5 seconds
     const violationCountRef = useRef(0);
+    const lastViolationTimeRef = useRef(0);
     const [showViolationWarning, setShowViolationWarning] = useState(false);
     const [violationWarningMessage, setViolationWarningMessage] = useState('');
     const autoSubmitTriggeredRef = useRef(false);
@@ -245,17 +248,23 @@ export default function TestPage() {
                 setTimeout(() => setShowAntiCheatWarning(false), 3000);
 
                 // Auto-submit logic — applies to ALL screen sizes (desktop + mobile)
+                // Debounce: skip if a violation was already counted within 1.5s (prevents
+                // double-counting when both visibilitychange + fullscreenchange fire together)
                 if (!autoSubmitTriggeredRef.current) {
-                    violationCountRef.current += 1;
-                    if (violationCountRef.current === 1) {
-                        // First violation: show blocking warning
-                        setViolationWarningMessage('⚠️ WARNING: Tab switch detected! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
-                        setShowViolationWarning(true);
-                    } else if (violationCountRef.current >= 2) {
-                        // Second violation: auto-submit
-                        autoSubmitTriggeredRef.current = true;
-                        setShowViolationWarning(false);
-                        handleFinalSubmit();
+                    const now = Date.now();
+                    if (now - lastViolationTimeRef.current > 1500) {
+                        lastViolationTimeRef.current = now;
+                        violationCountRef.current += 1;
+                        if (violationCountRef.current === 1) {
+                            // First violation: show blocking warning
+                            setViolationWarningMessage('⚠️ WARNING: Tab switch detected! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                            setShowViolationWarning(true);
+                        } else if (violationCountRef.current >= 2) {
+                            // Second violation: auto-submit
+                            autoSubmitTriggeredRef.current = true;
+                            setShowViolationWarning(false);
+                            handleFinalSubmit();
+                        }
                     }
                 }
             } else {
@@ -375,17 +384,23 @@ export default function TestPage() {
                 document.body.classList.remove('modal-open');
 
                 // Auto-submit logic — applies to ALL screen sizes (desktop + mobile)
+                // Debounce: skip if a violation was already counted within 1.5s (prevents
+                // double-counting when both visibilitychange + fullscreenchange fire together)
                 if (!autoSubmitTriggeredRef.current) {
-                    violationCountRef.current += 1;
-                    if (violationCountRef.current === 1) {
-                        // First violation: show blocking warning
-                        setViolationWarningMessage('⚠️ WARNING: You exited fullscreen! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
-                        setShowViolationWarning(true);
-                    } else if (violationCountRef.current >= 2) {
-                        // Second violation: auto-submit
-                        autoSubmitTriggeredRef.current = true;
-                        setShowViolationWarning(false);
-                        handleFinalSubmit();
+                    const now = Date.now();
+                    if (now - lastViolationTimeRef.current > 1500) {
+                        lastViolationTimeRef.current = now;
+                        violationCountRef.current += 1;
+                        if (violationCountRef.current === 1) {
+                            // First violation: show blocking warning
+                            setViolationWarningMessage('⚠️ WARNING: You exited fullscreen! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                            setShowViolationWarning(true);
+                        } else if (violationCountRef.current >= 2) {
+                            // Second violation: auto-submit
+                            autoSubmitTriggeredRef.current = true;
+                            setShowViolationWarning(false);
+                            handleFinalSubmit();
+                        }
                     }
                 }
             } else if (document.fullscreenElement) {
