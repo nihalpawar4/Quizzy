@@ -255,12 +255,12 @@ export default function TestPage() {
                     if (now - lastViolationTimeRef.current > 1500) {
                         lastViolationTimeRef.current = now;
                         violationCountRef.current += 1;
-                        if (violationCountRef.current === 1) {
-                            // First violation: show blocking warning
-                            setViolationWarningMessage('⚠️ WARNING: Tab switch detected! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                        if (violationCountRef.current <= 2) {
+                            // First or second violation: show blocking warning
+                            setViolationWarningMessage(`⚠️ WARNING: Tab switch detected! (${violationCountRef.current}/2 warnings) One more violation and your test will be automatically submitted.`);
                             setShowViolationWarning(true);
-                        } else if (violationCountRef.current >= 2) {
-                            // Second violation: auto-submit
+                        } else if (violationCountRef.current >= 3) {
+                            // Third violation: auto-submit
                             autoSubmitTriggeredRef.current = true;
                             setShowViolationWarning(false);
                             handleFinalSubmit();
@@ -391,12 +391,12 @@ export default function TestPage() {
                     if (now - lastViolationTimeRef.current > 1500) {
                         lastViolationTimeRef.current = now;
                         violationCountRef.current += 1;
-                        if (violationCountRef.current === 1) {
-                            // First violation: show blocking warning
-                            setViolationWarningMessage('⚠️ WARNING: You exited fullscreen! If you switch tabs or exit fullscreen again, your test will be automatically submitted.');
+                        if (violationCountRef.current <= 2) {
+                            // First or second violation: show blocking warning
+                            setViolationWarningMessage(`⚠️ WARNING: You exited fullscreen! (${violationCountRef.current}/2 warnings) One more violation and your test will be automatically submitted.`);
                             setShowViolationWarning(true);
-                        } else if (violationCountRef.current >= 2) {
-                            // Second violation: auto-submit
+                        } else if (violationCountRef.current >= 3) {
+                            // Third violation: auto-submit
                             autoSubmitTriggeredRef.current = true;
                             setShowViolationWarning(false);
                             handleFinalSubmit();
@@ -530,23 +530,19 @@ export default function TestPage() {
         setTestStartTime(new Date());
 
         if (testData.duration) {
-            // Check if there's a persisted deadline from sessionStorage (page refresh case)
-            const persisted = getPersistedDeadline();
-            if (persisted && persisted > Date.now()) {
-                // Restore persisted deadline — timer continues from where it was
-                deadlineRef.current = persisted;
-            } else {
-                // Calculate fresh deadline
-                let timerDeadline = Date.now() + testData.duration * 60 * 1000;
+            // Always clear any old persisted deadline first to prevent stale timers on retake
+            clearPersistedDeadline();
 
-                // If test has an expiresAt, use whichever comes first
-                if (testData.expiresAt) {
-                    const expiryMs = new Date(testData.expiresAt).getTime();
-                    timerDeadline = Math.min(timerDeadline, expiryMs);
-                }
+            // Calculate fresh deadline
+            let timerDeadline = Date.now() + testData.duration * 60 * 1000;
 
-                setDeadline(timerDeadline);
+            // If test has an expiresAt, use whichever comes first
+            if (testData.expiresAt) {
+                const expiryMs = new Date(testData.expiresAt).getTime();
+                timerDeadline = Math.min(timerDeadline, expiryMs);
             }
+
+            setDeadline(timerDeadline);
 
             // Calculate initial timeLeft
             const remaining = Math.max(0, Math.floor((deadlineRef.current! - Date.now()) / 1000));
@@ -874,11 +870,11 @@ export default function TestPage() {
                                 <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
                                     <p>On <strong>all devices (including mobile)</strong>, the following rules apply:</p>
                                     <div className="flex items-start gap-2">
-                                        <span className="font-bold">1st violation:</span>
+                                        <span className="font-bold">1st &amp; 2nd violation:</span>
                                         <span>If you <strong>switch tabs</strong>, <strong>minimize the app</strong>, or <strong>exit fullscreen</strong>, you will receive a <strong>warning</strong>.</span>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                        <span className="font-bold">2nd violation:</span>
+                                        <span className="font-bold">3rd violation:</span>
                                         <span>Your test will be <strong>automatically submitted</strong> with whatever answers you have completed.</span>
                                     </div>
                                     <p className="mt-2 font-medium text-red-800 dark:text-red-300">⚠️ Stay focused! Do not switch apps, lock your phone, or switch tabs during the test!</p>
