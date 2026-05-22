@@ -119,6 +119,19 @@ export default function TestPage() {
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
+    // Refs to mirror latest state — used by handleFinalSubmit so it always
+    // has current values even when called from stale event listener closures
+    const userRef = useRef(user);
+    const testRef = useRef(test);
+    const questionsRef = useRef(questions);
+    const answersRef = useRef(answers);
+    const isSubmittingRef = useRef(isSubmitting);
+    const testStartTimeRef = useRef<Date | null>(null);
+    const tabSwitchCountRef = useRef(0);
+    const copyAttemptsRef = useRef(0);
+    const rightClickAttemptsRef = useRef(0);
+    const fullscreenExitsRef = useRef(0);
+
     // Timing tracking
     const [testStartTime, setTestStartTime] = useState<Date | null>(null);
     const [testEndTime, setTestEndTime] = useState<Date | null>(null);
@@ -141,6 +154,18 @@ export default function TestPage() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showAntiCheatWarning, setShowAntiCheatWarning] = useState(false);
     const [warningMessage, setWarningMessage] = useState('');
+
+    // Keep refs in sync with latest state values
+    useEffect(() => { userRef.current = user; }, [user]);
+    useEffect(() => { testRef.current = test; }, [test]);
+    useEffect(() => { questionsRef.current = questions; }, [questions]);
+    useEffect(() => { answersRef.current = answers; }, [answers]);
+    useEffect(() => { isSubmittingRef.current = isSubmitting; }, [isSubmitting]);
+    useEffect(() => { tabSwitchCountRef.current = tabSwitchCount; }, [tabSwitchCount]);
+    useEffect(() => { copyAttemptsRef.current = copyAttempts; }, [copyAttempts]);
+    useEffect(() => { rightClickAttemptsRef.current = rightClickAttempts; }, [rightClickAttempts]);
+    useEffect(() => { fullscreenExitsRef.current = fullscreenExits; }, [fullscreenExits]);
+    useEffect(() => { testStartTimeRef.current = testStartTime; }, [testStartTime]);
 
     // Auto-submit tracking: count total violations (tab switches + fullscreen exits)
     // 1st violation = warning, 2nd violation = auto-submit (works on ALL devices including mobile)
@@ -609,11 +634,19 @@ export default function TestPage() {
     };
 
     // Final submit after review confirmation
+    // Uses refs instead of state to avoid stale closure issues when called
+    // from event listeners (visibilitychange, fullscreenchange, timer)
     const handleFinalSubmit = async () => {
-        if (!user || !test || isSubmitting) return;
+        const currentUser = userRef.current;
+        const currentTest = testRef.current;
+        const currentQuestions = questionsRef.current;
+        const currentAnswers = answersRef.current;
+
+        if (!currentUser || !currentTest || isSubmittingRef.current) return;
 
         setShowReviewModal(false);
         setIsSubmitting(true);
+        isSubmittingRef.current = true;
         const endTime = new Date();
         setTestEndTime(endTime);
 
@@ -622,8 +655,8 @@ export default function TestPage() {
             let wrongCount = 0;
             const detailedAnswers: { questionId: string; questionText: string; userAnswer: string; correctAnswer: string; isCorrect: boolean; explanation?: string }[] = [];
 
-            questions.forEach((q, index) => {
-                const userAnswer = answers[index];
+            currentQuestions.forEach((q, index) => {
+                const userAnswer = currentAnswers[index];
                 const questionType = getQuestionType(q);
                 let isCorrect = false;
                 let userAnswerStr = '';
@@ -662,8 +695,8 @@ export default function TestPage() {
             setScore(correctCount);
 
             // Calculate marks with negative marking
-            const marksPerQ = test.marksPerQuestion || 1;
-            const negMarksPerQ = test.negativeMarking ? (test.negativeMarksPerQuestion || 0.25) : 0;
+            const marksPerQ = currentTest.marksPerQuestion || 1;
+            const negMarksPerQ = currentTest.negativeMarking ? (currentTest.negativeMarksPerQuestion || 0.25) : 0;
             const positiveMarks = correctCount * marksPerQ;
             const negativeMarks = wrongCount * negMarksPerQ;
             const finalMarks = Math.max(0, positiveMarks - negativeMarks); // Ensure marks don't go below 0
@@ -672,34 +705,35 @@ export default function TestPage() {
             setNegativeMarksApplied(negativeMarks);
 
             // Calculate time taken
-            const timeTakenSeconds = testStartTime ? Math.floor((endTime.getTime() - testStartTime.getTime()) / 1000) : 0;
+            const currentStartTime = testStartTimeRef.current;
+            const timeTakenSeconds = currentStartTime ? Math.floor((endTime.getTime() - currentStartTime.getTime()) / 1000) : 0;
 
             // Submit with detailed answers and timing/anti-cheat data
             await submitTestResult({
-                studentId: user.uid,
-                studentName: user.name,
-                studentEmail: user.email,
-                studentClass: user.studentClass || 0,
-                testId: test.id,
-                testTitle: test.title,
-                subject: test.subject,
+                studentId: currentUser.uid,
+                studentName: currentUser.name,
+                studentEmail: currentUser.email,
+                studentClass: currentUser.studentClass || 0,
+                testId: currentTest.id,
+                testTitle: currentTest.title,
+                subject: currentTest.subject,
                 score: correctCount,
-                totalQuestions: questions.length,
-                answers: answers.map(a => typeof a === 'number' ? a : -1),
+                totalQuestions: currentQuestions.length,
+                answers: currentAnswers.map(a => typeof a === 'number' ? a : -1),
                 detailedAnswers,
                 // Timing data
-                startTime: testStartTime || undefined,
+                startTime: currentStartTime || undefined,
                 endTime: endTime,
                 timeTakenSeconds,
                 // Marking data
-                totalMarks: questions.length * marksPerQ,
+                totalMarks: currentQuestions.length * marksPerQ,
                 marksObtained: finalMarks,
                 negativeMarksApplied: negativeMarks,
                 // Anti-cheat data
-                tabSwitchCount,
-                copyAttempts,
-                rightClickAttempts,
-                fullscreenExits,
+                tabSwitchCount: tabSwitchCountRef.current,
+                copyAttempts: copyAttemptsRef.current,
+                rightClickAttempts: rightClickAttemptsRef.current,
+                fullscreenExits: fullscreenExitsRef.current,
                 antiCheatEnabled
             });
 
