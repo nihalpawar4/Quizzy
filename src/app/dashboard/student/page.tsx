@@ -5,12 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-    GraduationCap,
     BookOpen,
     Clock,
     ArrowRight,
     User,
-    LogOut,
     Trophy,
     Loader2,
     Target,
@@ -31,9 +29,6 @@ import {
     ExternalLink,
     Trash2,
     Megaphone,
-    Settings,
-    ChevronDown,
-    Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -54,6 +49,7 @@ import { generatePDFWithCover } from '@/lib/utils/generatePDFCover';
 import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import StudentSidebar from '@/components/ui/StudentSidebar';
 
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
@@ -99,8 +95,7 @@ export default function StudentDashboard() {
     const [viewedNotificationIds, setViewedNotificationIds] = useState<Set<string>>(new Set());
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-    // Profile dropdown state
-    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
 
     // PDF Test viewer state
     const [selectedPdfTest, setSelectedPdfTest] = useState<Test | null>(null);
@@ -127,15 +122,7 @@ export default function StudentDashboard() {
         }
     }, [selectedPdfTest, user?.uid, user?.name]);
 
-    // Auto-close profile dropdown after 3 seconds
-    useEffect(() => {
-        if (showProfileDropdown) {
-            const timer = setTimeout(() => {
-                setShowProfileDropdown(false);
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [showProfileDropdown]);
+
 
     // Read notes tracking (persisted in localStorage)
     const [readNoteIds, setReadNoteIds] = useState<Set<string>>(new Set());
@@ -663,7 +650,7 @@ export default function StudentDashboard() {
         );
     }
 
-    const _totalTests = results.length;
+    // Compute average score for stats
     const scorableResults = results.filter(r => !r.isPdfTest && r.totalQuestions > 0);
     const pdfEvaluatedResults = results.filter(r => r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0);
     const totalScorable = scorableResults.length + pdfEvaluatedResults.length;
@@ -676,17 +663,31 @@ export default function StudentDashboard() {
         )
         : 0;
 
-    // Quick actions - Leaderboard is now functional, others coming soon
-    const quickActions = [
-        { icon: BookOpen, label: 'Homework', color: 'bg-indigo-100 dark:bg-indigo-900/50', iconColor: 'text-indigo-600 dark:text-indigo-400', comingSoon: false, href: '/dashboard/student/homework' },
-        { icon: Target, label: 'Practice Mode', color: 'bg-green-100 dark:bg-green-900/50', iconColor: 'text-green-600 dark:text-green-400', comingSoon: true },
-        { icon: MessageSquare, label: 'Chat', color: 'bg-pink-100 dark:bg-pink-900/50', iconColor: 'text-pink-600 dark:text-pink-400', comingSoon: false, href: '/chat' },
-        { icon: HelpCircle, label: 'Help Center', color: 'bg-orange-100 dark:bg-orange-900/50', iconColor: 'text-orange-600 dark:text-orange-400', comingSoon: true },
-    ];
-
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 relative flex">
+            {/* Left Sidebar Navigation */}
+            <StudentSidebar
+                activeTab={activeTab}
+                onTabChange={(tab) => {
+                    setActiveTab(tab);
+                    if (tab === 'reports') setNewReportsCount(0);
+                }}
+                userName={user.name}
+                userClass={user.studentClass || 0}
+                userPhotoURL={user.photoURL}
+                notificationCount={notifications.filter(n => !n.viewedBy?.[user.uid]).length}
+                newReportsCount={newReportsCount}
+                unreadNotesCount={unreadNotesCount}
+                pendingHomeworkCount={homeworks.filter(h => !completedHomeworkIds.has(h.id)).length}
+                totalUnreadChat={totalUnreadCount}
+                onNotificationClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                onSignOut={handleSignOut}
+                onComingSoon={handleComingSoon}
+            />
+
+            {/* Main Content Area */}
+            <div className="flex-1 min-h-screen relative overflow-hidden">
             {/* New Test Notification */}
             <AnimatePresence>
                 {newTestNotification && (
@@ -745,51 +746,23 @@ export default function StudentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Header */}
-            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
-                            <GraduationCap className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-gray-900 dark:text-white">Quizy</h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Student Dashboard</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <Link
-                            href="/"
-                            className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Go to Home"
-
-                        >
-                            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                            <span className="hidden md:inline text-sm font-medium">Home</span>
-                        </Link>
-                        {/* Notification Bell */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                                className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            >
-                                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                {notifications.filter(n => !n.viewedBy?.[user.uid]).length > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                                        {notifications.filter(n => !n.viewedBy?.[user.uid]).length}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Notification Panel Dropdown */}
-                            <AnimatePresence>
-                                {showNotificationPanel && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto top-20 sm:top-full sm:mt-2 sm:w-80 max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
+            {/* Notification Panel Dropdown (repositioned for sidebar layout) */}
+            <AnimatePresence>
+                {showNotificationPanel && (
+                    <>
+                        {/* Backdrop to close */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[55]" 
+                            onClick={() => setShowNotificationPanel(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="fixed right-4 top-16 lg:top-4 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
                                     >
                                         <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -869,90 +842,12 @@ export default function StudentDashboard() {
                                                 </p>
                                             </div>
                                         )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
-                        <Link
-                            href="/chat"
-                            className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
-                            title="Chat with Teacher"
-
-                        >
-                            <div className="relative">
-                                <MessageSquare className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                {totalUnreadCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
-                                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="hidden sm:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
-                        </Link>
-
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                title="Profile Menu"
-                            >
-                                <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Class {user.studentClass}</p>
-                                </div>
-                                {user.photoURL ? (
-                                    <img
-                                        src={user.photoURL}
-                                        alt={user.name}
-                                        className="w-10 h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
-                                    />
-                                ) : (
-                                    <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                        <User className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                    </div>
-                                )}
-                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 hidden sm:block" />
-                            </button>
-
-                            {/* Profile Dropdown */}
-                            <AnimatePresence>
-                                {showProfileDropdown && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto top-20 sm:top-full sm:mt-2 sm:w-56 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
-                                    >
-                                        <div className="p-2">
-                                            <Link
-                                                href="/profile"
-                                                onClick={() => setShowProfileDropdown(false)}
-                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                            >
-                                                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">Profile Settings</span>
-                                            </Link>
-                                            <button
-                                                onClick={() => {
-                                                    setShowProfileDropdown(false);
-                                                    handleSignOut();
-                                                }}
-                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
-                                            >
-                                                <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-red-600" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-red-600">Logout</span>
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-16 pb-24 lg:pb-8">
                 {/* Welcome Section */}
                 <div className="mb-5"
                 >
@@ -979,84 +874,10 @@ export default function StudentDashboard() {
                                 {results.length === 0 ? "Let's start with your first test!" : `Class ${user.studentClass} Student`}
                             </p>
                         </div>
-
-                        {/* Stats - Simple Inline Cards */}
-                        <div className="flex gap-3">
-                            <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{results.length}</p>
-                                <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Tests</p>
-                            </div>
-                            <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{averageScore}%</p>
-                                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Score</p>
-                            </div>
-                            <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
-                                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{tests.length}</p>
-                                <p className="text-xs text-violet-600/70 dark:text-violet-400/70">Active</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="mb-5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="flex gap-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-max sm:min-w-0">
-                        <button
-                            onClick={() => setActiveTab('tests')}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'tests' ? 'bg-[#1650EB] text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        >
-                            <BookOpen className="w-5 h-5" />
-                            <span className="hidden sm:inline">Available Tests</span>
-                            <span className="sm:hidden">Tests</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('reports');
-                                setNewReportsCount(0);
-                            }}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'reports' ? 'bg-emerald-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        >
-                            <FileText className="w-5 h-5" />
-                            <span className="hidden sm:inline">My Reports</span>
-                            <span className="sm:hidden">Reports</span>
-                            {newReportsCount > 0 && (
-                                <span className="bg-white text-emerald-600 text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">
-                                    {newReportsCount}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('notes')}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'notes' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        >
-                            <BookMarked className="w-5 h-5" />
-                            <span className="hidden sm:inline">Study Notes</span>
-                            <span className="sm:hidden">Notes</span>
-                            {unreadNotesCount > 0 && (
-                                <span className="bg-white text-purple-600 text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">
-                                    {unreadNotesCount}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('homework')}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homework' ? 'bg-indigo-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        >
-                            <BookOpen className="w-5 h-5" />
-                            <span className="hidden sm:inline">Homework</span>
-                            <span className="sm:hidden">HW</span>
-                            {(() => {
-                                const pendingHwCount = homeworks.filter(h => !completedHomeworkIds.has(h.id)).length;
-                                return pendingHwCount > 0 ? (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold animate-pulse ${activeTab === 'homework' ? 'bg-white text-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'}`}>
-                                        {pendingHwCount}
-                                    </span>
-                                ) : null;
-                            })()}
-                        </button>
 
-                    </div>
-                </div>
 
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
@@ -1370,8 +1191,85 @@ export default function StudentDashboard() {
                                 })}
                             </div>
                         )}
+
+                        {/* Recent Results Summary */}
+                        {results.length > 0 && (
+                            <div className="mt-8">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Recent Results</h3>
+                                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                                                {results.slice(0, 5).map((result) => (
+                                                    <tr key={result.id}>
+                                                        <td className="px-6 py-4">
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{result.testTitle}</p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{result.subject}</p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {(() => {
+                                                                const pct = result.isPdfTest
+                                                                    ? (result.pdfEvaluated && result.pdfMaxMarks ? ((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) : 0)
+                                                                    : (result.totalQuestions > 0 ? result.score / result.totalQuestions : 0);
+                                                                const label = result.isPdfTest
+                                                                    ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Pending')
+                                                                    : `${result.score}/${result.totalQuestions}`;
+                                                                return (
+                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pct >= 0.7
+                                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                                        : pct >= 0.4
+                                                                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                                                                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                                        }`}>
+                                                                        {label} ({Math.round(pct * 100)}%)
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                            {result.timestamp.toLocaleDateString()}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stats Summary */}
+                        {results.length > 0 && (
+                            <div className="mt-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📈 Your Stats</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="px-4 py-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-center">
+                                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{results.length}</p>
+                                        <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-0.5">Tests Taken</p>
+                                    </div>
+                                    <div className="px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-center">
+                                        <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{averageScore}%</p>
+                                        <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Avg Score</p>
+                                    </div>
+                                    <div className="px-4 py-4 bg-violet-50 dark:bg-violet-900/20 rounded-2xl text-center">
+                                        <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{tests.length}</p>
+                                        <p className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-0.5">Active Tests</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
+
 
                 {/* Study Notes Tab */}
                 {activeTab === 'notes' && (
@@ -1450,109 +1348,9 @@ export default function StudentDashboard() {
 
 
 
-                {/* Quick Actions */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {quickActions.map((action, index) => (
-                            <motion.div
-                                key={action.label}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 + index * 0.05 }}
-                            >
-                                {action.href ? (
-                                    <Link
-                                        href={action.href}
-                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3 relative"
-                                    >
-                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform relative`}>
-                                            <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-                                            {/* Chat notification badge */}
-                                            {action.label === 'Chat' && totalUnreadCount > 0 && (
-                                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
-                                                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
-                                        </div>
-                                    </Link>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleComingSoon(action.label)}
-                                        className="w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-[#6095DB]/50 dark:hover:border-[#1243c7] transition-all group flex items-center gap-3"
-                                    >
-                                        <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                            <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.label}</p>
-                                            {action.comingSoon && <p className="text-xs text-gray-400">Coming Soon</p>}
-                                        </div>
-                                    </button>
-                                )}
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
 
-                {/* Recent Results */}
-                {results.length > 0 && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Your Recent Results</h3>
-                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                                        {results.slice(0, 5).map((result) => (
-                                            <tr key={result.id}>
-                                                <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{result.testTitle}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{result.subject}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {(() => {
-                                                        const pct = result.isPdfTest
-                                                            ? (result.pdfEvaluated && result.pdfMaxMarks ? ((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) : 0)
-                                                            : (result.totalQuestions > 0 ? result.score / result.totalQuestions : 0);
-                                                        const label = result.isPdfTest
-                                                            ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Pending')
-                                                            : `${result.score}/${result.totalQuestions}`;
-                                                        return (
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pct >= 0.7
-                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                                : pct >= 0.4
-                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                                }`}>
-                                                                {label} ({Math.round(pct * 100)}%)
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                    {result.timestamp.toLocaleDateString()}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
+
+
             </main>
 
             {/* Coming Soon Modal */}
@@ -2037,6 +1835,7 @@ export default function StudentDashboard() {
 
 
 
+            </div>{/* Close flex-1 content wrapper */}
         </div>
     );
 }
