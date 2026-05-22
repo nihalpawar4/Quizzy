@@ -30,6 +30,8 @@ import {
     Trash2,
     Megaphone,
     Hourglass,
+    Filter,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -96,6 +98,11 @@ export default function StudentDashboard() {
     const [viewedNotificationIds, setViewedNotificationIds] = useState<Set<string>>(new Set());
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
+    // Test filter state
+    const [filterSubject, setFilterSubject] = useState<string>('All');
+    const [filterType, setFilterType] = useState<'All' | 'Quiz' | 'PDF'>('All');
+    const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Completed' | 'Expired'>('All');
+    const [showFilters, setShowFilters] = useState(false);
 
 
     // PDF Test viewer state
@@ -888,18 +895,165 @@ export default function StudentDashboard() {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             📚 Available Tests for Class {user.studentClass}
                         </h3>
+
+                        {/* Filter Bar */}
+                        {tests.length > 0 && (
+                            <div className="mb-5">
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all mb-3 ${
+                                        showFilters || filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All'
+                                            ? 'bg-[#1650EB] text-white shadow-md'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    <SlidersHorizontal className="w-4 h-4" />
+                                    Filters
+                                    {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
+                                        <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                    )}
+                                </button>
+
+                                {showFilters && (
+                                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-4 shadow-sm">
+                                        {/* Subject Filter */}
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Subject</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['All', ...Array.from(new Set(tests.map(t => t.subject)))].map(subject => (
+                                                    <button
+                                                        key={subject}
+                                                        onClick={() => setFilterSubject(subject)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                            filterSubject === subject
+                                                                ? 'bg-[#1650EB] text-white shadow-sm'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                        }`}
+                                                    >
+                                                        {subject}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Type Filter */}
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Type</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['All', 'Quiz', 'PDF'] as const).map(type => (
+                                                    <button
+                                                        key={type}
+                                                        onClick={() => setFilterType(type)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                                            filterType === type
+                                                                ? type === 'PDF' ? 'bg-rose-500 text-white shadow-sm' : type === 'Quiz' ? 'bg-[#1650EB] text-white shadow-sm' : 'bg-[#1650EB] text-white shadow-sm'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                        }`}
+                                                    >
+                                                        {type === 'PDF' && '📋'}
+                                                        {type === 'Quiz' && '✏️'}
+                                                        {type === 'All' && '📚'}
+                                                        {type === 'PDF' ? 'PDF Paper' : type}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Status Filter */}
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Status</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['All', 'Pending', 'Completed', 'Expired'] as const).map(status => (
+                                                    <button
+                                                        key={status}
+                                                        onClick={() => setFilterStatus(status)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                                            filterStatus === status
+                                                                ? status === 'Completed' ? 'bg-green-500 text-white shadow-sm'
+                                                                    : status === 'Expired' ? 'bg-red-500 text-white shadow-sm'
+                                                                    : status === 'Pending' ? 'bg-amber-500 text-white shadow-sm'
+                                                                    : 'bg-[#1650EB] text-white shadow-sm'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                        }`}
+                                                    >
+                                                        {status === 'Completed' && '✅'}
+                                                        {status === 'Pending' && '⏳'}
+                                                        {status === 'Expired' && '⏰'}
+                                                        {status === 'All' && '📋'}
+                                                        {status}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Clear Filters */}
+                                        {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
+                                            <button
+                                                onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); }}
+                                                className="text-xs text-[#1650EB] hover:text-[#1243c7] font-medium flex items-center gap-1"
+                                            >
+                                                <X className="w-3 h-3" />
+                                                Clear all filters
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {(() => {
+                            // Apply filters
+                            const filteredTests = tests.filter(test => {
+                                // Subject filter
+                                if (filterSubject !== 'All' && test.subject !== filterSubject) return false;
+                                // Type filter
+                                if (filterType === 'Quiz' && test.isPdfTest) return false;
+                                if (filterType === 'PDF' && !test.isPdfTest) return false;
+                                // Status filter
+                                const hasTaken = takenTests.has(test.id);
+                                const isExpiredTest = !hasTaken && test.expiresAt && new Date(test.expiresAt) < new Date();
+                                if (filterStatus === 'Completed' && !hasTaken) return false;
+                                if (filterStatus === 'Pending' && (hasTaken || isExpiredTest)) return false;
+                                if (filterStatus === 'Expired' && !isExpiredTest) return false;
+                                return true;
+                            });
+
+                            return (
+                                <>
+                        {/* Active filter summary */}
+                        {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                Showing {filteredTests.length} of {tests.length} tests
+                                {filterSubject !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterSubject}</span>}
+                                {filterType !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterType === 'PDF' ? 'PDF Papers' : 'Quizzes'}</span>}
+                                {filterStatus !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterStatus}</span>}
+                            </p>
+                        )}
+
                         {loading && tests.length === 0 ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
                             </div>
-                        ) : tests.length === 0 ? (
+                        ) : filteredTests.length === 0 ? (
                             <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-                                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600 dark:text-gray-400">No tests available for your class yet. Check back later!</p>
+                                <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600 dark:text-gray-400">
+                                    {tests.length === 0
+                                        ? 'No tests available for your class yet. Check back later!'
+                                        : 'No tests match your filters. Try adjusting the filters above.'}
+                                </p>
+                                {tests.length > 0 && (
+                                    <button
+                                        onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); }}
+                                        className="mt-3 text-sm text-[#1650EB] hover:text-[#1243c7] font-medium"
+                                    >
+                                        Clear filters
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {tests.map((test, index) => {
+                                {filteredTests.map((test, index) => {
                                     const hasTaken = takenTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
@@ -1124,6 +1278,9 @@ export default function StudentDashboard() {
                                 })}
                             </div>
                         )}
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
 
