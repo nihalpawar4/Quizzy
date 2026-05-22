@@ -29,6 +29,7 @@ import {
     ExternalLink,
     Trash2,
     Megaphone,
+    Hourglass,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -355,7 +356,8 @@ export default function StudentDashboard() {
                         id: doc.id,
                         ...data,
                         createdAt: data.createdAt?.toDate() || new Date(),
-                        scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
+                        scheduledStartTime: data.scheduledStartTime?.toDate() || undefined,
+                        expiresAt: data.expiresAt?.toDate() || undefined
                     } as Test);
                 }
             });
@@ -377,7 +379,8 @@ export default function StudentDashboard() {
                             id: change.doc.id,
                             ...data,
                             createdAt,
-                            scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
+                            scheduledStartTime: data.scheduledStartTime?.toDate() || undefined,
+                            expiresAt: data.expiresAt?.toDate() || undefined
                         } as Test;
                         setNewTestNotification(newTest);
 
@@ -900,18 +903,20 @@ export default function StudentDashboard() {
                                     const hasTaken = takenTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
+                                    const isExpired = !hasTaken && test.expiresAt && new Date(test.expiresAt) < new Date();
                                     const countdown = countdowns[test.id];
 
                                     return (
                                         <div
                                             key={test.id}
-                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : test.isPdfTest ? 'border-rose-200 dark:border-rose-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
+                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isExpired ? 'border-red-200 dark:border-red-800 opacity-75' : isScheduled ? 'border-orange-200 dark:border-orange-800' : test.isPdfTest ? 'border-rose-200 dark:border-rose-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
                                         >
                                             {/* Gradient Header */}
                                             <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
-                                                isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
-                                                    test.isPdfTest ? 'bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-500' :
-                                                        'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
+                                                isExpired ? 'bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600' :
+                                                    isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
+                                                        test.isPdfTest ? 'bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-500' :
+                                                            'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
                                                 }`}>
                                                 {/* Decorative Elements */}
                                                 <div className="absolute inset-0 overflow-hidden">
@@ -1008,6 +1013,21 @@ export default function StudentDashboard() {
                                                     </div>
                                                 )}
 
+                                                {/* Expiry Info for tests with expiry */}
+                                                {test.expiresAt && !hasTaken && !isExpired && (
+                                                    <div className="mb-4 p-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <Hourglass className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
+                                                                <span className="text-sm font-medium text-red-700 dark:text-red-300">Expires:</span>
+                                                            </div>
+                                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                                                {new Date(test.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* PDF Test Actions */}
                                                 {test.isPdfTest ? (() => {
                                                     const pdfResult = results.find(r => r.testId === test.id && r.isPdfTest);
@@ -1082,6 +1102,11 @@ export default function StudentDashboard() {
                                                     <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
                                                         <Trophy className="w-5 h-5" />
                                                         <span className="text-sm font-medium">Completed • {result.score}/{result.totalQuestions} correct</span>
+                                                    </div>
+                                                ) : isExpired ? (
+                                                    <div className="flex items-center justify-center gap-2 w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-xl font-medium cursor-not-allowed border border-red-200 dark:border-red-800">
+                                                        <Hourglass className="w-4 h-4" />
+                                                        ⏰ Expired – Unattempted
                                                     </div>
                                                 ) : isScheduled ? (
                                                     <div className="flex items-center justify-center gap-2 w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl font-medium cursor-not-allowed">

@@ -65,6 +65,8 @@ export interface Test {
     combinedSubjects?: string[]; // List of subjects included in the combined test
     // Schedule control
     isScheduleEnabled?: boolean; // Enable/disable the scheduled start time
+    // Test expiry
+    expiresAt?: Date; // Datetime after which test auto-expires and becomes inaccessible
     // PDF Test
     isPdfTest?: boolean; // If true, this test is a PDF upload (no interactive questions)
     pdfUrl?: string; // Base64 data URL of the uploaded PDF file

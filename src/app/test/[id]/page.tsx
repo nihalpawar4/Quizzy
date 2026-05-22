@@ -123,6 +123,10 @@ export default function TestPage() {
     const [testStartTime, setTestStartTime] = useState<Date | null>(null);
     const [testEndTime, setTestEndTime] = useState<Date | null>(null);
 
+    // Tamper-proof timer: store absolute deadline timestamp (ms since epoch)
+    // This survives tab switches, app backgrounding, and phone locking
+    const deadlineRef = useRef<number | null>(null);
+
     // Marking data
     const [marksObtained, setMarksObtained] = useState<number>(0);
     const [totalMarks, setTotalMarks] = useState<number>(0);
@@ -139,12 +143,11 @@ export default function TestPage() {
     const [warningMessage, setWarningMessage] = useState('');
 
     // Auto-submit tracking: count total violations (tab switches + fullscreen exits)
-    // On non-mobile screens: 1st violation = warning, 2nd violation = auto-submit
+    // 1st violation = warning, 2nd violation = auto-submit (works on ALL devices including mobile)
     const violationCountRef = useRef(0);
     const [showViolationWarning, setShowViolationWarning] = useState(false);
     const [violationWarningMessage, setViolationWarningMessage] = useState('');
     const autoSubmitTriggeredRef = useRef(false);
-    const isNonMobileRef = useRef(false);
 
     // Instructions screen state
     const [showInstructionsScreen, setShowInstructionsScreen] = useState(false);
@@ -207,17 +210,30 @@ export default function TestPage() {
         }
     }, [antiCheatEnabled]);
 
-    // Detect non-mobile screen on mount and resize
-    useEffect(() => {
-        const checkScreenSize = () => {
-            isNonMobileRef.current = window.innerWidth >= 768;
-        };
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
-        return () => window.removeEventListener('resize', checkScreenSize);
-    }, []);
+    // Helper: set the deadline and persist to sessionStorage
+    const setDeadline = useCallback((deadlineMs: number) => {
+        deadlineRef.current = deadlineMs;
+        try {
+            sessionStorage.setItem(`testDeadline_${testId}`, String(deadlineMs));
+        } catch { /* sessionStorage unavailable */ }
+    }, [testId]);
 
-    // Anti-cheat: Visibility change detection
+    // Helper: get persisted deadline from sessionStorage
+    const getPersistedDeadline = useCallback((): number | null => {
+        try {
+            const stored = sessionStorage.getItem(`testDeadline_${testId}`);
+            return stored ? Number(stored) : null;
+        } catch { return null; }
+    }, [testId]);
+
+    // Helper: clear persisted deadline
+    const clearPersistedDeadline = useCallback(() => {
+        try {
+            sessionStorage.removeItem(`testDeadline_${testId}`);
+        } catch { /* ignore */ }
+    }, [testId]);
+
+    // Anti-cheat: Visibility change detection (works on ALL devices including mobile)
     useEffect(() => {
         if (!antiCheatEnabled || isSubmitted) return;
 
@@ -228,8 +244,8 @@ export default function TestPage() {
                 setShowAntiCheatWarning(true);
                 setTimeout(() => setShowAntiCheatWarning(false), 3000);
 
-                // Auto-submit logic for non-mobile screens
-                if (isNonMobileRef.current && !autoSubmitTriggeredRef.current) {
+                // Auto-submit logic — applies to ALL screen sizes (desktop + mobile)
+                if (!autoSubmitTriggeredRef.current) {
                     violationCountRef.current += 1;
                     if (violationCountRef.current === 1) {
                         // First violation: show blocking warning
@@ -240,6 +256,21 @@ export default function TestPage() {
                         autoSubmitTriggeredRef.current = true;
                         setShowViolationWarning(false);
                         handleFinalSubmit();
+                    }
+                }
+            } else {
+                // Tab became visible again — recalculate timer from deadline
+                // This handles mobile phone lock/unlock and tab switching
+                if (deadlineRef.current && !isSubmitted) {
+                    const remaining = Math.max(0, Math.floor((deadlineRef.current - Date.now()) / 1000));
+                    if (remaining <= 0) {
+                        // Time expired while backgrounded — auto-submit
+                        if (!autoSubmitTriggeredRef.current) {
+                            autoSubmitTriggeredRef.current = true;
+                            handleFinalSubmit();
+                        }
+                    } else {
+                        setTimeLeft(remaining);
                     }
                 }
             }
@@ -329,7 +360,7 @@ export default function TestPage() {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [antiCheatEnabled, isSubmitted]);
 
-    // Anti-cheat: Fullscreen exit detection
+    // Anti-cheat: Fullscreen exit detection (works on ALL devices)
     useEffect(() => {
         if (!antiCheatEnabled || isSubmitted) return;
 
@@ -343,8 +374,8 @@ export default function TestPage() {
                 // Remove body class when exiting fullscreen
                 document.body.classList.remove('modal-open');
 
-                // Auto-submit logic for non-mobile screens
-                if (isNonMobileRef.current && !autoSubmitTriggeredRef.current) {
+                // Auto-submit logic — applies to ALL screen sizes (desktop + mobile)
+                if (!autoSubmitTriggeredRef.current) {
                     violationCountRef.current += 1;
                     if (violationCountRef.current === 1) {
                         // First violation: show blocking warning
@@ -390,22 +421,28 @@ export default function TestPage() {
         }
     }, [testId, user, authLoading, router]);
 
-    // Timer effect
+    // Tamper-proof timer effect: uses absolute deadline instead of decrementing counter.
+    // On mobile, setInterval pauses when the tab/app is backgrounded, but the deadline
+    // is absolute — so when the tab becomes visible again, timeLeft is recalculated correctly.
     useEffect(() => {
-        if (timeLeft === null || timeLeft <= 0 || isSubmitted) return;
+        if (deadlineRef.current === null || isSubmitted) return;
 
         const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev === null || prev <= 1) {
+            const remaining = Math.max(0, Math.floor((deadlineRef.current! - Date.now()) / 1000));
+            if (remaining <= 0) {
+                clearInterval(timer);
+                setTimeLeft(0);
+                if (!autoSubmitTriggeredRef.current) {
+                    autoSubmitTriggeredRef.current = true;
                     handleFinalSubmit();
-                    return 0;
                 }
-                return prev - 1;
-            });
+            } else {
+                setTimeLeft(remaining);
+            }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeLeft, isSubmitted]);
+    }, [deadlineRef.current, isSubmitted]);
 
     const loadTest = async () => {
         try {
@@ -422,6 +459,13 @@ export default function TestPage() {
             const testData = await getTestById(testId);
             if (!testData) {
                 setError('Test not found');
+                setLoading(false);
+                return;
+            }
+
+            // Check if test has expired
+            if (testData.expiresAt && new Date(testData.expiresAt) < new Date()) {
+                setError('This test has expired and is no longer available.');
                 setLoading(false);
                 return;
             }
@@ -453,10 +497,7 @@ export default function TestPage() {
             if (testData.showInstructions !== false) {
                 setShowInstructionsScreen(true);
             } else {
-                setTestStartTime(new Date());
-                if (testData.duration) {
-                    setTimeLeft(testData.duration * 60);
-                }
+                startTimer(testData);
                 if (testData.enableAntiCheat) {
                     setTimeout(() => enterFullscreen(), 500);
                 }
@@ -469,6 +510,41 @@ export default function TestPage() {
         }
     };
 
+    // Initialize the tamper-proof deadline-based timer
+    const startTimer = (testData: Test) => {
+        setTestStartTime(new Date());
+
+        if (testData.duration) {
+            // Check if there's a persisted deadline from sessionStorage (page refresh case)
+            const persisted = getPersistedDeadline();
+            if (persisted && persisted > Date.now()) {
+                // Restore persisted deadline — timer continues from where it was
+                deadlineRef.current = persisted;
+            } else {
+                // Calculate fresh deadline
+                let timerDeadline = Date.now() + testData.duration * 60 * 1000;
+
+                // If test has an expiresAt, use whichever comes first
+                if (testData.expiresAt) {
+                    const expiryMs = new Date(testData.expiresAt).getTime();
+                    timerDeadline = Math.min(timerDeadline, expiryMs);
+                }
+
+                setDeadline(timerDeadline);
+            }
+
+            // Calculate initial timeLeft
+            const remaining = Math.max(0, Math.floor((deadlineRef.current! - Date.now()) / 1000));
+            if (remaining <= 0) {
+                // Already expired (e.g., came back after long time)
+                setTimeLeft(0);
+                handleFinalSubmit();
+                return;
+            }
+            setTimeLeft(remaining);
+        }
+    };
+
 
 
     // Start test after agreeing to instructions
@@ -476,11 +552,7 @@ export default function TestPage() {
         if (!hasAgreed || !test) return;
 
         setShowInstructionsScreen(false);
-        setTestStartTime(new Date());
-
-        if (test.duration) {
-            setTimeLeft(test.duration * 60);
-        }
+        startTimer(test);
 
         if (test.enableAntiCheat) {
             setTimeout(() => enterFullscreen(), 500);
@@ -626,6 +698,9 @@ export default function TestPage() {
             }
             // Remove body class
             document.body.classList.remove('modal-open');
+
+            // Clear persisted deadline from sessionStorage
+            clearPersistedDeadline();
 
             setIsSubmitted(true);
         } catch (err) {
@@ -774,25 +849,39 @@ export default function TestPage() {
                             </div>
                         )}
 
-                        {/* Auto-Submit Warning — shown on desktop/tablet only */}
+                        {/* Auto-Submit Warning — applies to ALL devices */}
                         {antiCheatEnabled && (
                             <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
                                 <div className="flex items-center gap-2 mb-3">
                                     <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                                    <h4 className="font-semibold text-red-700 dark:text-red-400">⚠️ Auto-Submit Rule (Desktop & Tablet)</h4>
+                                    <h4 className="font-semibold text-red-700 dark:text-red-400">⚠️ Auto-Submit Rule (All Devices)</h4>
                                 </div>
                                 <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
-                                    <p>On desktop and tablet screens, the following rules apply:</p>
+                                    <p>On <strong>all devices (including mobile)</strong>, the following rules apply:</p>
                                     <div className="flex items-start gap-2">
                                         <span className="font-bold">1st violation:</span>
-                                        <span>If you <strong>switch tabs</strong> or <strong>exit fullscreen</strong>, you will receive a <strong>warning</strong>.</span>
+                                        <span>If you <strong>switch tabs</strong>, <strong>minimize the app</strong>, or <strong>exit fullscreen</strong>, you will receive a <strong>warning</strong>.</span>
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <span className="font-bold">2nd violation:</span>
                                         <span>Your test will be <strong>automatically submitted</strong> with whatever answers you have completed.</span>
                                     </div>
-                                    <p className="mt-2 font-medium text-red-800 dark:text-red-300">⚠️ Stay in fullscreen and do not switch tabs during the test!</p>
+                                    <p className="mt-2 font-medium text-red-800 dark:text-red-300">⚠️ Stay focused! Do not switch apps, lock your phone, or switch tabs during the test!</p>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Test Expiry Info */}
+                        {test.expiresAt && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                    <h4 className="font-semibold text-amber-700 dark:text-amber-400">⏰ Test Expiry</h4>
+                                </div>
+                                <p className="text-sm text-amber-700 dark:text-amber-400">
+                                    This test expires on <strong>{new Date(test.expiresAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
+                                    If the test expires while you are taking it, it will be automatically submitted.
+                                </p>
                             </div>
                         )}
 

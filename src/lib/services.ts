@@ -218,6 +218,11 @@ export async function createTest(test: Omit<Test, 'id' | 'createdAt'>): Promise<
         testData.scheduledStartTime = Timestamp.fromDate(new Date(test.scheduledStartTime));
     }
 
+    // Convert expiresAt to Firestore Timestamp if provided
+    if (test.expiresAt) {
+        testData.expiresAt = Timestamp.fromDate(new Date(test.expiresAt));
+    }
+
     const docRef = await addDoc(testsRef, testData);
     return docRef.id;
 }
@@ -230,11 +235,15 @@ export async function getAllTests(): Promise<Test[]> {
     const q = query(testsRef, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date()
-    })) as Test[];
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || undefined
+        } as Test;
+    });
 }
 
 /**
@@ -250,11 +259,15 @@ export async function getTestsByClass(studentClass: number): Promise<Test[]> {
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date()
-    })) as Test[];
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || undefined
+        } as Test;
+    });
 }
 
 /**
@@ -269,7 +282,8 @@ export async function getTestById(testId: string): Promise<Test | null> {
         return {
             id: testSnap.id,
             ...data,
-            createdAt: data.createdAt?.toDate() || new Date()
+            createdAt: data.createdAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || undefined
         } as Test;
     }
     return null;
@@ -630,6 +644,11 @@ export async function updateTest(testId: string, updates: Partial<Omit<Test, 'id
     // Convert scheduledStartTime to Timestamp if provided
     if (updates.scheduledStartTime) {
         updateData.scheduledStartTime = Timestamp.fromDate(new Date(updates.scheduledStartTime));
+    }
+
+    // Convert expiresAt to Timestamp if provided
+    if (updates.expiresAt) {
+        updateData.expiresAt = Timestamp.fromDate(new Date(updates.expiresAt));
     }
 
     await updateDoc(testRef, updateData);

@@ -47,6 +47,7 @@ import {
     HelpCircle,
     Check,
     Home,
+    Hourglass,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -178,6 +179,8 @@ export default function TeacherDashboard() {
         isCombinedSubject: boolean;
         combinedSubjects: string[];
         isScheduleEnabled: boolean;
+        expiresAt: string;
+        isExpiryEnabled: boolean;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -194,6 +197,8 @@ export default function TeacherDashboard() {
         isCombinedSubject: false,
         combinedSubjects: [],
         isScheduleEnabled: false,
+        expiresAt: '',
+        isExpiryEnabled: false,
     });
 
     // Proctoring report modal state
@@ -250,13 +255,15 @@ export default function TeacherDashboard() {
         duration: number;
         isActive: boolean;
         scheduledStartTime: string;
+        expiresAt: string;
     }>({
         title: '',
         subject: SUBJECTS[0],
         targetClass: 5,
         duration: 30,
         isActive: true,
-        scheduledStartTime: ''
+        scheduledStartTime: '',
+        expiresAt: ''
     });
     const [editQuestions, setEditQuestions] = useState<ParsedQuestion[]>([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -365,7 +372,8 @@ export default function TeacherDashboard() {
                     id: doc.id,
                     ...data,
                     createdAt: data.createdAt?.toDate() || new Date(),
-                    scheduledStartTime: data.scheduledStartTime?.toDate() || undefined
+                    scheduledStartTime: data.scheduledStartTime?.toDate() || undefined,
+                    expiresAt: data.expiresAt?.toDate() || undefined
                 } as Test);
             });
             setTests(allTests);
@@ -678,7 +686,8 @@ export default function TeacherDashboard() {
                     isCombinedSubject: newTest.isCombinedSubject,
                     combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
                     isScheduleEnabled: newTest.isScheduleEnabled,
-                    ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
+                    ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
+                    ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
                 });
 
                 // Send push notification to students in the target class
@@ -731,7 +740,8 @@ export default function TeacherDashboard() {
                 isCombinedSubject: newTest.isCombinedSubject,
                 combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
                 isScheduleEnabled: newTest.isScheduleEnabled,
-                ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {})
+                ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
+                ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
             });
 
             await uploadQuestions(testId, questions);
@@ -775,6 +785,8 @@ export default function TeacherDashboard() {
             isCombinedSubject: false,
             combinedSubjects: [],
             isScheduleEnabled: false,
+            expiresAt: '',
+            isExpiryEnabled: false,
         });
         setCsvFile(null);
         setJsonInput('');
@@ -915,7 +927,8 @@ export default function TeacherDashboard() {
             targetClass: test.targetClass,
             duration: test.duration || 30,
             isActive: test.isActive,
-            scheduledStartTime: test.scheduledStartTime ? new Date(test.scheduledStartTime).toISOString().slice(0, 16) : ''
+            scheduledStartTime: test.scheduledStartTime ? new Date(test.scheduledStartTime).toISOString().slice(0, 16) : '',
+            expiresAt: test.expiresAt ? new Date(test.expiresAt).toISOString().slice(0, 16) : ''
         });
         setShowEditModal(true);
         setLoadingEditQuestions(true);
@@ -949,7 +962,8 @@ export default function TeacherDashboard() {
             targetClass: 5,
             duration: 30,
             isActive: true,
-            scheduledStartTime: ''
+            scheduledStartTime: '',
+            expiresAt: ''
         });
         setEditQuestions([]);
         setEditSuccess(false);
@@ -971,7 +985,8 @@ export default function TeacherDashboard() {
                 targetClass: editTestData.targetClass,
                 duration: editTestData.duration,
                 isActive: editTestData.isActive,
-                ...(editTestData.scheduledStartTime ? { scheduledStartTime: new Date(editTestData.scheduledStartTime) } : {})
+                ...(editTestData.scheduledStartTime ? { scheduledStartTime: new Date(editTestData.scheduledStartTime) } : {}),
+                ...(editTestData.expiresAt ? { expiresAt: new Date(editTestData.expiresAt) } : {})
             });
 
             // If questions were modified, update them
@@ -1544,13 +1559,14 @@ export default function TeacherDashboard() {
                                         ? Math.round(nonPdfResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / nonPdfResults.length)
                                         : null;
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
+                                    const isExpired = test.expiresAt && new Date(test.expiresAt) < new Date();
 
                                     return (
                                         <motion.div
                                             key={test.id}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}
+                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${isExpired ? 'border-red-200 dark:border-red-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}
                                         >
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
@@ -1584,6 +1600,18 @@ export default function TeacherDashboard() {
                                                         {test.isPdfTest && (
                                                             <span className="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-medium rounded-full flex items-center gap-1">
                                                                 📋 PDF Paper
+                                                            </span>
+                                                        )}
+                                                        {isExpired && (
+                                                            <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                <Hourglass className="w-3 h-3" />
+                                                                Expired
+                                                            </span>
+                                                        )}
+                                                        {test.expiresAt && !isExpired && (
+                                                            <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                <Hourglass className="w-3 h-3" />
+                                                                Expires {new Date(test.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         )}
                                                     </div>
@@ -2352,6 +2380,65 @@ export default function TeacherDashboard() {
                                                     )}
                                                 </div>
 
+
+                                                {/* Test Expiry Section */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+                                                            <Hourglass className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Test Expiry</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Set a deadline after which students can&apos;t take the test</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, isExpiryEnabled: !newTest.isExpiryEnabled, expiresAt: '' })}
+                                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 flex items-center gap-2 ${
+                                                                newTest.isExpiryEnabled
+                                                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                                                                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-8 h-4 rounded-full transition-colors ${newTest.isExpiryEnabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                                <div className={`w-3.5 h-3.5 rounded-full bg-white shadow transform transition-transform mt-[1px] ${newTest.isExpiryEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                                            </div>
+                                                            {newTest.isExpiryEnabled ? 'Enabled' : 'Disabled'}
+                                                        </button>
+                                                    </div>
+                                                    {newTest.isExpiryEnabled && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                    <Hourglass className="w-4 h-4 inline mr-1" />
+                                                                    Expiry Date & Time
+                                                                </label>
+                                                                <input
+                                                                    type="datetime-local"
+                                                                    value={newTest.expiresAt}
+                                                                    onChange={(e) => setNewTest({ ...newTest, expiresAt: e.target.value })}
+                                                                    min={new Date().toISOString().slice(0, 16)}
+                                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                                                />
+                                                            </div>
+                                                            {newTest.expiresAt && (
+                                                                <div className="flex items-center">
+                                                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 w-full">
+                                                                        <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                                                                            <Hourglass className="w-4 h-4" />
+                                                                            <span className="font-medium">Test will auto-expire</span>
+                                                                        </div>
+                                                                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                                                                            Expires: {new Date(newTest.expiresAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                        </p>
+                                                                        <p className="text-xs text-red-500 dark:text-red-500 mt-1">
+                                                                            Students who haven&apos;t taken the test by this time will be marked as unattempted
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 {/* Marking Settings Section */}
                                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
@@ -3430,6 +3517,25 @@ export default function TeacherDashboard() {
                                                 onChange={(e) => setEditTestData({ ...editTestData, scheduledStartTime: e.target.value })}
                                                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
                                             />
+                                        </div>
+
+                                        {/* Test Expiry Time */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                <Hourglass className="w-4 h-4 inline mr-1" />
+                                                Expiry Time (Optional)
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editTestData.expiresAt}
+                                                onChange={(e) => setEditTestData({ ...editTestData, expiresAt: e.target.value })}
+                                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
+                                            />
+                                            {editTestData.expiresAt && (
+                                                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                                                    Test will expire: {new Date(editTestData.expiresAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Status Toggle */}
