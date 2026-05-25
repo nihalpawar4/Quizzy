@@ -1,5 +1,5 @@
 // Quizy Service Worker - By Nihal Pawar
-const CACHE_NAME = 'quizy-pwa-v1';
+const CACHE_NAME = 'quizy-pwa-v2';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache immediately on install
