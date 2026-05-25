@@ -136,7 +136,7 @@ export function subscribeToMasteredMistakes(
 
 /**
  * Record a practice attempt on a mistake bucket item.
- * - Correct: increment correctStreak. If >= 2, mark as mastered.
+ * - Correct: increment correctStreak. If >= 1, mark as mastered.
  * - Wrong: reset correctStreak to 0.
  */
 export async function recordAttempt(
@@ -147,7 +147,7 @@ export async function recordAttempt(
     const docRef = doc(db, COLLECTIONS.MISTAKE_BUCKET, itemId);
 
     const newStreak = isCorrect ? currentStreak + 1 : 0;
-    const isMastered = newStreak >= 2;
+    const isMastered = newStreak >= 1;
 
     const updateData: Record<string, unknown> = {
         correctStreak: newStreak,

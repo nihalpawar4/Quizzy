@@ -104,6 +104,7 @@ export default function StudentDashboard() {
     const [filterType, setFilterType] = useState<'All' | 'Quiz' | 'PDF'>('All');
     const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Completed' | 'Expired'>('All');
     const [showFilters, setShowFilters] = useState(false);
+    const [filterTouched, setFilterTouched] = useState<Set<string>>(new Set());
 
     // Practice Mode - Mistake Bucket state
     const [mistakeBucketItems, setMistakeBucketItems] = useState<MistakeBucketItem[]>([]);
@@ -914,7 +915,10 @@ export default function StudentDashboard() {
                         {tests.length > 0 && (
                             <div className="mb-5">
                                 <button
-                                    onClick={() => setShowFilters(!showFilters)}
+                                    onClick={() => {
+                                        setShowFilters(!showFilters);
+                                        if (!showFilters) setFilterTouched(new Set());
+                                    }}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all mb-3 ${
                                         showFilters || filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All'
                                             ? 'bg-[#1650EB] text-white shadow-md'
@@ -937,7 +941,17 @@ export default function StudentDashboard() {
                                                 {['All', ...Array.from(new Set(tests.map(t => t.subject)))].map(subject => (
                                                     <button
                                                         key={subject}
-                                                        onClick={() => setFilterSubject(subject)}
+                                                        onClick={() => {
+                                                            setFilterSubject(subject);
+                                                            setFilterTouched(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add('subject');
+                                                                if (next.has('type') && next.has('status')) {
+                                                                    setTimeout(() => setShowFilters(false), 200);
+                                                                }
+                                                                return next;
+                                                            });
+                                                        }}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                                             filterSubject === subject
                                                                 ? 'bg-[#1650EB] text-white shadow-sm'
@@ -957,7 +971,17 @@ export default function StudentDashboard() {
                                                 {(['All', 'Quiz', 'PDF'] as const).map(type => (
                                                     <button
                                                         key={type}
-                                                        onClick={() => setFilterType(type)}
+                                                        onClick={() => {
+                                                            setFilterType(type);
+                                                            setFilterTouched(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add('type');
+                                                                if (next.has('subject') && next.has('status')) {
+                                                                    setTimeout(() => setShowFilters(false), 200);
+                                                                }
+                                                                return next;
+                                                            });
+                                                        }}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                                                             filterType === type
                                                                 ? type === 'PDF' ? 'bg-rose-500 text-white shadow-sm' : type === 'Quiz' ? 'bg-[#1650EB] text-white shadow-sm' : 'bg-[#1650EB] text-white shadow-sm'
@@ -980,7 +1004,17 @@ export default function StudentDashboard() {
                                                 {(['All', 'Pending', 'Completed', 'Expired'] as const).map(status => (
                                                     <button
                                                         key={status}
-                                                        onClick={() => setFilterStatus(status)}
+                                                        onClick={() => {
+                                                            setFilterStatus(status);
+                                                            setFilterTouched(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add('status');
+                                                                if (next.has('subject') && next.has('type')) {
+                                                                    setTimeout(() => setShowFilters(false), 200);
+                                                                }
+                                                                return next;
+                                                            });
+                                                        }}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                                                             filterStatus === status
                                                                 ? status === 'Completed' ? 'bg-green-500 text-white shadow-sm'
@@ -1003,7 +1037,7 @@ export default function StudentDashboard() {
                                         {/* Clear Filters */}
                                         {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
                                             <button
-                                                onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); }}
+                                                onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); setFilterTouched(new Set()); }}
                                                 className="text-xs text-[#1650EB] hover:text-[#1243c7] font-medium flex items-center gap-1"
                                             >
                                                 <X className="w-3 h-3" />
@@ -2056,6 +2090,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
     const [sessionResults, setSessionResults] = useState<{ correct: number; wrong: number; mastered: number }>({ correct: 0, wrong: 0, mastered: 0 });
     const [reviewItems, setReviewItems] = useState<MistakeBucketItem[]>([]);
     const [showSummary, setShowSummary] = useState(false);
+    const [optionsMap, setOptionsMap] = useState<Record<number, string[]>>({});
 
     // Group mistakes by subject
     const subjectGroups = mistakeItems.reduce((acc, item) => {
@@ -2074,8 +2109,36 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
         return addedAt >= yesterday && addedAt < today;
     });
 
+    // Build shuffled options for a mistake item
+    const buildOptionsForItem = (item: MistakeBucketItem): string[] => {
+        const optionSet = new Set<string>();
+        optionSet.add(item.correctAnswer);
+        optionSet.add(item.userWrongAnswer);
+        const distractors = ['None of the above', 'All of the above', 'Cannot be determined', 'Not enough information'];
+        let i = 0;
+        while (optionSet.size < 4 && i < distractors.length) {
+            if (distractors[i] !== item.correctAnswer && distractors[i] !== item.userWrongAnswer) {
+                optionSet.add(distractors[i]);
+            }
+            i++;
+        }
+        const arr = Array.from(optionSet);
+        for (let j = arr.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [arr[j], arr[k]] = [arr[k], arr[j]];
+        }
+        return arr;
+    };
+
     const startReview = (items: MistakeBucketItem[]) => {
-        setReviewItems([...items]);
+        const itemsCopy = [...items];
+        // Pre-build all shuffled options
+        const map: Record<number, string[]> = {};
+        itemsCopy.forEach((item, idx) => {
+            map[idx] = buildOptionsForItem(item);
+        });
+        setOptionsMap(map);
+        setReviewItems(itemsCopy);
         setCurrentReviewIndex(0);
         setSelectedAnswer(null);
         setShowResult(false);
@@ -2168,7 +2231,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                         {sessionResults.mastered > 0 && (
                             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
                                 <p className="text-sm text-purple-700 dark:text-purple-400">
-                                    🎯 <strong>{sessionResults.mastered} question{sessionResults.mastered > 1 ? 's' : ''}</strong> cleared from your bucket! Get them right twice to master them.
+                                    🎯 <strong>{sessionResults.mastered} question{sessionResults.mastered > 1 ? 's' : ''}</strong> cleared from your bucket! Get it right once to master it.
                                 </p>
                             </div>
                         )}
@@ -2189,57 +2252,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
     if (isReviewing && reviewItems.length > 0) {
         const currentItem = reviewItems[currentReviewIndex];
         const progress = ((currentReviewIndex + 1) / reviewItems.length) * 100;
-
-        // Build answer options: correct + wrong answer + 2 distractors
-        const buildOptions = (item: MistakeBucketItem): string[] => {
-            const optionSet = new Set<string>();
-            optionSet.add(item.correctAnswer);
-            optionSet.add(item.userWrongAnswer);
-            // Add generic distractors if needed
-            const distractors = ['None of the above', 'All of the above', 'Cannot be determined', 'Not enough information'];
-            let i = 0;
-            while (optionSet.size < 4 && i < distractors.length) {
-                if (distractors[i] !== item.correctAnswer && distractors[i] !== item.userWrongAnswer) {
-                    optionSet.add(distractors[i]);
-                }
-                i++;
-            }
-            // Shuffle
-            const arr = Array.from(optionSet);
-            for (let j = arr.length - 1; j > 0; j--) {
-                const k = Math.floor(Math.random() * (j + 1));
-                [arr[j], arr[k]] = [arr[k], arr[j]];
-            }
-            return arr;
-        };
-
-        // Memoize options to prevent reshuffling on re-render
-        const [currentOptions] = useState(() => buildOptions(currentItem));
-        const [optionsMap, setOptionsMap] = useState<Record<number, string[]>>(() => {
-            const map: Record<number, string[]> = {};
-            reviewItems.forEach((item, idx) => {
-                const opts = new Set<string>();
-                opts.add(item.correctAnswer);
-                opts.add(item.userWrongAnswer);
-                const distractors = ['None of the above', 'All of the above', 'Cannot be determined', 'Not enough information'];
-                let i = 0;
-                while (opts.size < 4 && i < distractors.length) {
-                    if (distractors[i] !== item.correctAnswer && distractors[i] !== item.userWrongAnswer) {
-                        opts.add(distractors[i]);
-                    }
-                    i++;
-                }
-                const arr = Array.from(opts);
-                for (let j = arr.length - 1; j > 0; j--) {
-                    const k = Math.floor(Math.random() * (j + 1));
-                    [arr[j], arr[k]] = [arr[k], arr[j]];
-                }
-                map[idx] = arr;
-            });
-            return map;
-        });
-
-        const options = optionsMap[currentReviewIndex] || currentOptions;
+        const options = optionsMap[currentReviewIndex] || [currentItem.correctAnswer, currentItem.userWrongAnswer];
 
         return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 max-w-2xl mx-auto">
@@ -2279,7 +2292,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                             {currentItem.questionText}
                         </h3>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
-                            Streak: {currentItem.correctStreak}/2 — get it right {2 - currentItem.correctStreak} more time{2 - currentItem.correctStreak !== 1 ? 's' : ''} to master
+                            Get it right once to clear it from your bucket
                         </p>
 
                         {/* Answer Options */}
@@ -2452,7 +2465,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                             <div>
                                 <h4 className="font-bold text-lg">Review All Mistakes 📚</h4>
                                 <p className="text-blue-200 text-sm mt-1">
-                                    {mistakeItems.length} question{mistakeItems.length > 1 ? 's' : ''} in your bucket — get each right twice to clear it!
+                                    {mistakeItems.length} question{mistakeItems.length > 1 ? 's' : ''} in your bucket — get each right once to clear it!
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
