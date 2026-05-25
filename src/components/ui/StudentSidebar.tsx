@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
-    activeTab: 'tests' | 'reports' | 'notes' | 'homework';
-    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework') => void;
+    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice';
+    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice') => void;
     userName: string;
     userClass: number;
     userPhotoURL?: string | null;
@@ -33,6 +33,7 @@ interface SidebarProps {
     onNotificationClick: () => void;
     onSignOut: () => void;
     onComingSoon: (feature: string) => void;
+    mistakeBucketCount: number;
 }
 
 interface NavItem {
@@ -40,7 +41,7 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'reports' | 'notes' | 'homework';
+    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice';
     href?: string;
     badge?: number;
     comingSoon?: boolean;
@@ -61,6 +62,7 @@ export default function StudentSidebar({
     onNotificationClick,
     onSignOut,
     onComingSoon,
+    mistakeBucketCount,
 }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -117,7 +119,8 @@ export default function StudentSidebar({
             label: 'Practice Mode',
             shortLabel: 'Practice',
             icon: Target,
-            comingSoon: true,
+            tab: 'practice',
+            badge: mistakeBucketCount,
             activeColor: 'bg-green-500',
         },
         {

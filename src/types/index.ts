@@ -137,6 +137,32 @@ export interface TestResult {
     pdfEvaluated?: boolean; // Whether teacher has evaluated this
 }
 
+// Mistake Bucket item for Practice Mode
+export interface MistakeBucketItem {
+    id: string;
+    studentId: string;
+    studentClass: number;
+    // Question data (denormalized for fast access)
+    questionId: string;
+    questionText: string;
+    questionType: QuestionType;
+    options: string[];
+    correctAnswer: string;
+    explanation?: string;
+    // Context
+    testId: string;
+    testTitle: string;
+    subject: string;
+    userWrongAnswer: string;
+    // Mastery tracking
+    correctStreak: number;    // 0 initially, +1 each correct, resets on wrong
+    isMastered: boolean;      // true when correctStreak >= 2
+    // Timestamps
+    addedAt: Date;
+    lastAttemptedAt?: Date;
+    masteredAt?: Date;
+}
+
 // Auth Context Types
 export interface AuthContextType {
     user: User | null;

@@ -35,9 +35,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
+import { subscribeToMistakes, subscribeToMasteredMistakes, recordAttempt } from '@/services/mistakeBucketService';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
-import type { Test, TestResult, SubjectNote, Notification } from '@/types';
+import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem } from '@/types';
 import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -75,7 +76,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -103,6 +104,10 @@ export default function StudentDashboard() {
     const [filterType, setFilterType] = useState<'All' | 'Quiz' | 'PDF'>('All');
     const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Completed' | 'Expired'>('All');
     const [showFilters, setShowFilters] = useState(false);
+
+    // Practice Mode - Mistake Bucket state
+    const [mistakeBucketItems, setMistakeBucketItems] = useState<MistakeBucketItem[]>([]);
+    const [masteredCount, setMasteredCount] = useState(0);
 
 
     // PDF Test viewer state
@@ -521,6 +526,14 @@ export default function StudentDashboard() {
         }
     }, [user?.uid]);
 
+    // Real-time listener for Mistake Bucket
+    useEffect(() => {
+        if (!user?.uid) return;
+        const unsub1 = subscribeToMistakes(user.uid, setMistakeBucketItems);
+        const unsub2 = subscribeToMasteredMistakes(user.uid, setMasteredCount);
+        return () => { unsub1(); unsub2(); };
+    }, [user?.uid]);
+
     // Real-time listener for user profile changes (class change from profile settings)
     // When studentClass is changed in Firestore, this triggers refreshUser() which updates
     // the AuthContext user object, causing all dependent listeners to re-subscribe instantly
@@ -694,6 +707,7 @@ export default function StudentDashboard() {
                 onNotificationClick={() => setShowNotificationPanel(!showNotificationPanel)}
                 onSignOut={handleSignOut}
                 onComingSoon={handleComingSoon}
+                mistakeBucketCount={mistakeBucketItems.length}
             />
 
             {/* Main Content Area */}
@@ -1528,9 +1542,14 @@ export default function StudentDashboard() {
                     </motion.div>
                 )}
 
-
-
-
+                {/* Practice Mode Tab */}
+                {activeTab === 'practice' && (
+                    <PracticeModeTab
+                        mistakeItems={mistakeBucketItems}
+                        masteredCount={masteredCount}
+                        onRecordAttempt={recordAttempt}
+                    />
+                )}
 
 
             </main>
@@ -2019,5 +2038,486 @@ export default function StudentDashboard() {
 
             </div>{/* Close flex-1 content wrapper */}
         </div>
+    );
+}
+
+// ==================== PRACTICE MODE TAB ====================
+interface PracticeModeTabProps {
+    mistakeItems: MistakeBucketItem[];
+    masteredCount: number;
+    onRecordAttempt: (itemId: string, isCorrect: boolean, currentStreak: number) => Promise<{ newStreak: number; isMastered: boolean }>;
+}
+
+function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: PracticeModeTabProps) {
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [showResult, setShowResult] = useState(false);
+    const [sessionResults, setSessionResults] = useState<{ correct: number; wrong: number; mastered: number }>({ correct: 0, wrong: 0, mastered: 0 });
+    const [reviewItems, setReviewItems] = useState<MistakeBucketItem[]>([]);
+    const [showSummary, setShowSummary] = useState(false);
+
+    // Group mistakes by subject
+    const subjectGroups = mistakeItems.reduce((acc, item) => {
+        acc[item.subject] = (acc[item.subject] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    // Get yesterday's mistakes
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterdayMistakes = mistakeItems.filter(item => {
+        const addedAt = item.addedAt instanceof Date ? item.addedAt : new Date(item.addedAt);
+        return addedAt >= yesterday && addedAt < today;
+    });
+
+    const startReview = (items: MistakeBucketItem[]) => {
+        setReviewItems([...items]);
+        setCurrentReviewIndex(0);
+        setSelectedAnswer(null);
+        setShowResult(false);
+        setSessionResults({ correct: 0, wrong: 0, mastered: 0 });
+        setShowSummary(false);
+        setIsReviewing(true);
+    };
+
+    const handleAnswerSelect = async (answer: string) => {
+        if (showResult) return;
+        setSelectedAnswer(answer);
+        setShowResult(true);
+
+        const currentItem = reviewItems[currentReviewIndex];
+        const isCorrect = answer === currentItem.correctAnswer;
+
+        try {
+            const result = await onRecordAttempt(currentItem.id, isCorrect, currentItem.correctStreak);
+            setSessionResults(prev => ({
+                correct: prev.correct + (isCorrect ? 1 : 0),
+                wrong: prev.wrong + (isCorrect ? 0 : 1),
+                mastered: prev.mastered + (result.isMastered ? 1 : 0),
+            }));
+        } catch (err) {
+            console.error('[Quizy] Error recording attempt:', err);
+        }
+    };
+
+    const handleNext = () => {
+        if (currentReviewIndex < reviewItems.length - 1) {
+            setCurrentReviewIndex(prev => prev + 1);
+            setSelectedAnswer(null);
+            setShowResult(false);
+        } else {
+            setShowSummary(true);
+        }
+    };
+
+    const exitReview = () => {
+        setIsReviewing(false);
+        setShowSummary(false);
+    };
+
+    // Summary screen after review
+    if (showSummary) {
+        const totalReviewed = sessionResults.correct + sessionResults.wrong;
+        const accuracy = totalReviewed > 0 ? Math.round((sessionResults.correct / totalReviewed) * 100) : 0;
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 max-w-2xl mx-auto">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-lg">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
+                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <Trophy className="w-8 h-8 text-white" />
+                        </div>
+                        <h2 className="text-2xl font-bold">Review Complete! 🎉</h2>
+                        <p className="text-green-100 mt-1">Here&apos;s how you did</p>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
+                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{sessionResults.correct}</p>
+                                <p className="text-xs text-green-700 dark:text-green-400 mt-1">Correct</p>
+                            </div>
+                            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
+                                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{sessionResults.wrong}</p>
+                                <p className="text-xs text-red-700 dark:text-red-400 mt-1">Wrong</p>
+                            </div>
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
+                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{sessionResults.mastered}</p>
+                                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">Mastered ✨</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Accuracy</span>
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">{accuracy}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${accuracy}%` }}
+                                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                                    className={`h-3 rounded-full ${accuracy >= 70 ? 'bg-green-500' : accuracy >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                />
+                            </div>
+                        </div>
+
+                        {sessionResults.mastered > 0 && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                                <p className="text-sm text-purple-700 dark:text-purple-400">
+                                    🎯 <strong>{sessionResults.mastered} question{sessionResults.mastered > 1 ? 's' : ''}</strong> cleared from your bucket! Get them right twice to master them.
+                                </p>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={exitReview}
+                            className="w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                        >
+                            Back to Practice Mode
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // Review quiz screen
+    if (isReviewing && reviewItems.length > 0) {
+        const currentItem = reviewItems[currentReviewIndex];
+        const progress = ((currentReviewIndex + 1) / reviewItems.length) * 100;
+
+        // Build answer options: correct + wrong answer + 2 distractors
+        const buildOptions = (item: MistakeBucketItem): string[] => {
+            const optionSet = new Set<string>();
+            optionSet.add(item.correctAnswer);
+            optionSet.add(item.userWrongAnswer);
+            // Add generic distractors if needed
+            const distractors = ['None of the above', 'All of the above', 'Cannot be determined', 'Not enough information'];
+            let i = 0;
+            while (optionSet.size < 4 && i < distractors.length) {
+                if (distractors[i] !== item.correctAnswer && distractors[i] !== item.userWrongAnswer) {
+                    optionSet.add(distractors[i]);
+                }
+                i++;
+            }
+            // Shuffle
+            const arr = Array.from(optionSet);
+            for (let j = arr.length - 1; j > 0; j--) {
+                const k = Math.floor(Math.random() * (j + 1));
+                [arr[j], arr[k]] = [arr[k], arr[j]];
+            }
+            return arr;
+        };
+
+        // Memoize options to prevent reshuffling on re-render
+        const [currentOptions] = useState(() => buildOptions(currentItem));
+        const [optionsMap, setOptionsMap] = useState<Record<number, string[]>>(() => {
+            const map: Record<number, string[]> = {};
+            reviewItems.forEach((item, idx) => {
+                const opts = new Set<string>();
+                opts.add(item.correctAnswer);
+                opts.add(item.userWrongAnswer);
+                const distractors = ['None of the above', 'All of the above', 'Cannot be determined', 'Not enough information'];
+                let i = 0;
+                while (opts.size < 4 && i < distractors.length) {
+                    if (distractors[i] !== item.correctAnswer && distractors[i] !== item.userWrongAnswer) {
+                        opts.add(distractors[i]);
+                    }
+                    i++;
+                }
+                const arr = Array.from(opts);
+                for (let j = arr.length - 1; j > 0; j--) {
+                    const k = Math.floor(Math.random() * (j + 1));
+                    [arr[j], arr[k]] = [arr[k], arr[j]];
+                }
+                map[idx] = arr;
+            });
+            return map;
+        });
+
+        const options = optionsMap[currentReviewIndex] || currentOptions;
+
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 max-w-2xl mx-auto">
+                {/* Progress Bar */}
+                <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <button onClick={exitReview} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1">
+                            <X className="w-4 h-4" /> Exit
+                        </button>
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            {currentReviewIndex + 1} / {reviewItems.length}
+                        </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <motion.div
+                            animate={{ width: `${progress}%` }}
+                            className="h-2 rounded-full bg-gradient-to-r from-[#1650EB] to-green-500"
+                        />
+                    </div>
+                </div>
+
+                {/* Question Card */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-lg">
+                    {/* Subject & Test info */}
+                    <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
+                        <span className="text-xs font-medium text-[#1650EB] dark:text-[#6095DB] bg-[#1650EB]/10 dark:bg-[#1650EB]/20 px-2.5 py-1 rounded-full">
+                            {currentItem.subject}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                            from: {currentItem.testTitle}
+                        </span>
+                    </div>
+
+                    {/* Question */}
+                    <div className="p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                            {currentItem.questionText}
+                        </h3>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
+                            Streak: {currentItem.correctStreak}/2 — get it right {2 - currentItem.correctStreak} more time{2 - currentItem.correctStreak !== 1 ? 's' : ''} to master
+                        </p>
+
+                        {/* Answer Options */}
+                        <div className="space-y-3">
+                            {options.map((option, idx) => {
+                                const isSelected = selectedAnswer === option;
+                                const isCorrect = option === currentItem.correctAnswer;
+                                const isWrong = showResult && isSelected && !isCorrect;
+                                const showCorrectHighlight = showResult && isCorrect;
+
+                                return (
+                                    <motion.button
+                                        key={idx}
+                                        whileTap={!showResult ? { scale: 0.98 } : {}}
+                                        onClick={() => handleAnswerSelect(option)}
+                                        disabled={showResult}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                                            showCorrectHighlight
+                                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                                : isWrong
+                                                ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                                : isSelected
+                                                ? 'border-[#1650EB] bg-[#1650EB]/5'
+                                                : 'border-gray-200 dark:border-gray-700 hover:border-[#1650EB]/50 dark:hover:border-[#1650EB]/50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                                                showCorrectHighlight
+                                                    ? 'bg-green-500 text-white'
+                                                    : isWrong
+                                                    ? 'bg-red-500 text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                            }`}>
+                                                {showCorrectHighlight ? <CheckCircle className="w-4 h-4" /> : isWrong ? <XCircle className="w-4 h-4" /> : String.fromCharCode(65 + idx)}
+                                            </div>
+                                            <span className={`text-sm font-medium ${
+                                                showCorrectHighlight
+                                                    ? 'text-green-700 dark:text-green-400'
+                                                    : isWrong
+                                                    ? 'text-red-700 dark:text-red-400'
+                                                    : 'text-gray-800 dark:text-gray-200'
+                                            }`}>
+                                                {option}
+                                            </span>
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Explanation */}
+                        {showResult && currentItem.explanation && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800"
+                            >
+                                <p className="text-sm text-blue-700 dark:text-blue-400">
+                                    <strong>💡 Explanation:</strong> {currentItem.explanation}
+                                </p>
+                            </motion.div>
+                        )}
+
+                        {/* Next Button */}
+                        {showResult && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                onClick={handleNext}
+                                className="mt-6 w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors flex items-center justify-center gap-2"
+                            >
+                                {currentReviewIndex < reviewItems.length - 1 ? (
+                                    <>Next Question <ArrowRight className="w-4 h-4" /></>
+                                ) : (
+                                    <>View Results <Trophy className="w-4 h-4" /></>
+                                )}
+                            </motion.button>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // Main Practice Mode view
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
+            {/* Header */}
+            <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    🎯 Practice Mode
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Review your mistakes and master every question
+                </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+                            <XCircle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{mistakeItems.length}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{masteredCount}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Mastered</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                            <Target className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{mistakeItems.length + masteredCount}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mistake Bucket CTA */}
+            {mistakeItems.length > 0 ? (
+                <div className="space-y-4 mb-8">
+                    {/* Yesterday's mistakes prompt */}
+                    {yesterdayMistakes.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                            onClick={() => startReview(yesterdayMistakes)}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-bold text-lg">Clear yesterday&apos;s mistakes! 🧹</h4>
+                                    <p className="text-amber-100 text-sm mt-1">
+                                        You have {yesterdayMistakes.length} mistake{yesterdayMistakes.length > 1 ? 's' : ''} from yesterday. Tap to review!
+                                    </p>
+                                </div>
+                                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <ArrowRight className="w-6 h-6" />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Review all mistakes */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-gradient-to-r from-[#1650EB] to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-[#1650EB]/20 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                        onClick={() => startReview(mistakeItems)}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h4 className="font-bold text-lg">Review All Mistakes 📚</h4>
+                                <p className="text-blue-200 text-sm mt-1">
+                                    {mistakeItems.length} question{mistakeItems.length > 1 ? 's' : ''} in your bucket — get each right twice to clear it!
+                                </p>
+                            </div>
+                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <RefreshCw className="w-6 h-6" />
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Subject breakdown */}
+                    {Object.keys(subjectGroups).length > 1 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {Object.entries(subjectGroups).map(([subject, count]) => (
+                                <button
+                                    key={subject}
+                                    onClick={() => startReview(mistakeItems.filter(item => item.subject === subject))}
+                                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 hover:border-[#1650EB] dark:hover:border-[#1650EB] transition-all text-left group"
+                                >
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">{subject}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{count} mistake{count > 1 ? 's' : ''}</p>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center mb-8">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="w-8 h-8 text-green-500" />
+                    </div>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Bucket is empty! 🎉</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {masteredCount > 0
+                            ? `You've mastered ${masteredCount} question${masteredCount > 1 ? 's' : ''}! Take more tests to add new mistakes to practice.`
+                            : 'Take a test to start building your practice bucket. Wrong answers will appear here for review!'}
+                    </p>
+                </div>
+            )}
+
+            {/* Coming Soon Features */}
+            <div className="mb-2">
+                <h4 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Coming Soon</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                        { emoji: '⏱️', title: 'Timed Challenges', desc: 'Beat the clock on practice questions' },
+                        { emoji: '📊', title: 'Weak Topic Analysis', desc: 'AI identifies your weakest subjects' },
+                        { emoji: '🏆', title: 'Practice Streaks', desc: 'Build daily practice habits' },
+                        { emoji: '🎮', title: 'Quiz Battle', desc: 'Challenge classmates in real-time' },
+                        { emoji: '🧠', title: 'Spaced Repetition', desc: 'Smart scheduling for long-term memory' },
+                        { emoji: '📝', title: 'Custom Practice Sets', desc: 'Create your own practice quizzes' },
+                    ].map((feature) => (
+                        <div
+                            key={feature.title}
+                            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 opacity-70 hover:opacity-100 transition-opacity"
+                        >
+                            <div className="flex items-start gap-3">
+                                <span className="text-2xl">{feature.emoji}</span>
+                                <div>
+                                    <h5 className="text-sm font-semibold text-gray-900 dark:text-white">{feature.title}</h5>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{feature.desc}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </motion.div>
     );
 }

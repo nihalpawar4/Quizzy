@@ -84,5 +84,7 @@ export const COLLECTIONS = {
     CALLS: 'calls',
     // Class change requests (teacher approval)
     CLASS_CHANGE_REQUESTS: 'classChangeRequests',
+    // Practice Mode - Mistake Bucket
+    MISTAKE_BUCKET: 'mistakeBucket',
 } as const;
 

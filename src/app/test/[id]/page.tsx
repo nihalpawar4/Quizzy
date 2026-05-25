@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getTestById, getQuestionsByTestId, submitTestResult, hasStudentTakenTest } from '@/lib/services';
 import type { Test, Question } from '@/types';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import { addMistakesFromResult } from '@/services/mistakeBucketService';
 
 // Circular Progress Component
 function CircularProgress({
@@ -746,6 +747,31 @@ export default function TestPage() {
 
             // Clear persisted deadline from sessionStorage
             clearPersistedDeadline();
+
+            // Save wrong answers to Mistake Bucket for Practice Mode
+            try {
+                await addMistakesFromResult(
+                    currentUser.uid,
+                    currentUser.studentClass || 0,
+                    {
+                        id: '',
+                        studentId: currentUser.uid,
+                        studentName: currentUser.name,
+                        studentEmail: currentUser.email,
+                        studentClass: currentUser.studentClass || 0,
+                        testId: currentTest.id,
+                        testTitle: currentTest.title,
+                        subject: currentTest.subject,
+                        score: correctCount,
+                        totalQuestions: currentQuestions.length,
+                        answers: currentAnswers.map(a => typeof a === 'number' ? a : -1),
+                        detailedAnswers,
+                        timestamp: endTime,
+                    }
+                );
+            } catch (mbErr) {
+                console.error('[Quizy] Mistake Bucket save failed (non-blocking):', mbErr);
+            }
 
             setIsSubmitted(true);
         } catch (err) {
