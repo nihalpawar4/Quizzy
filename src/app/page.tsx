@@ -24,12 +24,14 @@ import {
   Bell,
   Star,
   Shield,
-  Award
+  Award,
+  Download
 } from 'lucide-react';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePWA } from '@/components/PWAProvider';
 import { PostQuestionButton, PostQuestionModal, QuestionList } from '@/components/qa';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
@@ -515,6 +517,32 @@ function PenUnderline() {
         </defs>
       </motion.svg>
     </div>
+  );
+}
+
+// ==================== INSTALL APP FOOTER LINK ====================
+function InstallAppLink() {
+  const { isInstallable, isInstalled, installApp } = usePWA();
+
+  const handleInstall = async () => {
+    if (isInstallable) {
+      await installApp();
+    } else {
+      alert('To install Quizy:\n\n📱 Android/Chrome:\n1. Tap the ⋮ menu\n2. Select "Add to Home screen"\n3. Tap "Add"\n\n🍎 iPhone/Safari:\n1. Tap the Share button\n2. Select "Add to Home Screen"\n3. Tap "Add"');
+    }
+  };
+
+  // Don't show if already installed as PWA
+  if (isInstalled) return null;
+
+  return (
+    <button
+      onClick={handleInstall}
+      className="typo-body text-sm text-[#1650EB] dark:text-[#6095DB] hover:text-[#1243c7] dark:hover:text-white transition-colors flex items-center gap-1.5 group"
+    >
+      <Download className="w-3.5 h-3.5 group-hover:animate-bounce" />
+      Install App
+    </button>
   );
 }
 
@@ -1114,6 +1142,9 @@ export default function HomePage() {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <InstallAppLink />
+                </li>
               </ul>
             </div>
 
