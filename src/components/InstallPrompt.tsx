@@ -5,6 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, CheckCircle } from 'lucide-react';
 import { usePWA } from './PWAProvider';
 
+/** Returns true on mobile/tablet devices (touch + small screen) */
+function isMobileDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const smallScreen = window.innerWidth <= 768;
+    return mobileUA || smallScreen;
+}
+
 export function InstallPrompt() {
     const { isInstallable, isInstalled, installApp } = usePWA();
     const [showPrompt, setShowPrompt] = useState(false);
@@ -12,18 +21,24 @@ export function InstallPrompt() {
     const [justInstalled, setJustInstalled] = useState(false);
     const [mounted, setMounted] = useState(() => typeof window !== 'undefined');
     const mountedRef = useRef(typeof window !== 'undefined');
+    const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useEffect(() => {
         mountedRef.current = true;
         if (!mounted) setMounted(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Show install prompt after 3 seconds - ALWAYS (unless already installed/dismissed)
+    // Show install prompt after 3 seconds — MOBILE ONLY
     useEffect(() => {
         if (!mounted) return;
 
         // Don't show if already running as installed PWA
-        if (isInstalled) {
+        if (isInstalled) return;
+
+        // Only show on mobile devices
+        if (!isMobileDevice()) {
+            console.log('[Quizy Install] Not a mobile device, skipping install prompt');
             return;
         }
 
@@ -36,8 +51,8 @@ export function InstallPrompt() {
             return;
         }
 
-        // Show the install prompt after 3 seconds - GUARANTEED
-        console.log('[Quizy Install] Will show prompt in 3 seconds...');
+        // Show the install prompt after 3 seconds
+        console.log('[Quizy Install] Will show prompt in 3 seconds (mobile user)...');
         const timer = setTimeout(() => {
             console.log('[Quizy Install] Showing install prompt NOW');
             setShowPrompt(true);
@@ -46,13 +61,27 @@ export function InstallPrompt() {
         return () => clearTimeout(timer);
     }, [mounted, isInstalled]);
 
+    // Auto-dismiss the prompt after 15 seconds
+    useEffect(() => {
+        if (!showPrompt) return;
+
+        autoDismissRef.current = setTimeout(() => {
+            console.log('[Quizy Install] Auto-dismissing install prompt after 15s');
+            setShowPrompt(false);
+            localStorage.setItem('quizy-install-dismissed', Date.now().toString());
+        }, 15000);
+
+        return () => {
+            if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
+        };
+    }, [showPrompt]);
+
     // Handle success toast when app is installed
     useEffect(() => {
         if (!mountedRef.current || !isInstalled) return;
 
         const alreadyShown = localStorage.getItem('quizy-app-installed-shown');
         if (!alreadyShown) {
-            // Intentional: setState triggered by external isInstalled state change
             setJustInstalled(true);
             localStorage.setItem('quizy-app-installed-shown', 'true');
 
@@ -65,6 +94,9 @@ export function InstallPrompt() {
     }, [isInstalled]);
 
     const handleInstall = useCallback(async () => {
+        // Cancel auto-dismiss since user is interacting
+        if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
+
         if (isInstallable) {
             // Browser supports automatic install
             setInstalling(true);
@@ -82,6 +114,7 @@ export function InstallPrompt() {
     }, [isInstallable, installApp]);
 
     const handleDismiss = useCallback(() => {
+        if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
         setShowPrompt(false);
         localStorage.setItem('quizy-install-dismissed', Date.now().toString());
     }, []);

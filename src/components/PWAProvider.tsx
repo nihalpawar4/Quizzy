@@ -210,6 +210,10 @@ export function PWARegistration() {
     }, []);
 
     const handleApplyUpdate = useCallback(() => {
+        // Clear install-dismissed so the install prompt re-shows after reload (for mobile users)
+        localStorage.removeItem('quizy-install-dismissed');
+        localStorage.removeItem('quizy-app-installed-shown');
+
         if (waitingSW) {
             waitingSW.postMessage({ type: 'SKIP_WAITING' });
         }
