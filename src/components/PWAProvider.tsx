@@ -110,6 +110,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
 /**
  * Handles service worker registration + update detection.
  * Renders the UpdateBanner when a new SW version is waiting.
+ * Uses localStorage to ensure the banner only shows ONCE per update.
  */
 export function PWARegistration() {
     const [showUpdateBanner, setShowUpdateBanner] = useState(false);
@@ -120,7 +121,22 @@ export function PWARegistration() {
 
         let cleanupInterval: ReturnType<typeof setInterval> | undefined;
 
+        // Check if this update was already acknowledged
+        const wasRecentlyUpdated = () => {
+            const lastUpdate = localStorage.getItem('quizy-sw-update-applied');
+            if (!lastUpdate) return false;
+            // Don't show banner again within 60 seconds of last update (covers the reload)
+            return Date.now() - parseInt(lastUpdate, 10) < 60000;
+        };
+
         const storeWaiting = (sw: ServiceWorker) => {
+            // Don't show if user just applied an update (page just reloaded)
+            if (wasRecentlyUpdated()) {
+                console.log('[Quizy PWA] Update was recently applied, skipping banner');
+                // Auto-activate the waiting worker silently
+                sw.postMessage({ type: 'SKIP_WAITING' });
+                return;
+            }
             setWaitingSW(sw);
             setShowUpdateBanner(true);
         };
@@ -210,6 +226,9 @@ export function PWARegistration() {
     }, []);
 
     const handleApplyUpdate = useCallback(() => {
+        // Mark this update as applied so banner doesn't re-appear after reload
+        localStorage.setItem('quizy-sw-update-applied', Date.now().toString());
+
         // Clear install-dismissed so the install prompt re-shows after reload (for mobile users)
         localStorage.removeItem('quizy-install-dismissed');
         localStorage.removeItem('quizy-app-installed-shown');
