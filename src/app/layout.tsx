@@ -5,7 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { CallProvider } from "@/contexts/CallContext";
-import { PWAProvider, PWARegistration } from "@/components/PWAProvider";
+import { PWARegistration } from "@/components/PWAProvider";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushNotificationProvider } from "@/components/PushNotificationProvider";
 import { IncomingCallModal, CallScreen } from "@/components/call";
@@ -129,23 +129,21 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ThemeProvider>
-          <PWAProvider>
-            <AuthProvider>
-              <ChatProvider>
-                <CallProvider>
-                  <PushNotificationProvider>
-                    {children}
-                    {/* PWA Components */}
-                    <PWARegistration />
-                    <InstallPrompt />
-                    {/* Call Components (global) */}
-                    <IncomingCallModal />
-                    <CallScreen />
-                  </PushNotificationProvider>
-                </CallProvider>
-              </ChatProvider>
-            </AuthProvider>
-          </PWAProvider>
+          <AuthProvider>
+            <ChatProvider>
+              <CallProvider>
+                <PushNotificationProvider>
+                  {children}
+                  {/* PWA Components */}
+                  <PWARegistration />
+                  <InstallPrompt />
+                  {/* Call Components (global) */}
+                  <IncomingCallModal />
+                  <CallScreen />
+                </PushNotificationProvider>
+              </CallProvider>
+            </ChatProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
