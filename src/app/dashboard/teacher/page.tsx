@@ -3222,6 +3222,12 @@ export default function TeacherDashboard() {
                                                                             <span className={`text-xs font-medium ${avgScore >= 70 ? 'text-green-600' : avgScore >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>Avg: {avgScore}%</span>
                                                                         </>
                                                                     )}
+                                                                    {(student.currentStreak || 0) > 0 && (
+                                                                        <>
+                                                                            <span className="text-xs text-gray-400">•</span>
+                                                                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">🔥{student.currentStreak}</span>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>

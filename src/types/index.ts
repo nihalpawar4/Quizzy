@@ -135,6 +135,9 @@ export interface TestResult {
     pdfMaxMarks?: number; // Maximum marks for PDF test
     pdfTeacherRemarks?: string; // Teacher's remarks/feedback
     pdfEvaluated?: boolean; // Whether teacher has evaluated this
+    // Daily Challenge data
+    isDailyChallenge?: boolean; // Whether this is a daily challenge result
+    dailyChallengeDate?: string; // YYYY-MM-DD date of the daily challenge
 }
 
 // Mistake Bucket item for Practice Mode

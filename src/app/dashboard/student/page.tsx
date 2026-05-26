@@ -46,7 +46,7 @@ import { COLLECTIONS } from '@/lib/constants';
 import { subscribeToHomework, getStudentHomeworkCompletions } from '@/services/homeworkService';
 import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
-import { getDailyQuizQuestions, hasCompletedDailyQuiz, submitDailyQuiz } from '@/services/dailyQuizService';
+import { getDailyQuizQuestions, hasCompletedDailyQuiz, submitDailyQuiz, getDailyQuizHistory } from '@/services/dailyQuizService';
 
 import { useChat } from '@/contexts/ChatContext';
 import { saveLastRoute } from '@/lib/routePersistence';
@@ -115,6 +115,10 @@ export default function StudentDashboard() {
     const [dailyQuizQuestions, setDailyQuizQuestions] = useState<Question[]>([]);
     const [dailyQuizCompleted, setDailyQuizCompleted] = useState(false);
     const [dailyQuizLoading, setDailyQuizLoading] = useState(true);
+    const [showDailyHistory, setShowDailyHistory] = useState(false);
+    const [dailyHistory, setDailyHistory] = useState<{ date: string; score: number; totalQuestions: number; completedAt: Date }[]>([]);
+    const [dailyHistoryLoading, setDailyHistoryLoading] = useState(false);
+    const [dailyQuizScore, setDailyQuizScore] = useState<{ score: number; total: number } | null>(null);
 
 
     // PDF Test viewer state
@@ -954,8 +958,8 @@ export default function StudentDashboard() {
                 )}
 
 
-                {/* Daily Quiz Challenge — always shown on Tests tab */}
-                {activeTab === 'tests' && (
+                {/* Daily Quiz Challenge — shown on Tests tab ONLY if not completed */}
+                {activeTab === 'tests' && !dailyQuizCompleted && (
                     <DailyQuizCard
                         questions={dailyQuizQuestions}
                         completed={dailyQuizCompleted}
@@ -963,11 +967,37 @@ export default function StudentDashboard() {
                         user={user}
                         streak={user.currentStreak || 0}
                         longestStreak={user.longestStreak || 0}
-                        onComplete={() => {
+                        onComplete={(score, total) => {
                             setDailyQuizCompleted(true);
+                            setDailyQuizScore({ score, total });
                             refreshUser();
+                            // Auto-hide the score toast after 4 seconds
+                            setTimeout(() => setDailyQuizScore(null), 4000);
                         }}
                     />
+                )}
+
+                {/* Daily Quiz Score Toast — shown briefly after completion */}
+                {activeTab === 'tests' && dailyQuizScore && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        className="mb-5 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-4 text-white shadow-lg shadow-green-500/20"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🎉</span>
+                                <div>
+                                    <p className="font-bold">Daily Challenge Complete!</p>
+                                    <p className="text-white/80 text-sm">Score: {dailyQuizScore.score}/{dailyQuizScore.total} • 🔥 Streak updated!</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setDailyQuizScore(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </motion.div>
                 )}
 
                 {/* Available Tests Tab */}
@@ -1114,6 +1144,94 @@ export default function StudentDashboard() {
                                 )}
                             </div>
                         )}
+
+                        {/* Daily Challenge History button */}
+                        <button
+                            onClick={async () => {
+                                setShowDailyHistory(!showDailyHistory);
+                                if (!showDailyHistory && dailyHistory.length === 0) {
+                                    setDailyHistoryLoading(true);
+                                    try {
+                                        const history = await getDailyQuizHistory(user.uid);
+                                        setDailyHistory(history);
+                                    } catch (e) { console.error(e); }
+                                    setDailyHistoryLoading(false);
+                                }
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all mb-4 ${
+                                showDailyHistory
+                                    ? 'bg-amber-500 text-white shadow-md'
+                                    : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                            }`}
+                        >
+                            🔥 Daily Challenge
+                            {dailyHistory.length > 0 && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}`}>
+                                    {dailyHistory.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Daily Challenge History Panel */}
+                        <AnimatePresence>
+                            {showDailyHistory && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mb-5 overflow-hidden"
+                                >
+                                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-800/50 p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                🏆 Challenge History
+                                                <span className="text-xs font-normal text-gray-500">({dailyHistory.length} completed)</span>
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                                                    🔥 {user.currentStreak || 0} streak
+                                                </span>
+                                                <span className="text-xs text-gray-400">Best: {user.longestStreak || 0}</span>
+                                            </div>
+                                        </div>
+                                        {dailyHistoryLoading ? (
+                                            <div className="text-center py-6">
+                                                <Loader2 className="w-5 h-5 animate-spin text-amber-500 mx-auto" />
+                                            </div>
+                                        ) : dailyHistory.length === 0 ? (
+                                            <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-6">No challenges completed yet. Start today!</p>
+                                        ) : (
+                                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                                {dailyHistory.map((entry, i) => {
+                                                    const pct = Math.round((entry.score / entry.totalQuestions) * 100);
+                                                    return (
+                                                        <div key={entry.date} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📝'}</span>
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                        {new Date(entry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {entry.totalQuestions} questions
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className={`text-sm font-bold ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                                                                    {entry.score}/{entry.totalQuestions}
+                                                                </span>
+                                                                <p className="text-xs text-gray-400">{pct}%</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {(() => {
                             // Apply filters
@@ -2609,7 +2727,7 @@ interface DailyQuizCardProps {
     user: AppUser;
     streak: number;
     longestStreak: number;
-    onComplete: () => void;
+    onComplete: (score: number, total: number) => void;
 }
 
 function DailyQuizCard({ questions, completed, loading, user, streak, longestStreak, onComplete }: DailyQuizCardProps) {
@@ -2698,7 +2816,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
         }
         setSubmitting(false);
         setFinished(true);
-        onComplete();
+        onComplete(finalScore, questions.length);
     };
 
     // ── Already completed today ──

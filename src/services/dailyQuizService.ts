@@ -189,6 +189,7 @@ export async function hasCompletedDailyQuiz(
 
 /**
  * Submit a daily quiz result and update the student's streak.
+ * Also saves to the `results` collection so it appears in My Reports.
  */
 export async function submitDailyQuiz(
     user: User,
@@ -201,7 +202,7 @@ export async function submitDailyQuiz(
 }> {
     const today = getTodayIST();
 
-    // 1) Save the result
+    // 1) Save to dailyQuizResults collection
     const ref = collection(db, COLLECTIONS.DAILY_QUIZ_RESULTS);
     await addDoc(ref, {
         studentId: user.uid,
@@ -213,7 +214,25 @@ export async function submitDailyQuiz(
         completedAt: Timestamp.now(),
     });
 
-    // 2) Claim the streak (uses existing infrastructure)
+    // 2) Also save to results collection (so it shows in My Reports)
+    const resultsRef = collection(db, COLLECTIONS.RESULTS);
+    await addDoc(resultsRef, {
+        studentId: user.uid,
+        studentName: user.name,
+        studentEmail: user.email || '',
+        studentClass: user.studentClass || 0,
+        testId: `daily-challenge-${today}`,
+        testTitle: `Daily Challenge — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+        subject: 'Daily Challenge',
+        score,
+        totalQuestions,
+        answers: [],
+        timestamp: Timestamp.now(),
+        isDailyChallenge: true,
+        dailyChallengeDate: today,
+    });
+
+    // 3) Claim the streak (uses existing infrastructure)
     const streakResult = await claimDailyStreak(user.uid, user);
 
     if (streakResult) {
@@ -230,4 +249,30 @@ export async function submitDailyQuiz(
         longestStreak: user.longestStreak || 0,
         message: 'Streak already counted!',
     };
+}
+
+/**
+ * Get all daily quiz results for a student (history).
+ */
+export async function getDailyQuizHistory(
+    studentId: string
+): Promise<{ date: string; score: number; totalQuestions: number; completedAt: Date }[]> {
+    const ref = collection(db, COLLECTIONS.DAILY_QUIZ_RESULTS);
+    const q = query(
+        ref,
+        where('studentId', '==', studentId),
+    );
+    const snap = await getDocs(q);
+    const history = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+            date: data.date,
+            score: data.score,
+            totalQuestions: data.totalQuestions,
+            completedAt: data.completedAt?.toDate?.() || new Date(),
+        };
+    });
+    // Sort by date descending
+    history.sort((a, b) => b.date.localeCompare(a.date));
+    return history;
 }
