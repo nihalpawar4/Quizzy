@@ -1007,15 +1007,16 @@ export default function StudentDashboard() {
                             📚 Available Tests for Class {user.studentClass}
                         </h3>
 
-                        {/* Filter Bar */}
-                        {tests.length > 0 && (
-                            <div className="mb-5">
+                        <div className="mb-5 relative">
+                            {/* Button Row: Filters + Daily Challenge side by side */}
+                            <div className="flex items-center gap-2 mb-3">
                                 <button
                                     onClick={() => {
                                         setShowFilters(!showFilters);
+                                        setShowDailyHistory(false);
                                         if (!showFilters) setFilterTouched(new Set());
                                     }}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all mb-3 ${
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                                         showFilters || filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All'
                                             ? 'bg-[#1650EB] text-white shadow-md'
                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -1028,210 +1029,221 @@ export default function StudentDashboard() {
                                     )}
                                 </button>
 
-                                {showFilters && (
-                                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-4 shadow-sm">
-                                        {/* Subject Filter */}
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Subject</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {['All', ...Array.from(new Set(tests.map(t => t.subject)))].map(subject => (
-                                                    <button
-                                                        key={subject}
-                                                        onClick={() => {
-                                                            setFilterSubject(subject);
-                                                            setFilterTouched(prev => {
-                                                                const next = new Set(prev);
-                                                                next.add('subject');
-                                                                if (next.has('type') && next.has('status')) {
-                                                                    setTimeout(() => setShowFilters(false), 200);
-                                                                }
-                                                                return next;
-                                                            });
-                                                        }}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                            filterSubject === subject
-                                                                ? 'bg-[#1650EB] text-white shadow-sm'
-                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                                        }`}
-                                                    >
-                                                        {subject}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Type Filter */}
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Type</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(['All', 'Quiz', 'PDF'] as const).map(type => (
-                                                    <button
-                                                        key={type}
-                                                        onClick={() => {
-                                                            setFilterType(type);
-                                                            setFilterTouched(prev => {
-                                                                const next = new Set(prev);
-                                                                next.add('type');
-                                                                if (next.has('subject') && next.has('status')) {
-                                                                    setTimeout(() => setShowFilters(false), 200);
-                                                                }
-                                                                return next;
-                                                            });
-                                                        }}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                                                            filterType === type
-                                                                ? type === 'PDF' ? 'bg-rose-500 text-white shadow-sm' : type === 'Quiz' ? 'bg-[#1650EB] text-white shadow-sm' : 'bg-[#1650EB] text-white shadow-sm'
-                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                                        }`}
-                                                    >
-                                                        {type === 'PDF' && '📋'}
-                                                        {type === 'Quiz' && '✏️'}
-                                                        {type === 'All' && '📚'}
-                                                        {type === 'PDF' ? 'PDF Paper' : type}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Status Filter */}
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Status</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(['All', 'Pending', 'Completed', 'Expired'] as const).map(status => (
-                                                    <button
-                                                        key={status}
-                                                        onClick={() => {
-                                                            setFilterStatus(status);
-                                                            setFilterTouched(prev => {
-                                                                const next = new Set(prev);
-                                                                next.add('status');
-                                                                if (next.has('subject') && next.has('type')) {
-                                                                    setTimeout(() => setShowFilters(false), 200);
-                                                                }
-                                                                return next;
-                                                            });
-                                                        }}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                                                            filterStatus === status
-                                                                ? status === 'Completed' ? 'bg-green-500 text-white shadow-sm'
-                                                                    : status === 'Expired' ? 'bg-red-500 text-white shadow-sm'
-                                                                    : status === 'Pending' ? 'bg-amber-500 text-white shadow-sm'
-                                                                    : 'bg-[#1650EB] text-white shadow-sm'
-                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                                        }`}
-                                                    >
-                                                        {status === 'Completed' && '✅'}
-                                                        {status === 'Pending' && '⏳'}
-                                                        {status === 'Expired' && '⏰'}
-                                                        {status === 'All' && '📋'}
-                                                        {status}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Clear Filters */}
-                                        {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
-                                            <button
-                                                onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); setFilterTouched(new Set()); }}
-                                                className="text-xs text-[#1650EB] hover:text-[#1243c7] font-medium flex items-center gap-1"
-                                            >
-                                                <X className="w-3 h-3" />
-                                                Clear all filters
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Daily Challenge History button */}
-                        <button
-                            onClick={async () => {
-                                setShowDailyHistory(!showDailyHistory);
-                                if (!showDailyHistory && dailyHistory.length === 0) {
-                                    setDailyHistoryLoading(true);
-                                    try {
-                                        const history = await getDailyQuizHistory(user.uid);
-                                        setDailyHistory(history);
-                                    } catch (e) { console.error(e); }
-                                    setDailyHistoryLoading(false);
-                                }
-                            }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all mb-4 ${
-                                showDailyHistory
-                                    ? 'bg-amber-500 text-white shadow-md'
-                                    : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-                            }`}
-                        >
-                            🔥 Daily Challenge
-                            {dailyHistory.length > 0 && (
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}`}>
-                                    {dailyHistory.length}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Daily Challenge History Panel */}
-                        <AnimatePresence>
-                            {showDailyHistory && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="mb-5 overflow-hidden"
+                                <button
+                                    onClick={async () => {
+                                        setShowDailyHistory(!showDailyHistory);
+                                        setShowFilters(false);
+                                        if (!showDailyHistory && dailyHistory.length === 0) {
+                                            setDailyHistoryLoading(true);
+                                            try {
+                                                const history = await getDailyQuizHistory(user.uid);
+                                                setDailyHistory(history);
+                                            } catch (e) { console.error(e); }
+                                            setDailyHistoryLoading(false);
+                                        }
+                                    }}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                                        showDailyHistory
+                                            ? 'bg-amber-500 text-white shadow-md'
+                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                    }`}
                                 >
-                                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-800/50 p-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                                🏆 Challenge History
-                                                <span className="text-xs font-normal text-gray-500">({dailyHistory.length} completed)</span>
-                                            </h4>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-                                                    🔥 {user.currentStreak || 0} streak
-                                                </span>
-                                                <span className="text-xs text-gray-400">Best: {user.longestStreak || 0}</span>
+                                    🔥 Daily Challenge
+                                    {dailyHistory.length > 0 && (
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}`}>
+                                            {dailyHistory.length}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Filters Popup — floating overlay */}
+                            <AnimatePresence>
+                                {showFilters && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowFilters(false)} />
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-4 shadow-xl"
+                                        >
+                                            {/* Subject Filter */}
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Subject</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {['All', ...Array.from(new Set(tests.map(t => t.subject)))].map(subject => (
+                                                        <button
+                                                            key={subject}
+                                                            onClick={() => {
+                                                                setFilterSubject(subject);
+                                                                setFilterTouched(prev => {
+                                                                    const next = new Set(prev);
+                                                                    next.add('subject');
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                                filterSubject === subject
+                                                                    ? 'bg-[#1650EB] text-white shadow-sm'
+                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                        >
+                                                            {subject}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                        {dailyHistoryLoading ? (
-                                            <div className="text-center py-6">
-                                                <Loader2 className="w-5 h-5 animate-spin text-amber-500 mx-auto" />
+
+                                            {/* Type Filter */}
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Type</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(['All', 'Quiz', 'PDF'] as const).map(type => (
+                                                        <button
+                                                            key={type}
+                                                            onClick={() => {
+                                                                setFilterType(type);
+                                                                setFilterTouched(prev => {
+                                                                    const next = new Set(prev);
+                                                                    next.add('type');
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                                                filterType === type
+                                                                    ? type === 'PDF' ? 'bg-purple-500 text-white shadow-sm'
+                                                                        : type === 'Quiz' ? 'bg-emerald-500 text-white shadow-sm'
+                                                                        : 'bg-[#1650EB] text-white shadow-sm'
+                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                        >
+                                                            {type === 'PDF' && '📄'}
+                                                            {type === 'Quiz' && '📝'}
+                                                            {type === 'All' && '📋'}
+                                                            {type}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ) : dailyHistory.length === 0 ? (
-                                            <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-6">No challenges completed yet. Start today!</p>
-                                        ) : (
-                                            <div className="space-y-2 max-h-64 overflow-y-auto">
-                                                {dailyHistory.map((entry, i) => {
-                                                    const pct = Math.round((entry.score / entry.totalQuestions) * 100);
-                                                    return (
-                                                        <div key={entry.date} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📝'}</span>
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                        {new Date(entry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                        {entry.totalQuestions} questions
-                                                                    </p>
+
+                                            {/* Status Filter */}
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Status</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(['All', 'Pending', 'Completed', 'Expired'] as const).map(status => (
+                                                        <button
+                                                            key={status}
+                                                            onClick={() => {
+                                                                setFilterStatus(status);
+                                                                setFilterTouched(prev => {
+                                                                    const next = new Set(prev);
+                                                                    next.add('status');
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                                                filterStatus === status
+                                                                    ? status === 'Completed' ? 'bg-green-500 text-white shadow-sm'
+                                                                        : status === 'Expired' ? 'bg-red-500 text-white shadow-sm'
+                                                                        : status === 'Pending' ? 'bg-amber-500 text-white shadow-sm'
+                                                                        : 'bg-[#1650EB] text-white shadow-sm'
+                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                        >
+                                                            {status === 'Completed' && '✅'}
+                                                            {status === 'Pending' && '⏳'}
+                                                            {status === 'Expired' && '⏰'}
+                                                            {status === 'All' && '📋'}
+                                                            {status}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Clear Filters */}
+                                            {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
+                                                <button
+                                                    onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); setFilterTouched(new Set()); }}
+                                                    className="text-xs text-[#1650EB] hover:text-[#1243c7] font-medium flex items-center gap-1"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                    Clear all filters
+                                                </button>
+                                            )}
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Daily Challenge History — Modal Popup */}
+                            <AnimatePresence>
+                                {showDailyHistory && (
+                                    <>
+                                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55]" onClick={() => setShowDailyHistory(false)} />
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[56] max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-800/50 p-5 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+                                        >
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h4 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                    🏆 Challenge History
+                                                </h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                                                        🔥 {user.currentStreak || 0} streak
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">Best: {user.longestStreak || 0}</span>
+                                                    <button onClick={() => setShowDailyHistory(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                                        <X className="w-4 h-4 text-gray-400" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto">
+                                                {dailyHistoryLoading ? (
+                                                    <div className="text-center py-6">
+                                                        <Loader2 className="w-5 h-5 animate-spin text-amber-500 mx-auto" />
+                                                    </div>
+                                                ) : dailyHistory.length === 0 ? (
+                                                    <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-6">No challenges completed yet. Start today!</p>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {dailyHistory.map((entry, i) => {
+                                                            const pct = Math.round((entry.score / entry.totalQuestions) * 100);
+                                                            return (
+                                                                <div key={entry.date} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📝'}</span>
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                {new Date(entry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                {entry.totalQuestions} questions
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <span className={`text-sm font-bold ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                                                                            {entry.score}/{entry.totalQuestions}
+                                                                        </span>
+                                                                        <p className="text-xs text-gray-400">{pct}%</p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className={`text-sm font-bold ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
-                                                                    {entry.score}/{entry.totalQuestions}
-                                                                </span>
-                                                                <p className="text-xs text-gray-400">{pct}%</p>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
                         {(() => {
                             // Apply filters

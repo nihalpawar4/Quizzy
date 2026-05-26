@@ -263,7 +263,7 @@ export async function getDailyQuizHistory(
         where('studentId', '==', studentId),
     );
     const snap = await getDocs(q);
-    const history = snap.docs.map(doc => {
+    const raw = snap.docs.map(doc => {
         const data = doc.data();
         return {
             date: data.date,
@@ -272,6 +272,15 @@ export async function getDailyQuizHistory(
             completedAt: data.completedAt?.toDate?.() || new Date(),
         };
     });
+    // Deduplicate by date — keep the latest entry per day
+    const byDate = new Map<string, typeof raw[0]>();
+    for (const entry of raw) {
+        const existing = byDate.get(entry.date);
+        if (!existing || entry.completedAt > existing.completedAt) {
+            byDate.set(entry.date, entry);
+        }
+    }
+    const history = Array.from(byDate.values());
     // Sort by date descending
     history.sort((a, b) => b.date.localeCompare(a.date));
     return history;
