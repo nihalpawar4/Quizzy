@@ -86,5 +86,7 @@ export const COLLECTIONS = {
     CLASS_CHANGE_REQUESTS: 'classChangeRequests',
     // Practice Mode - Mistake Bucket
     MISTAKE_BUCKET: 'mistakeBucket',
+    // Daily Quiz Challenge
+    DAILY_QUIZ_RESULTS: 'dailyQuizResults',
 } as const;
 

@@ -286,5 +286,18 @@ service cloud.firestore {
       // Teachers can manage all; students can delete their own
       allow delete: if isTeacher() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
     }
+    
+    // ==================== DAILY QUIZ RESULTS COLLECTION ====================
+    
+    match /dailyQuizResults/{resultId} {
+      // Students can read their own results; teachers can read all
+      allow read: if isAuthenticated();
+      // Students can create their own results
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+      // No updates allowed (immutable once submitted)
+      allow update: if false;
+      // Teachers can delete
+      allow delete: if isTeacher();
+    }
   }
 }

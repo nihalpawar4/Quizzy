@@ -38,7 +38,7 @@ import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, del
 import { subscribeToMistakes, subscribeToMasteredMistakes, recordAttempt } from '@/services/mistakeBucketService';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
-import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem } from '@/types';
+import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser } from '@/types';
 import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -46,6 +46,7 @@ import { COLLECTIONS } from '@/lib/constants';
 import { subscribeToHomework, getStudentHomeworkCompletions } from '@/services/homeworkService';
 import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
+import { getDailyQuizQuestions, hasCompletedDailyQuiz, submitDailyQuiz } from '@/services/dailyQuizService';
 
 import { useChat } from '@/contexts/ChatContext';
 import { saveLastRoute } from '@/lib/routePersistence';
@@ -109,6 +110,11 @@ export default function StudentDashboard() {
     // Practice Mode - Mistake Bucket state
     const [mistakeBucketItems, setMistakeBucketItems] = useState<MistakeBucketItem[]>([]);
     const [masteredCount, setMasteredCount] = useState(0);
+
+    // Daily Quiz Challenge state
+    const [dailyQuizQuestions, setDailyQuizQuestions] = useState<Question[]>([]);
+    const [dailyQuizCompleted, setDailyQuizCompleted] = useState(false);
+    const [dailyQuizLoading, setDailyQuizLoading] = useState(true);
 
 
     // PDF Test viewer state
@@ -560,6 +566,23 @@ export default function StudentDashboard() {
         return () => { unsub1(); unsub2(); };
     }, [user?.uid]);
 
+    // Load Daily Quiz Challenge data
+    useEffect(() => {
+        if (!user?.uid || !user?.studentClass) return;
+        setDailyQuizLoading(true);
+        Promise.all([
+            getDailyQuizQuestions(user.studentClass),
+            hasCompletedDailyQuiz(user.uid),
+        ]).then(([questions, completed]) => {
+            setDailyQuizQuestions(questions);
+            setDailyQuizCompleted(completed);
+        }).catch(err => {
+            console.error('[Quizy] Daily quiz load error:', err);
+        }).finally(() => {
+            setDailyQuizLoading(false);
+        });
+    }, [user?.uid, user?.studentClass]);
+
     // Real-time listener for user profile changes (class change from profile settings)
     // When studentClass is changed in Firestore, this triggers refreshUser() which updates
     // the AuthContext user object, causing all dependent listeners to re-subscribe instantly
@@ -734,6 +757,7 @@ export default function StudentDashboard() {
                 onSignOut={handleSignOut}
                 onComingSoon={handleComingSoon}
                 mistakeBucketCount={mistakeBucketItems.length}
+                streak={user.currentStreak || 0}
             />
 
             {/* Main Content Area */}
@@ -930,6 +954,20 @@ export default function StudentDashboard() {
                 )}
 
 
+                {/* Daily Quiz Challenge — shown at top of Tests tab */}
+                {activeTab === 'tests' && !dailyQuizLoading && dailyQuizQuestions.length > 0 && (
+                    <DailyQuizCard
+                        questions={dailyQuizQuestions}
+                        completed={dailyQuizCompleted}
+                        user={user}
+                        streak={user.currentStreak || 0}
+                        longestStreak={user.longestStreak || 0}
+                        onComplete={() => {
+                            setDailyQuizCompleted(true);
+                            refreshUser();
+                        }}
+                    />
+                )}
 
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
@@ -2558,6 +2596,249 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                     ))}
                 </div>
             </div>
+        </motion.div>
+    );
+}
+
+// ==================== DAILY QUIZ CHALLENGE CARD ====================
+interface DailyQuizCardProps {
+    questions: Question[];
+    completed: boolean;
+    user: AppUser;
+    streak: number;
+    longestStreak: number;
+    onComplete: () => void;
+}
+
+function DailyQuizCard({ questions, completed, user, streak, longestStreak, onComplete }: DailyQuizCardProps) {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentQ, setCurrentQ] = useState(0);
+    const [selected, setSelected] = useState<number | null>(null);
+    const [showAnswer, setShowAnswer] = useState(false);
+    const [correctCount, setCorrectCount] = useState(0);
+    const [finished, setFinished] = useState(completed);
+    const [resultStreak, setResultStreak] = useState(streak);
+    const [resultLongest, setResultLongest] = useState(longestStreak);
+    const [submitting, setSubmitting] = useState(false);
+    const [streakMessage, setStreakMessage] = useState('');
+
+    const handleSelect = (optionIndex: number) => {
+        if (showAnswer) return;
+        setSelected(optionIndex);
+        setShowAnswer(true);
+
+        const isCorrect = optionIndex === questions[currentQ].correctOption;
+        if (isCorrect) {
+            setCorrectCount(prev => prev + 1);
+        }
+
+        // Auto-advance after 1.5s
+        setTimeout(() => {
+            if (currentQ < questions.length - 1) {
+                setCurrentQ(prev => prev + 1);
+                setSelected(null);
+                setShowAnswer(false);
+            } else {
+                // Quiz done — submit
+                handleFinish(correctCount + (isCorrect ? 1 : 0));
+            }
+        }, 1200);
+    };
+
+    const handleFinish = async (finalScore: number) => {
+        setSubmitting(true);
+        try {
+            const result = await submitDailyQuiz(user, finalScore, questions.length);
+            setResultStreak(result.currentStreak);
+            setResultLongest(result.longestStreak);
+            setStreakMessage(result.message);
+        } catch (err) {
+            console.error('[Quizy] Daily quiz submit error:', err);
+        }
+        setSubmitting(false);
+        setFinished(true);
+        onComplete();
+    };
+
+    // ── Already completed today ──
+    if (finished && !isPlaying) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/20"
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">✅</div>
+                        <div>
+                            <h3 className="font-bold text-lg">Daily Challenge Complete!</h3>
+                            <p className="text-white/80 text-sm">Come back tomorrow for a new one</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="flex items-center gap-1 text-2xl font-bold">
+                            🔥 {resultStreak}
+                        </div>
+                        <p className="text-white/70 text-xs">day streak</p>
+                    </div>
+                </div>
+                {streakMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-3 text-sm text-white/90 bg-white/10 rounded-lg px-3 py-2 text-center"
+                    >
+                        {streakMessage}
+                    </motion.p>
+                )}
+            </motion.div>
+        );
+    }
+
+    // ── Quiz in progress ──
+    if (isPlaying) {
+        const q = questions[currentQ];
+        const progress = ((currentQ) / questions.length) * 100;
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg overflow-hidden"
+            >
+                {/* Progress bar */}
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-800">
+                    <motion.div
+                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-r-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.3 }}
+                    />
+                </div>
+
+                <div className="p-5">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                            Question {currentQ + 1} of {questions.length}
+                        </span>
+                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                            {correctCount}/{currentQ + (showAnswer ? 1 : 0)} correct
+                        </span>
+                    </div>
+
+                    {/* Question */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentQ}
+                            initial={{ opacity: 0, x: 30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -30 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <p className="text-base font-semibold text-gray-900 dark:text-white mb-4 leading-relaxed">
+                                {q.text}
+                            </p>
+
+                            {/* Options */}
+                            <div className="space-y-2.5">
+                                {q.options.map((opt, idx) => {
+                                    const isCorrectOption = idx === q.correctOption;
+                                    const isSelected = selected === idx;
+                                    let optionStyle = 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800';
+                                    if (showAnswer) {
+                                        if (isCorrectOption) {
+                                            optionStyle = 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-400 dark:border-emerald-600 ring-1 ring-emerald-400';
+                                        } else if (isSelected && !isCorrectOption) {
+                                            optionStyle = 'bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 ring-1 ring-red-400';
+                                        } else {
+                                            optionStyle = 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 opacity-50';
+                                        }
+                                    } else if (isSelected) {
+                                        optionStyle = 'bg-[#1650EB]/10 border-[#1650EB] ring-1 ring-[#1650EB]';
+                                    }
+
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleSelect(idx)}
+                                            disabled={showAnswer}
+                                            className={`w-full text-left p-3.5 rounded-xl border transition-all duration-150 ${optionStyle}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                                                    showAnswer && isCorrectOption
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : showAnswer && isSelected && !isCorrectOption
+                                                            ? 'bg-red-500 text-white'
+                                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                                                }`}>
+                                                    {showAnswer && isCorrectOption ? '✓' : showAnswer && isSelected && !isCorrectOption ? '✗' : String.fromCharCode(65 + idx)}
+                                                </span>
+                                                <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{opt}</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Explanation */}
+                            {showAnswer && q.explanation && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800"
+                                >
+                                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                                        💡 {q.explanation}
+                                    </p>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {submitting && (
+                    <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                        Saving your result...
+                    </div>
+                )}
+            </motion.div>
+        );
+    }
+
+    // ── Card state (not started) ──
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20 cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => setIsPlaying(true)}
+        >
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">⚡</div>
+                    <div>
+                        <h3 className="font-bold text-lg">Daily Challenge</h3>
+                        <p className="text-white/80 text-sm">{questions.length} quick questions • Tap to play!</p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <div className="flex items-center gap-1 text-2xl font-bold">
+                        🔥 {streak}
+                    </div>
+                    <p className="text-white/70 text-xs">
+                        {streak === 0 ? 'Start streak!' : `${streak} day${streak > 1 ? 's' : ''}`}
+                    </p>
+                </div>
+            </div>
+            {longestStreak > 0 && streak < longestStreak && (
+                <p className="mt-3 text-xs text-white/70 bg-white/10 rounded-lg px-3 py-1.5 text-center">
+                    🏆 Best streak: {longestStreak} days — can you beat it?
+                </p>
+            )}
         </motion.div>
     );
 }

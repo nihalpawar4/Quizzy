@@ -163,6 +163,18 @@ export interface MistakeBucketItem {
     masteredAt?: Date;
 }
 
+// Daily Quiz Challenge result
+export interface DailyQuizResult {
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentClass: number;
+    date: string;           // "YYYY-MM-DD" (IST)
+    score: number;           // correct answers
+    totalQuestions: number;  // always 5
+    completedAt: Date;
+}
+
 // Auth Context Types
 export interface AuthContextType {
     user: User | null;

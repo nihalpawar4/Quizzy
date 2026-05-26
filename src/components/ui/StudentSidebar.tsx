@@ -34,6 +34,7 @@ interface SidebarProps {
     onSignOut: () => void;
     onComingSoon: (feature: string) => void;
     mistakeBucketCount: number;
+    streak?: number;
 }
 
 interface NavItem {
@@ -63,6 +64,7 @@ export default function StudentSidebar({
     onSignOut,
     onComingSoon,
     mistakeBucketCount,
+    streak = 0,
 }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -379,6 +381,9 @@ export default function StudentSidebar({
                             <GraduationCap className="w-4 h-4 text-white" />
                         </div>
                         <h1 className="font-bold text-gray-900 dark:text-white text-sm">Quizy</h1>
+                        {streak > 0 && (
+                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">🔥{streak}</span>
+                        )}
                     </div>
 
                     {/* Right icons: Chat, Home, Notification, Profile */}
