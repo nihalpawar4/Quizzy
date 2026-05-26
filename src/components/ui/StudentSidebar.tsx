@@ -493,6 +493,12 @@ export default function StudentSidebar({
             <div className="hidden lg:block fixed top-0 right-0 z-50" style={{ left: isCollapsed ? '72px' : '260px', transition: 'left 0.3s ease-in-out' }}>
                 <div className="flex items-center justify-end px-6 py-2.5 bg-gray-50 dark:bg-gray-950">
                     <div className="flex items-center gap-1.5">
+                        {/* Streak badge */}
+                        {streak > 0 && (
+                            <span className="flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-xl mr-1">
+                                🔥 {streak} day{streak > 1 ? 's' : ''}
+                            </span>
+                        )}
                         {/* Home */}
                         <Link
                             href="/"

@@ -954,11 +954,12 @@ export default function StudentDashboard() {
                 )}
 
 
-                {/* Daily Quiz Challenge — shown at top of Tests tab */}
-                {activeTab === 'tests' && !dailyQuizLoading && dailyQuizQuestions.length > 0 && (
+                {/* Daily Quiz Challenge — always shown on Tests tab */}
+                {activeTab === 'tests' && (
                     <DailyQuizCard
                         questions={dailyQuizQuestions}
                         completed={dailyQuizCompleted}
+                        loading={dailyQuizLoading}
                         user={user}
                         streak={user.currentStreak || 0}
                         longestStreak={user.longestStreak || 0}
@@ -2604,13 +2605,14 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
 interface DailyQuizCardProps {
     questions: Question[];
     completed: boolean;
+    loading: boolean;
     user: AppUser;
     streak: number;
     longestStreak: number;
     onComplete: () => void;
 }
 
-function DailyQuizCard({ questions, completed, user, streak, longestStreak, onComplete }: DailyQuizCardProps) {
+function DailyQuizCard({ questions, completed, loading, user, streak, longestStreak, onComplete }: DailyQuizCardProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentQ, setCurrentQ] = useState(0);
     const [selected, setSelected] = useState<number | null>(null);
@@ -2621,6 +2623,45 @@ function DailyQuizCard({ questions, completed, user, streak, longestStreak, onCo
     const [resultLongest, setResultLongest] = useState(longestStreak);
     const [submitting, setSubmitting] = useState(false);
     const [streakMessage, setStreakMessage] = useState('');
+
+    // ── Loading state ──
+    if (loading) {
+        return (
+            <div className="mb-6 bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-red-500/20 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-red-900/20 rounded-2xl p-5 border border-amber-200/50 dark:border-amber-800/30 animate-pulse">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-amber-300/30 dark:bg-amber-700/30 rounded-xl" />
+                    <div className="flex-1">
+                        <div className="h-5 bg-amber-300/30 dark:bg-amber-700/30 rounded-lg w-40 mb-2" />
+                        <div className="h-3 bg-amber-300/20 dark:bg-amber-700/20 rounded-lg w-56" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── No questions available ──
+    if (questions.length === 0) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-gray-100 dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-xl flex items-center justify-center text-2xl">📝</div>
+                    <div>
+                        <h3 className="font-bold text-gray-700 dark:text-gray-300">Daily Challenge</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">No questions available yet — once your teacher creates tests, your daily quiz will appear here!</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                        <div className="flex items-center gap-1 text-xl font-bold text-gray-400">
+                            🔥 {streak}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
 
     const handleSelect = (optionIndex: number) => {
         if (showAnswer) return;

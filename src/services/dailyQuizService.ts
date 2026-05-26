@@ -1,8 +1,10 @@
 /**
  * Daily Quiz Service — Daily Challenge
- * Generates a 5-question daily quiz from existing test questions.
+ * Generates a 5-10 question daily quiz from existing test questions.
  * Zero cost: no AI, reuses teacher-created questions.
  * Deterministic: same quiz for all students in a class on a given day.
+ * Multi-subject: ensures a mix of subjects, not just one.
+ * Auto-refreshes daily after 12 AM IST.
  */
 
 import {
@@ -20,7 +22,7 @@ import type { Question, User } from '@/types';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/** Get today's date in YYYY-MM-DD (IST). */
+/** Get today's date in YYYY-MM-DD (IST). Resets at 12:00 AM IST. */
 function getTodayIST(): string {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -45,17 +47,22 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
 }
 
 // ── In-memory cache (per session) ────────────────────────────────────
-// Avoids re-fetching all questions on every render.
 let cachedDate = '';
 let cachedClass = 0;
 let cachedQuestions: Question[] = [];
 
 // ── Public API ───────────────────────────────────────────────────────
 
+/** How many questions to include in the daily quiz (5-10). */
+const DAILY_QUIZ_MIN = 5;
+const DAILY_QUIZ_MAX = 10;
+
 /**
- * Get 5 daily quiz questions for a given class.
+ * Get 5-10 daily quiz questions for a given class.
  * Uses a deterministic seed so all students in the same class
- * get the same 5 questions on the same day.
+ * get the same questions on the same day.
+ * Ensures a MIX of all subjects — not just one subject.
+ * Refreshes automatically after 12 AM IST (new date = new seed = new questions).
  */
 export async function getDailyQuizQuestions(
     studentClass: number,
@@ -63,12 +70,12 @@ export async function getDailyQuizQuestions(
 ): Promise<Question[]> {
     const today = date || getTodayIST();
 
-    // Return cache if valid
+    // Return cache if valid (same day, same class)
     if (cachedDate === today && cachedClass === studentClass && cachedQuestions.length > 0) {
         return cachedQuestions;
     }
 
-    // 1) Get all test IDs for this class (active, non-PDF tests only)
+    // 1) Get all tests for this class (active, non-PDF only)
     const testsRef = collection(db, COLLECTIONS.TESTS);
     const testsQuery = query(
         testsRef,
@@ -76,15 +83,22 @@ export async function getDailyQuizQuestions(
         where('isActive', '==', true)
     );
     const testsSnap = await getDocs(testsQuery);
-    const testIds = testsSnap.docs
-        .filter(d => !d.data().isPdfTest)
-        .map(d => d.id);
+
+    // Build testId → subject map and filter out PDF tests
+    const testSubjectMap: Record<string, string> = {};
+    const testIds: string[] = [];
+    testsSnap.docs.forEach(d => {
+        const data = d.data();
+        if (!data.isPdfTest) {
+            testIds.push(d.id);
+            testSubjectMap[d.id] = data.subject || 'General';
+        }
+    });
 
     if (testIds.length === 0) return [];
 
     // 2) Fetch questions for those tests (Firestore `in` supports up to 30)
-    const allQuestions: Question[] = [];
-    // Process in chunks of 30 (Firestore 'in' limit)
+    const allQuestions: (Question & { _subject: string })[] = [];
     for (let i = 0; i < testIds.length; i += 30) {
         const chunk = testIds.slice(i, i + 30);
         const qRef = collection(db, COLLECTIONS.QUESTIONS);
@@ -92,22 +106,62 @@ export async function getDailyQuizQuestions(
         const qSnap = await getDocs(qQuery);
         qSnap.docs.forEach(doc => {
             const data = doc.data();
-            // Only include MCQ and true/false (not text-input since they need exact typing)
+            // Only include MCQ and true/false (not fill_blank, short_answer etc.)
             const type = data.type || 'mcq';
             if (type === 'mcq' || type === 'true_false') {
-                allQuestions.push({ id: doc.id, ...data } as Question);
+                allQuestions.push({
+                    id: doc.id,
+                    ...data,
+                    _subject: testSubjectMap[data.testId] || 'General',
+                } as Question & { _subject: string });
             }
         });
     }
 
     if (allQuestions.length === 0) return [];
 
-    // 3) Deterministic shuffle and pick 5
-    const seed = `${today}-class${studentClass}`;
-    const shuffled = seededShuffle(allQuestions, seed);
-    const picked = shuffled.slice(0, Math.min(5, shuffled.length));
+    // 3) Multi-subject mixing: round-robin from each subject, then fill remaining
+    // Group questions by subject
+    const bySubject: Record<string, (Question & { _subject: string })[]> = {};
+    for (const q of allQuestions) {
+        const subj = q._subject;
+        if (!bySubject[subj]) bySubject[subj] = [];
+        bySubject[subj].push(q);
+    }
 
-    // Cache
+    // Shuffle each subject's questions deterministically
+    const seed = `${today}-class${studentClass}`;
+    const subjects = Object.keys(bySubject);
+    for (const subj of subjects) {
+        bySubject[subj] = seededShuffle(bySubject[subj], seed + subj);
+    }
+
+    // Round-robin pick: 1 from each subject, repeat until we have enough
+    const shuffledSubjects = seededShuffle(subjects, seed);
+    const picked: Question[] = [];
+    const usedIds = new Set<string>();
+    let targetCount = Math.min(DAILY_QUIZ_MAX, allQuestions.length);
+    targetCount = Math.max(DAILY_QUIZ_MIN, targetCount);
+
+    let round = 0;
+    while (picked.length < targetCount) {
+        let addedThisRound = false;
+        for (const subj of shuffledSubjects) {
+            if (picked.length >= targetCount) break;
+            const pool = bySubject[subj];
+            if (round < pool.length && !usedIds.has(pool[round].id)) {
+                usedIds.add(pool[round].id);
+                // Strip the internal _subject field before returning
+                const { _subject, ...question } = pool[round];
+                picked.push(question as Question);
+                addedThisRound = true;
+            }
+        }
+        if (!addedThisRound) break; // All subjects exhausted
+        round++;
+    }
+
+    // Cache results for this session
     cachedDate = today;
     cachedClass = studentClass;
     cachedQuestions = picked;
