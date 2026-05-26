@@ -53,44 +53,52 @@ messaging.onBackgroundMessage((payload) => {
     return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Also handle raw push events (fallback for when FCM doesn't trigger onBackgroundMessage)
+// Also handle raw push events (fallback for edge cases)
 self.addEventListener('push', (event) => {
-    console.log('[Quizy SW] Push event received:', event);
+    console.log('[Quizy SW] Push event received');
     
-    // If the push event has data, try to parse and show notification
-    if (event.data) {
-        let data;
-        try {
-            data = event.data.json();
-        } catch (e) {
-            // If it's not JSON, treat as text
-            data = { notification: { title: 'Quizy', body: event.data.text() } };
-        }
+    if (!event.data) return;
 
-        // Only show notification if onBackgroundMessage didn't handle it
-        // Check if this is a data-only message that FCM SDK didn't process
-        if (data.data && !data.notification) {
-            const notifData = data.data;
-            const notificationTitle = notifData.title || '📚 Quizy';
-            const notificationBody = notifData.body || 'New notification';
+    let payload;
+    try {
+        payload = event.data.json();
+    } catch (e) {
+        // If not JSON, show as plain text
+        event.waitUntil(
+            self.registration.showNotification('📚 Quizy', {
+                body: event.data.text(),
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+            })
+        );
+        return;
+    }
 
-            event.waitUntil(
-                self.registration.showNotification(notificationTitle, {
-                    body: notificationBody,
-                    icon: notifData.icon || '/icons/icon-192x192.png',
-                    badge: notifData.badge || '/icons/icon-72x72.png',
-                    vibrate: [200, 100, 200, 100, 200],
-                    data: {
-                        type: notifData.type || 'general',
-                        url: notifData.url || '/dashboard',
-                        tag: notifData.tag || 'quizy-notification',
-                    },
-                    tag: notifData.tag || 'quizy-notification',
-                    renotify: true,
-                    requireInteraction: true,
-                })
-            );
-        }
+    // If the message has a `notification` key, the browser will auto-display it.
+    // We only need to manually show for data-only messages (no notification key).
+    if (payload.notification) {
+        // Browser handles this natively — do nothing
+        return;
+    }
+
+    // Data-only message — manually show notification
+    if (payload.data) {
+        const d = payload.data;
+        event.waitUntil(
+            self.registration.showNotification(d.title || '📚 Quizy', {
+                body: d.body || 'New notification',
+                icon: d.icon || '/icons/icon-192x192.png',
+                badge: d.badge || '/icons/icon-72x72.png',
+                vibrate: [200, 100, 200],
+                data: {
+                    type: d.type || 'general',
+                    url: d.url || '/dashboard',
+                    tag: d.tag || 'quizy-notification',
+                },
+                tag: d.tag || 'quizy-notification',
+                renotify: true,
+            })
+        );
     }
 });
 

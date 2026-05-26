@@ -32,22 +32,45 @@ export async function POST(request: NextRequest) {
         console.log(`[Quizy FCM] Body: ${notifBody}`);
 
         // Build the FCM message
-        // IMPORTANT: Use `data` only (not `notification`) so the service worker
-        // has full control over how the notification is displayed.
-        // When `notification` is included, Android auto-displays it and
-        // onBackgroundMessage doesn't fire.
+        // Include BOTH `notification` (for native background display) and
+        // `data` (for service worker foreground control).
+        // Without `notification`, some browsers show raw JSON as the notification body.
         const message = {
-            // Use data-only message so our service worker controls the display
+            notification: {
+                title: title,
+                body: notifBody,
+            },
             data: {
                 title: title,
                 body: notifBody,
                 icon: '/icons/icon-192x192.png',
                 badge: '/icons/icon-72x72.png',
-                tag: data?.tag || 'quizy-homework',
-                type: data?.type || 'homework',
-                url: data?.url || '/dashboard/student/homework',
-                // Timestamp to ensure unique notifications
+                tag: data?.tag || 'quizy-notification',
+                type: data?.type || 'general',
+                url: data?.url || '/dashboard',
                 timestamp: Date.now().toString(),
+            },
+            webpush: {
+                headers: {
+                    Urgency: 'high',
+                    TTL: '86400',
+                },
+                notification: {
+                    title: title,
+                    body: notifBody,
+                    icon: '/icons/icon-192x192.png',
+                    badge: '/icons/icon-72x72.png',
+                    tag: data?.tag || 'quizy-notification',
+                    renotify: true,
+                    requireInteraction: false,
+                    actions: [
+                        { action: 'open', title: 'Open Quizy' },
+                        { action: 'dismiss', title: 'Close' },
+                    ],
+                },
+                fcmOptions: {
+                    link: data?.url || '/dashboard',
+                },
             },
         };
 
