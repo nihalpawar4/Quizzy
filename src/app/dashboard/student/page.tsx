@@ -114,7 +114,32 @@ export default function StudentDashboard() {
     // PDF Test viewer state
     const [selectedPdfTest, setSelectedPdfTest] = useState<Test | null>(null);
 
-
+    // Mobile swipe-to-switch-tab (Instagram-style)
+    const mobileTabOrder: Array<'tests' | 'practice' | 'notes' | 'homework'> = ['tests', 'practice', 'notes', 'homework'];
+    const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+    }, []);
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (!touchStartRef.current) return;
+        const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+        const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+        const dt = Date.now() - touchStartRef.current.time;
+        touchStartRef.current = null;
+        // Only trigger if horizontal swipe is dominant and fast enough
+        if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.7 || dt > 400) return;
+        const currentIdx = mobileTabOrder.indexOf(activeTab as typeof mobileTabOrder[number]);
+        if (currentIdx === -1) return;
+        if (dx < 0 && currentIdx < mobileTabOrder.length - 1) {
+            // Swipe left → next tab
+            const next = mobileTabOrder[currentIdx + 1];
+            setActiveTab(next);
+        } else if (dx > 0 && currentIdx > 0) {
+            // Swipe right → previous tab
+            const prev = mobileTabOrder[currentIdx - 1];
+            setActiveTab(prev);
+        }
+    }, [activeTab]);
 
     // Lock body scroll when any modal is open
     const isAnyModalOpen = showComingSoon || !!selectedReport || !!selectedNote || !!selectedNotification || !!selectedPdfTest;
@@ -712,7 +737,7 @@ export default function StudentDashboard() {
             />
 
             {/* Main Content Area */}
-            <div className="flex-1 min-h-screen relative overflow-hidden">
+            <div className="flex-1 min-h-screen relative overflow-hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {/* New Test Notification */}
             <AnimatePresence>
                 {newTestNotification && (
@@ -873,7 +898,8 @@ export default function StudentDashboard() {
             </AnimatePresence>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-16 pb-24 lg:pb-8">
-                {/* Welcome Section */}
+                {/* Welcome Section - Only shown on Tests tab */}
+                {activeTab === 'tests' && (
                 <div className="mb-5"
                 >
                     {/* Welcome Section - Simple & Light */}
@@ -901,6 +927,7 @@ export default function StudentDashboard() {
                         </div>
                     </div>
                 </div>
+                )}
 
 
 

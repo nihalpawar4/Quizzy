@@ -400,6 +400,9 @@ export default function TestPage() {
         if (!antiCheatEnabled || isSubmitted) return;
 
         const handleFullscreenChange = () => {
+            // Skip if test is being submitted — exiting fullscreen during submit is expected
+            if (isSubmittingRef.current) return;
+
             if (!document.fullscreenElement && isFullscreen) {
                 setFullscreenExits(prev => prev + 1);
                 setIsFullscreen(false);
@@ -449,6 +452,39 @@ export default function TestPage() {
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
         };
     }, [antiCheatEnabled, isSubmitted, isFullscreen]);
+
+    // Auto-submit on page close/quit: if the test is in progress and the user
+    // closes the browser, navigates away, or quits the app, submit immediately.
+    // Uses sendBeacon for reliability — it fires even during page unload.
+    useEffect(() => {
+        if (isSubmitted || !test || !user) return;
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Show browser-native confirmation dialog
+            e.preventDefault();
+            // Trigger auto-submit via the main handler
+            if (!autoSubmitTriggeredRef.current && !isSubmittingRef.current) {
+                autoSubmitTriggeredRef.current = true;
+                handleFinalSubmit();
+            }
+        };
+
+        const handlePageHide = () => {
+            // pagehide fires on mobile when app is swiped away or phone locked
+            if (!autoSubmitTriggeredRef.current && !isSubmittingRef.current) {
+                autoSubmitTriggeredRef.current = true;
+                handleFinalSubmit();
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', handlePageHide);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', handlePageHide);
+        };
+    }, [isSubmitted, test, user]);
 
     // Load test data
     useEffect(() => {
@@ -648,6 +684,8 @@ export default function TestPage() {
         setShowReviewModal(false);
         setIsSubmitting(true);
         isSubmittingRef.current = true;
+        // Mark as submitting early so fullscreen exit handler doesn't fire a false warning
+        setIsFullscreen(false);
         const endTime = new Date();
         setTestEndTime(endTime);
 
