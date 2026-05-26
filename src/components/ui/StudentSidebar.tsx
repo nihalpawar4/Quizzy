@@ -239,6 +239,22 @@ export default function StudentSidebar({
         );
     };
 
+    // Mobile bottom tab items: Tests, Practice, Notes, Homework (Reports moved to profile dropdown)
+    const mobileBottomItems: NavItem[] = [
+        studyItems.find(i => i.id === 'tests')!,
+        {
+            id: 'practice',
+            label: 'Practice Mode',
+            shortLabel: 'Practice',
+            icon: Target,
+            tab: 'practice',
+            badge: mistakeBucketCount,
+            activeColor: 'bg-green-500',
+        },
+        studyItems.find(i => i.id === 'notes')!,
+        studyItems.find(i => i.id === 'homework')!,
+    ];
+
     // Profile dropdown content (reused for mobile & desktop)
     const profileDropdownContent = (
         <motion.div
@@ -254,6 +270,19 @@ export default function StudentSidebar({
                 <p className="text-xs text-gray-400 dark:text-gray-500">Class {userClass} • Student</p>
             </div>
             <div className="p-1.5">
+                {/* My Reports — visible in dropdown (moved from mobile bottom bar) */}
+                <button
+                    onClick={() => { setShowProfileDropdown(false); onTabChange('reports'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                >
+                    <FileText className="w-4 h-4 text-gray-500 group-hover:text-emerald-600" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">My Reports</span>
+                    {newReportsCount > 0 && (
+                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-bold">
+                            {newReportsCount}
+                        </span>
+                    )}
+                </button>
                 <Link
                     href="/profile"
                     onClick={() => setShowProfileDropdown(false)}
@@ -412,7 +441,7 @@ export default function StudentSidebar({
             {/* ===== MOBILE: Bottom Tab Bar (native app feel) ===== */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
                 <div className="flex items-center justify-around px-2 pt-1.5 pb-2">
-                    {studyItems.map((item) => {
+                    {mobileBottomItems.map((item) => {
                         const isActive = activeTab === item.tab;
                         return (
                             <button
