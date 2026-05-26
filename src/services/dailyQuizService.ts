@@ -214,25 +214,7 @@ export async function submitDailyQuiz(
         completedAt: Timestamp.now(),
     });
 
-    // 2) Also save to results collection (so it shows in My Reports)
-    const resultsRef = collection(db, COLLECTIONS.RESULTS);
-    await addDoc(resultsRef, {
-        studentId: user.uid,
-        studentName: user.name,
-        studentEmail: user.email || '',
-        studentClass: user.studentClass || 0,
-        testId: `daily-challenge-${today}`,
-        testTitle: `Daily Challenge — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
-        subject: 'Daily Challenge',
-        score,
-        totalQuestions,
-        answers: [],
-        timestamp: Timestamp.now(),
-        isDailyChallenge: true,
-        dailyChallengeDate: today,
-    });
-
-    // 3) Claim the streak (uses existing infrastructure)
+    // 2) Claim the streak (uses existing infrastructure)
     const streakResult = await claimDailyStreak(user.uid, user);
 
     if (streakResult) {
