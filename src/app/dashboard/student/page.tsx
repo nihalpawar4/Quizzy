@@ -32,6 +32,7 @@ import {
     Hourglass,
     Filter,
     SlidersHorizontal,
+    ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -106,6 +107,7 @@ export default function StudentDashboard() {
     const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Completed' | 'Expired'>('All');
     const [showFilters, setShowFilters] = useState(false);
     const [filterTouched, setFilterTouched] = useState<Set<string>>(new Set());
+    const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 
     // Practice Mode - Mistake Bucket state
     const [mistakeBucketItems, setMistakeBucketItems] = useState<MistakeBucketItem[]>([]);
@@ -1296,227 +1298,280 @@ export default function StudentDashboard() {
                                 )}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
                                 {filteredTests.map((test, index) => {
                                     const hasTaken = takenTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
                                     const isExpired = !hasTaken && test.expiresAt && new Date(test.expiresAt) < new Date();
                                     const countdown = countdowns[test.id];
+                                    const isExpanded = expandedTestId === test.id;
+                                    const isPdf = test.isPdfTest;
+                                    const pdfResult = isPdf ? results.find(r => r.testId === test.id && r.isPdfTest) : null;
+                                    const scorePercent = hasTaken && result
+                                        ? (result.isPdfTest
+                                            ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : null)
+                                            : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : null))
+                                        : null;
 
                                     return (
-                                        <div
-                                            key={test.id}
-                                            className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border ${hasTaken ? 'border-green-200 dark:border-green-800' : isExpired ? 'border-red-200 dark:border-red-800 opacity-75' : isScheduled ? 'border-orange-200 dark:border-orange-800' : test.isPdfTest ? 'border-rose-200 dark:border-rose-800' : 'border-gray-200 dark:border-gray-800'} hover:shadow-lg transition-shadow duration-200`}
-                                        >
-                                            {/* Gradient Header */}
-                                            <div className={`h-24 relative ${hasTaken ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500' :
-                                                isExpired ? 'bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600' :
-                                                    isScheduled ? 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-500' :
-                                                        test.isPdfTest ? 'bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-500' :
-                                                            'bg-gradient-to-br from-[#1650EB] via-[#3b7dd8] to-[#6095DB]'
-                                                }`}>
-                                                {/* Decorative Elements */}
-                                                <div className="absolute inset-0 overflow-hidden">
-                                                    <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-                                                    <div className="absolute -bottom-8 -left-4 w-32 h-32 bg-white/5 rounded-full" />
-                                                </div>
-                                                {/* Subject Badge */}
-                                                <div className="absolute top-4 left-4 flex items-center gap-1.5">
-                                                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
-                                                        {test.isCombinedSubject ? '📚 Combined' : test.subject}
-                                                    </span>
-                                                    {test.difficultyLevel && (
-                                                        <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded-full">
-                                                            {test.difficultyLevel}
-                                                        </span>
-                                                    )}
-                                                    {test.isPdfTest && (
-                                                        <span className="inline-block px-2 py-1 bg-white/30 backdrop-blur-sm text-white text-xs font-medium rounded-full">
-                                                            📋 PDF
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {/* Progress Circle (for completed tests) */}
-                                                {hasTaken && result && (() => {
-                                                    const isPdf = result.isPdfTest;
-                                                    const scorePercent = isPdf
-                                                        ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : null)
-                                                        : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : null);
-                                                    if (scorePercent === null) return null;
-                                                    return (
-                                                        <div className="absolute top-3 right-3">
-                                                            <div className="relative w-14 h-14">
-                                                                <svg className="w-14 h-14 transform -rotate-90">
-                                                                    <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.3)" strokeWidth="4" fill="none" />
-                                                                    <circle
-                                                                        cx="28" cy="28" r="24"
-                                                                        stroke="white" strokeWidth="4" fill="none"
-                                                                        strokeLinecap="round"
-                                                                        strokeDasharray={`${(scorePercent / 100) * 150.8} 150.8`}
-                                                                    />
-                                                                </svg>
-                                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                                    <span className="text-white text-sm font-bold">{scorePercent}%</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
+                                        <div key={test.id} className={`${isExpired ? 'opacity-60' : ''}`}>
+                                            {/* Main Row — always visible */}
+                                            <div
+                                                className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isExpanded ? 'bg-gray-50 dark:bg-gray-800/40' : ''}`}
+                                                onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
+                                            >
+                                                {/* Row Number */}
+                                                <span className="text-xs text-gray-400 dark:text-gray-500 font-mono w-5 shrink-0 hidden sm:block">
+                                                    {String(index + 1).padStart(2, '0')}
+                                                </span>
 
+                                                {/* Left: Status indicator dot */}
+                                                <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                                    hasTaken ? 'bg-emerald-500' :
+                                                    isExpired ? 'bg-red-400' :
+                                                    isScheduled ? 'bg-amber-400 animate-pulse' :
+                                                    'bg-blue-500'
+                                                }`} />
+
+                                                {/* Center: Title + metadata */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`font-semibold text-sm truncate ${hasTaken ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
+                                                        {test.title}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                                        {isPdf ? (
+                                                            <span>📄 PDF</span>
+                                                        ) : (
+                                                            <span>{test.questionCount || '?'} Qs</span>
+                                                        )}
+                                                        {test.duration && <span>· {test.duration} min</span>}
+                                                        {test.marksPerQuestion && test.questionCount && <span>· {test.marksPerQuestion * test.questionCount} marks</span>}
+                                                    </p>
+                                                </div>
+
+                                                {/* Score / Status badge */}
+                                                <div className="shrink-0 flex items-center gap-2">
+                                                    {hasTaken && scorePercent !== null ? (
+                                                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                                                            scorePercent >= 70 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                                                            scorePercent >= 40 ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
+                                                            'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                                                        }`}>
+                                                            {result?.isPdfTest ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : `${result?.score}/${result?.totalQuestions}`}
+                                                        </span>
+                                                    ) : hasTaken && isPdf && pdfResult && !pdfResult.pdfEvaluated ? (
+                                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                                            Awaiting
+                                                        </span>
+                                                    ) : isExpired ? (
+                                                        <span className="text-xs font-medium text-red-400">Expired</span>
+                                                    ) : isScheduled ? (
+                                                        <span className="text-xs font-medium text-amber-500">Upcoming</span>
+                                                    ) : null}
+
+                                                    {/* Subject pill — desktop only */}
+                                                    <span className="hidden md:inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">
+                                                        {test.isCombinedSubject ? 'Combined' : test.subject}
+                                                    </span>
+                                                </div>
+
+                                                {/* Action Button */}
+                                                <div className="shrink-0">
+                                                    {hasTaken ? (
+                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                            ✓ Done
+                                                        </span>
+                                                    ) : isExpired ? (
+                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700">
+                                                            Missed
+                                                        </span>
+                                                    ) : isScheduled ? (
+                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                                            Scheduled
+                                                        </span>
+                                                    ) : isPdf ? (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedPdfTest(test); }}
+                                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                                                        >
+                                                            View PDF
+                                                        </button>
+                                                    ) : (
+                                                        <Link
+                                                            href={`/test/${test.id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                        >
+                                                            Attempt
+                                                        </Link>
+                                                    )}
+                                                </div>
+
+                                                {/* Expand chevron */}
+                                                <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                             </div>
 
-                                            {/* Card Content */}
-                                            <div className="p-5">
-                                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#1650EB] transition-colors">{test.title}</h4>
-                                                {test.isCombinedSubject && test.combinedSubjects && test.combinedSubjects.length > 0 && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                        {test.combinedSubjects.join(' • ')}
-                                                    </p>
-                                                )}
-                                                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                                    {test.isPdfTest ? (
-                                                        <span className="flex items-center gap-1">
-                                                            <FileText className="w-4 h-4" />
-                                                            PDF Test Paper
-                                                        </span>
-                                                    ) : (
-                                                        <>
-                                                            <span className="flex items-center gap-1">
-                                                                <BookOpen className="w-4 h-4" />
-                                                                {test.questionCount || '?'} Questions
-                                                            </span>
-                                                            {test.duration && (
-                                                                <span className="flex items-center gap-1">
-                                                                    <Clock className="w-4 h-4" />
-                                                                    {test.duration} min
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                {/* Countdown Timer for Scheduled Tests */}
-                                                {isScheduled && countdown && (
-                                                    <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <Timer className="w-5 h-5 text-orange-600 dark:text-orange-400 animate-pulse" />
-                                                                <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Starts in:</span>
-                                                            </div>
-                                                            <span className="text-lg font-bold text-orange-600 dark:text-orange-400 font-mono">
-                                                                {countdown}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Expiry Info for tests with expiry */}
-                                                {test.expiresAt && !hasTaken && !isExpired && (
-                                                    <div className="mb-4 p-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <Hourglass className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
-                                                                <span className="text-sm font-medium text-red-700 dark:text-red-300">Expires:</span>
-                                                            </div>
-                                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                                                {new Date(test.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* PDF Test Actions */}
-                                                {test.isPdfTest ? (() => {
-                                                    const pdfResult = results.find(r => r.testId === test.id && r.isPdfTest);
-                                                    const hasDownloaded = hasTaken && pdfResult;
-
-                                                    if (hasDownloaded && pdfResult?.pdfEvaluated) {
-                                                        // Evaluated by teacher — show marks
-                                                        return (
-                                                            <div className="space-y-2">
-                                                                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                                                                    <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />
-                                                                    <div className="flex-1">
-                                                                        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                                                                            Marks: {pdfResult.pdfMarksAwarded}/{pdfResult.pdfMaxMarks}
-                                                                        </span>
-                                                                        {pdfResult.pdfTeacherRemarks && (
-                                                                            <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
-                                                                                &quot;{pdfResult.pdfTeacherRemarks}&quot;
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
+                                            {/* Expanded Dropdown Details */}
+                                            <AnimatePresence>
+                                                {isExpanded && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="px-4 pb-4 pt-1 bg-gray-50/70 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800">
+                                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                                                                {/* Subject */}
+                                                                <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
+                                                                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Subject</p>
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                                                        {test.isCombinedSubject ? '📚 Combined' : test.subject}
+                                                                    </p>
+                                                                    {test.isCombinedSubject && test.combinedSubjects && (
+                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{test.combinedSubjects.join(', ')}</p>
+                                                                    )}
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => downloadPdfTest(test)}
-                                                                    className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                                >
-                                                                    <Download className="w-3.5 h-3.5" /> Re-download PDF
-                                                                </button>
+                                                                {/* Questions / Type */}
+                                                                <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
+                                                                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Format</p>
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                                                        {isPdf ? '📄 PDF Paper' : `${test.questionCount || '?'} Questions`}
+                                                                    </p>
+                                                                    {test.difficultyLevel && (
+                                                                        <p className="text-[10px] text-gray-400 mt-0.5">Difficulty: {test.difficultyLevel}</p>
+                                                                    )}
+                                                                </div>
+                                                                {/* Duration */}
+                                                                <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
+                                                                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Duration</p>
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                                                        {test.duration ? `${test.duration} min` : 'No limit'}
+                                                                    </p>
+                                                                    {test.marksPerQuestion && test.questionCount && (
+                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{test.marksPerQuestion * test.questionCount} marks</p>
+                                                                    )}
+                                                                </div>
+                                                                {/* Status / Score */}
+                                                                <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
+                                                                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Status</p>
+                                                                    {hasTaken && result ? (
+                                                                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                                                            {result.isPdfTest
+                                                                                ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks} marks` : 'Awaiting marks')
+                                                                                : `${result.score}/${result.totalQuestions} correct`
+                                                                            }
+                                                                        </p>
+                                                                    ) : isExpired ? (
+                                                                        <p className="text-sm font-medium text-red-500 mt-0.5">⏰ Expired</p>
+                                                                    ) : isScheduled ? (
+                                                                        <p className="text-sm font-medium text-amber-500 mt-0.5">⏳ Scheduled</p>
+                                                                    ) : (
+                                                                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-0.5">Ready</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        );
-                                                    } else if (hasDownloaded) {
-                                                        // Downloaded but not yet evaluated
-                                                        return (
-                                                            <div className="space-y-2">
-                                                                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-                                                                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                                                                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                                                                        Completed • Awaiting marks
+
+                                                            {/* Countdown Timer */}
+                                                            {isScheduled && countdown && (
+                                                                <div className="flex items-center justify-between p-3 mb-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Timer className="w-4 h-4 text-amber-600 animate-pulse" />
+                                                                        <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Starts in:</span>
+                                                                    </div>
+                                                                    <span className="text-base font-bold text-amber-600 font-mono">{countdown}</span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Expiry Warning */}
+                                                            {test.expiresAt && !hasTaken && !isExpired && (
+                                                                <div className="flex items-center justify-between p-3 mb-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Hourglass className="w-4 h-4 text-red-600 animate-pulse" />
+                                                                        <span className="text-sm font-medium text-red-700 dark:text-red-300">Expires:</span>
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-red-600">
+                                                                        {new Date(test.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                                     </span>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => downloadPdfTest(test)}
-                                                                    className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                                >
-                                                                    <Download className="w-3.5 h-3.5" /> Re-download PDF
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        // Not downloaded yet — show actions
-                                                        return (
-                                                            <div className="flex items-center gap-2">
-                                                                <button
-                                                                    onClick={() => setSelectedPdfTest(test)}
-                                                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
-                                                                >
-                                                                    <ExternalLink className="w-4 h-4" /> View PDF
-                                                                </button>
-                                                                {test.pdfUrl && (
+                                                            )}
+
+                                                            {/* PDF result / remarks */}
+                                                            {isPdf && hasTaken && pdfResult && (
+                                                                <div className="mb-3 space-y-2">
+                                                                    {pdfResult.pdfEvaluated && pdfResult.pdfTeacherRemarks && (
+                                                                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                                                                            <p className="text-xs font-semibold text-green-700 dark:text-green-400">Teacher Remarks:</p>
+                                                                            <p className="text-sm text-green-600 dark:text-green-500 mt-0.5">&quot;{pdfResult.pdfTeacherRemarks}&quot;</p>
+                                                                        </div>
+                                                                    )}
                                                                     <button
                                                                         onClick={() => downloadPdfTest(test)}
-                                                                        className="flex items-center justify-center gap-2 py-3 px-4 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-                                                                        title="Download PDF"
+                                                                        className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                                                                     >
-                                                                        <Download className="w-4 h-4" />
+                                                                        <Download className="w-3.5 h-3.5" /> Re-download PDF
                                                                     </button>
+                                                                </div>
+                                                            )}
+
+                                                            {/* MCQ result score bar */}
+                                                            {hasTaken && result && !result.isPdfTest && scorePercent !== null && (
+                                                                <div className="mb-3">
+                                                                    <div className="flex items-center justify-between text-xs mb-1">
+                                                                        <span className="text-gray-500">Score</span>
+                                                                        <span className={`font-bold ${scorePercent >= 70 ? 'text-emerald-600' : scorePercent >= 40 ? 'text-amber-600' : 'text-red-500'}`}>{scorePercent}%</span>
+                                                                    </div>
+                                                                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full rounded-full transition-all duration-500 ${scorePercent >= 70 ? 'bg-emerald-500' : scorePercent >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                            style={{ width: `${scorePercent}%` }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Action buttons row */}
+                                                            <div className="flex items-center gap-2">
+                                                                {!hasTaken && !isExpired && !isScheduled && (
+                                                                    isPdf ? (
+                                                                        <div className="flex items-center gap-2 flex-1">
+                                                                            <button
+                                                                                onClick={() => setSelectedPdfTest(test)}
+                                                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-xl font-medium text-sm hover:bg-purple-700 transition-colors"
+                                                                            >
+                                                                                <ExternalLink className="w-4 h-4" /> View PDF
+                                                                            </button>
+                                                                            {test.pdfUrl && (
+                                                                                <button
+                                                                                    onClick={() => downloadPdfTest(test)}
+                                                                                    className="flex items-center justify-center gap-2 py-2.5 px-4 border border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 rounded-xl font-medium text-sm hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                                                                                >
+                                                                                    <Download className="w-4 h-4" />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Link
+                                                                            href={`/test/${test.id}`}
+                                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium text-sm hover:bg-[#1243c7] transition-colors"
+                                                                        >
+                                                                            Start Test <ArrowRight className="w-4 h-4" />
+                                                                        </Link>
+                                                                    )
+                                                                )}
+                                                                {hasTaken && result && (
+                                                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                                                        Completed {result.timestamp ? new Date(result.timestamp instanceof Date ? result.timestamp : (result.timestamp as {toDate: () => Date}).toDate()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                                                                    </div>
                                                                 )}
                                                             </div>
-                                                        );
-                                                    }
-                                                })() : hasTaken && result ? (
-                                                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
-                                                        <Trophy className="w-5 h-5" />
-                                                        <span className="text-sm font-medium">Completed • {result.score}/{result.totalQuestions} correct</span>
-                                                    </div>
-                                                ) : isExpired ? (
-                                                    <div className="flex items-center justify-center gap-2 w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-xl font-medium cursor-not-allowed border border-red-200 dark:border-red-800">
-                                                        <Hourglass className="w-4 h-4" />
-                                                        ⏰ Expired – Unattempted
-                                                    </div>
-                                                ) : isScheduled ? (
-                                                    <div className="flex items-center justify-center gap-2 w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl font-medium cursor-not-allowed">
-                                                        <Timer className="w-4 h-4" />
-                                                        Waiting for test to start
-                                                    </div>
-                                                ) : (
-                                                    <Link href={`/test/${test.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
-                                                        Start Test <ArrowRight className="w-4 h-4" />
-                                                    </Link>
+                                                        </div>
+                                                    </motion.div>
                                                 )}
-                                            </div>
+                                            </AnimatePresence>
                                         </div>
                                     );
                                 })}
