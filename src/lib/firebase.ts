@@ -18,16 +18,16 @@ import {
 import { getFirestore } from 'firebase/firestore';
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 
-// Your VAPID key for push notifications
-const VAPID_KEY = 'BM-cIeTyjU-BeDpKVAMjzkOcYvuuMZ9n0i9ZL6f68JXhBU3mTh9gycXiETzC0IK3_SwkZKAmw5W7-q-2SFuijUM';
+// Your VAPID key for push notifications (from environment variable)
+const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || '';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBlCfylXmtdVgloa8eECVLINdsDecQxWoc",
-    authDomain: "quizzy-1fde2.firebaseapp.com",
-    projectId: "quizzy-1fde2",
-    storageBucket: "quizzy-1fde2.firebasestorage.app",
-    messagingSenderId: "964585344236",
-    appId: "1:964585344236:web:6374ab94c720cde4d569c9"
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase (prevent multiple instances in development)

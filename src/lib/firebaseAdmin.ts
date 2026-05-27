@@ -20,7 +20,7 @@ function getFirebaseAdmin() {
             const serviceAccount = JSON.parse(serviceAccountKey);
             return admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount),
-                projectId: 'quizzy-1fde2',
+                projectId: process.env.FIREBASE_PROJECT_ID,
             });
         } catch (error) {
             console.error('[Quizy Admin] Failed to parse service account key:', error);
@@ -31,7 +31,7 @@ function getFirebaseAdmin() {
     // For local dev, you need to set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_KEY
     try {
         return admin.initializeApp({
-            projectId: 'quizzy-1fde2',
+            projectId: process.env.FIREBASE_PROJECT_ID,
         });
     } catch (error) {
         console.error('[Quizy Admin] Failed to initialize Firebase Admin:', error);
