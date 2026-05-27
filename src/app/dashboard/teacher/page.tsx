@@ -48,6 +48,9 @@ import {
     Check,
     Home,
     Hourglass,
+    DollarSign,
+    ToggleLeft,
+    ToggleRight,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -83,7 +86,7 @@ import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User, SubjectNote, Notification, ClassChangeRequest } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS } from '@/lib/constants';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
 import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuestion } from '@/lib/qaService';
@@ -137,7 +140,13 @@ export default function TeacherDashboard() {
     const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<string | null>(null); // uid of student to delete
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes' | 'qa'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes' | 'qa' | 'fees'>('tests');
+
+    // Fee management state
+    const [feeRequests, setFeeRequests] = useState<Array<{ id: string; name: string; status: string; createdAt: Date }>>([]);
+    const [feeVisible, setFeeVisible] = useState(false);
+    const [feeLoading, setFeeLoading] = useState(false);
+    const [feeActionLoading, setFeeActionLoading] = useState<string | null>(null);
 
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -1394,6 +1403,7 @@ export default function TeacherDashboard() {
                             { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                             { id: 'notes', label: 'Subject Notes', icon: BookMarked },
                             { id: 'qa', label: 'Q&A', icon: HelpCircle },
+                            { id: 'fees', label: 'Fee Requests', icon: DollarSign },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -2143,6 +2153,20 @@ export default function TeacherDashboard() {
                             </div>
                         )}
                     </motion.div>
+                )}
+
+                {/* Fee Management Tab */}
+                {activeTab === 'fees' && (
+                    <FeeManagementTab
+                        feeRequests={feeRequests}
+                        setFeeRequests={setFeeRequests}
+                        feeVisible={feeVisible}
+                        setFeeVisible={setFeeVisible}
+                        feeLoading={feeLoading}
+                        setFeeLoading={setFeeLoading}
+                        feeActionLoading={feeActionLoading}
+                        setFeeActionLoading={setFeeActionLoading}
+                    />
                 )}
 
             </main>
@@ -4376,5 +4400,240 @@ export default function TeacherDashboard() {
             </AnimatePresence>
 
         </div >
+    );
+}
+
+// ==================== FEE MANAGEMENT TAB ====================
+interface FeeManagementTabProps {
+    feeRequests: Array<{ id: string; name: string; status: string; createdAt: Date }>;
+    setFeeRequests: React.Dispatch<React.SetStateAction<Array<{ id: string; name: string; status: string; createdAt: Date }>>>;
+    feeVisible: boolean;
+    setFeeVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    feeLoading: boolean;
+    setFeeLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    feeActionLoading: string | null;
+    setFeeActionLoading: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+function FeeManagementTab({ feeRequests, setFeeRequests, feeVisible, setFeeVisible, feeLoading, setFeeLoading, feeActionLoading, setFeeActionLoading }: FeeManagementTabProps) {
+    const [togglingVisibility, setTogglingVisibility] = useState(false);
+
+    // Load fee requests and visibility setting on mount
+    useEffect(() => {
+        const loadFeeData = async () => {
+            setFeeLoading(true);
+            try {
+                // Load visibility
+                const settingsDoc = await getDoc(doc(db, 'settings', 'feeStructure'));
+                if (settingsDoc.exists()) setFeeVisible(settingsDoc.data().isVisible ?? false);
+
+                // Load requests
+                const q = query(collection(db, 'feeRequests'), orderBy('createdAt', 'desc'));
+                const snap = await getDocs(q);
+                const reqs = snap.docs.map(d => ({
+                    id: d.id,
+                    name: d.data().name || 'Unknown',
+                    status: d.data().status || 'pending',
+                    createdAt: d.data().createdAt?.toDate?.() || new Date(),
+                }));
+                setFeeRequests(reqs);
+            } catch (e) { console.error(e); }
+            setFeeLoading(false);
+        };
+        loadFeeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleToggleVisibility = async () => {
+        setTogglingVisibility(true);
+        try {
+            const newVal = !feeVisible;
+            await setDoc(doc(db, 'settings', 'feeStructure'), { isVisible: newVal }, { merge: true });
+            setFeeVisible(newVal);
+        } catch (e) { console.error(e); }
+        setTogglingVisibility(false);
+    };
+
+    const handleApproveRequest = async (id: string) => {
+        setFeeActionLoading(id);
+        try {
+            await updateDoc(doc(db, 'feeRequests', id), { status: 'approved' });
+            setFeeRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
+        } catch (e) { console.error(e); }
+        setFeeActionLoading(null);
+    };
+
+    const handleRejectRequest = async (id: string) => {
+        setFeeActionLoading(id);
+        try {
+            await updateDoc(doc(db, 'feeRequests', id), { status: 'rejected' });
+            setFeeRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r));
+        } catch (e) { console.error(e); }
+        setFeeActionLoading(null);
+    };
+
+    const handleDeleteRequest = async (id: string) => {
+        setFeeActionLoading(id);
+        try {
+            await deleteDoc(doc(db, 'feeRequests', id));
+            setFeeRequests(prev => prev.filter(r => r.id !== id));
+        } catch (e) { console.error(e); }
+        setFeeActionLoading(null);
+    };
+
+    const pendingReqs = feeRequests.filter(r => r.status === 'pending');
+    const approvedReqs = feeRequests.filter(r => r.status === 'approved');
+    const rejectedReqs = feeRequests.filter(r => r.status === 'rejected');
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Header + Toggle */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">💰 Fee Structure Management</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage fee visibility and approve access requests</p>
+                </div>
+                <button
+                    onClick={handleToggleVisibility}
+                    disabled={togglingVisibility}
+                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                        feeVisible
+                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                >
+                    {togglingVisibility ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : feeVisible ? (
+                        <ToggleRight className="w-5 h-5" />
+                    ) : (
+                        <ToggleLeft className="w-5 h-5" />
+                    )}
+                    {feeVisible ? 'Fees Visible to All' : 'Fees Hidden'}
+                </button>
+            </div>
+
+            {/* Fee Plans Summary */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 mb-6">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">📋 Current Fee Plans</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                        { label: 'CBSE 5-8', price: '₹6,000/mo', color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' },
+                        { label: 'ICSE 5-8', price: '₹7,000/mo', color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400' },
+                        { label: 'CBSE 9-10 (M+S)', price: '₹8,000/mo', color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400' },
+                        { label: 'ICSE 9-10 (M+S)', price: '₹9,000/mo', color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400' },
+                        { label: '11-12 Maths', price: '₹10,000/mo', color: 'bg-[#1650EB]/10 dark:bg-[#1650EB]/20 text-[#1650EB] dark:text-[#6095DB]' },
+                    ].map(p => (
+                        <div key={p.label} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${p.color}`}>
+                            <span className="text-xs font-semibold">{p.label}</span>
+                            <span className="text-sm font-bold">{p.price}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {feeLoading ? (
+                <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
+                </div>
+            ) : feeRequests.length === 0 ? (
+                <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-900 dark:text-white font-semibold mb-1">No fee requests yet</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Requests will appear here when visitors submit their names.</p>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {/* Pending Requests */}
+                    {pendingReqs.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+                                <Hourglass className="w-4 h-4" /> Pending Requests ({pendingReqs.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {pendingReqs.map(req => (
+                                    <div key={req.id} className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-200 dark:border-amber-800/30 px-4 py-3">
+                                        <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm font-bold text-amber-600">
+                                            {req.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{req.name}</p>
+                                            <p className="text-[10px] text-gray-400">{req.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={() => handleApproveRequest(req.id)}
+                                                disabled={feeActionLoading === req.id}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                                            >
+                                                {feeActionLoading === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleRejectRequest(req.id)}
+                                                disabled={feeActionLoading === req.id}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                                            >
+                                                <X className="w-3 h-3" /> Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Approved Requests */}
+                    {approvedReqs.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4" /> Approved ({approvedReqs.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {approvedReqs.map(req => (
+                                    <div key={req.id} className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-xl border border-emerald-200 dark:border-emerald-800/30 px-4 py-3">
+                                        <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-bold text-emerald-600">
+                                            {req.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{req.name}</p>
+                                            <p className="text-[10px] text-gray-400">{req.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                        </div>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded">Approved</span>
+                                        <button onClick={() => handleDeleteRequest(req.id)} disabled={feeActionLoading === req.id} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Rejected Requests */}
+                    {rejectedReqs.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
+                                <X className="w-4 h-4" /> Rejected ({rejectedReqs.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {rejectedReqs.map(req => (
+                                    <div key={req.id} className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-xl border border-red-200 dark:border-red-800/30 px-4 py-3 opacity-60">
+                                        <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-sm font-bold text-red-600">
+                                            {req.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{req.name}</p>
+                                        </div>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded">Rejected</span>
+                                        <button onClick={() => handleDeleteRequest(req.id)} disabled={feeActionLoading === req.id} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </motion.div>
     );
 }

@@ -299,5 +299,26 @@ service cloud.firestore {
       // Teachers can delete
       allow delete: if isTeacher();
     }
+    // ==================== FEE STRUCTURE REQUESTS ====================
+    
+    match /feeRequests/{requestId} {
+      // Anyone can read (for checking own request status)
+      allow read: if true;
+      // Anyone can create a request (no login required)
+      allow create: if true;
+      // Only teachers can approve/reject
+      allow update: if isTeacher();
+      // Only teachers can delete
+      allow delete: if isTeacher();
+    }
+    
+    // ==================== FEE STRUCTURE VISIBILITY SETTINGS ====================
+    
+    match /settings/{settingId} {
+      // Anyone can read settings (to check if fee structure is visible)
+      allow read: if true;
+      // Only teachers can update settings
+      allow write: if isTeacher();
+    }
   }
 }
