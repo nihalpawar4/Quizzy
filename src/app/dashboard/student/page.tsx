@@ -1376,7 +1376,7 @@ export default function StudentDashboard() {
 
                                                 {/* Center: Title + Meta + Status */}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2">
                                                         {test.title}
                                                     </p>
                                                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -1389,7 +1389,11 @@ export default function StudentDashboard() {
                                                     )}
                                                     {/* Status badge */}
                                                     <div className="mt-1">
-                                                        {isExpired ? (
+                                                        {hasTaken ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Completed
+                                                            </span>
+                                                        ) : isExpired ? (
                                                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Expired
                                                             </span>
@@ -1405,7 +1409,7 @@ export default function StudentDashboard() {
                                                     </div>
                                                 </div>
 
-                                                {/* Score Pill */}
+                                                {/* Score Pill — only shown for completed tests */}
                                                 <div className="shrink-0">
                                                     {hasTaken && result && !isPdf ? (
                                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -1420,10 +1424,6 @@ export default function StudentDashboard() {
                                                             pdfResult.pdfEvaluated ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600'
                                                         }`}>
                                                             {pdfResult.pdfEvaluated ? `${pdfResult.pdfMarksAwarded}/${pdfResult.pdfMaxMarks}` : 'Awaiting'}
-                                                        </span>
-                                                    ) : !hasTaken && !isPdf && test.questionCount ? (
-                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500">
-                                                            0/{test.questionCount}
                                                         </span>
                                                     ) : null}
                                                 </div>
@@ -2892,12 +2892,12 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
     // ── Loading state ──
     if (loading) {
         return (
-            <div className="mb-6 bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-red-500/20 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-red-900/20 rounded-2xl p-5 border border-amber-200/50 dark:border-amber-800/30 animate-pulse">
+            <div className="mb-6 bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/30 animate-pulse">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-amber-300/30 dark:bg-amber-700/30 rounded-xl" />
+                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-xl" />
                     <div className="flex-1">
-                        <div className="h-5 bg-amber-300/30 dark:bg-amber-700/30 rounded-lg w-40 mb-2" />
-                        <div className="h-3 bg-amber-300/20 dark:bg-amber-700/20 rounded-lg w-56" />
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-lg w-40 mb-2" />
+                        <div className="h-3 bg-gray-200/70 dark:bg-gray-700/70 rounded-lg w-56" />
                     </div>
                 </div>
             </div>
