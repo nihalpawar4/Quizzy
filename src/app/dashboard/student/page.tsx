@@ -927,33 +927,59 @@ export default function StudentDashboard() {
                 )}
             </AnimatePresence>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-16 pb-24 lg:pb-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-20 lg:pt-24 pb-24 lg:pb-8">
                 {/* Welcome Section - Only shown on Tests tab */}
                 {activeTab === 'tests' && (
-                <div className="mb-5"
-                >
-                    {/* Welcome Section - Simple & Light */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        {/* Greeting */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-2xl">
-                                    {!currentTime ? '👋' : currentTime.getHours() < 12 ? '🌅' : currentTime.getHours() < 17 ? '☀️' : '🌙'}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                <div className="mb-5">
+                    {/* Welcome CTA Banner */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4338CA] via-[#1650EB] to-[#3B82F6] p-5 sm:p-6 min-h-[140px]">
+                        {/* Animated sparkles */}
+                        <style dangerouslySetInnerHTML={{ __html: `
+                            @keyframes sparkle-float { 0%,100%{transform:translateY(0) scale(1);opacity:0.4} 50%{transform:translateY(-12px) scale(1.3);opacity:0.9} }
+                            @keyframes sparkle-drift { 0%,100%{transform:translateX(0) translateY(0);opacity:0.3} 50%{transform:translateX(8px) translateY(-6px);opacity:0.8} }
+                            @keyframes sparkle-pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:0.7;transform:scale(1.2)} }
+                            .sparkle-1{animation:sparkle-float 3s ease-in-out infinite}
+                            .sparkle-2{animation:sparkle-drift 4s ease-in-out infinite 0.5s}
+                            .sparkle-3{animation:sparkle-pulse 2.5s ease-in-out infinite 1s}
+                            .sparkle-4{animation:sparkle-float 3.5s ease-in-out infinite 1.5s}
+                            .sparkle-5{animation:sparkle-drift 3s ease-in-out infinite 0.8s}
+                        ` }} />
+                        {/* Decorative background circles */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full" />
+                            <div className="absolute top-12 right-28 w-20 h-20 bg-white/5 rounded-full" />
+                            <div className="absolute -bottom-12 -left-8 w-44 h-44 bg-white/5 rounded-full" />
+                            {/* Sparkles */}
+                            <div className="sparkle-1 absolute top-4 right-16 text-yellow-300/60 text-[10px]">✦</div>
+                            <div className="sparkle-2 absolute top-14 right-40 text-white/40 text-xs">✧</div>
+                            <div className="sparkle-3 absolute bottom-6 right-24 text-yellow-200/50 text-[8px]">✦</div>
+                            <div className="sparkle-4 absolute top-8 left-[55%] text-white/30 text-[10px]">✧</div>
+                            <div className="sparkle-5 absolute bottom-3 left-[45%] text-yellow-300/40 text-[8px]">✦</div>
+                        </div>
+
+                        <div className="relative flex items-center justify-between">
+                            {/* Left: Text */}
+                            <div className="flex-1">
+                                <p className="text-white/70 text-xs sm:text-sm font-medium flex items-center gap-1.5 mb-1">
+                                    <span className="text-base">
+                                        {!currentTime ? '👋' : currentTime.getHours() < 12 ? '🌅' : currentTime.getHours() < 17 ? '☀️' : '🌙'}
+                                    </span>
                                     {!currentTime ? 'Welcome' : currentTime.getHours() < 12 ? 'Good Morning' : currentTime.getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
-                                </span>
+                                </p>
+                                <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                                    Welcome back,
+                                    <br />
+                                    <span className="text-yellow-300">{user.name}!</span> 👋
+                                </h2>
+                                <p className="text-white/60 text-xs sm:text-sm mt-1.5">
+                                    Class {user.studentClass} Student
+                                </p>
                             </div>
-                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                                {results.length === 0 ? (
-                                    <>Welcome, <span className="text-[#1650EB]">{user.name}</span>! 🎉</>
-                                ) : (
-                                    <>Welcome back, <span className="text-[#1650EB]">{user.name}</span>! 👋</>
-                                )}
-                            </h2>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                                {results.length === 0 ? "Let's start with your first test!" : `Class ${user.studentClass} Student`}
-                            </p>
+
+                            {/* Right: Rocket — large */}
+                            <div className="shrink-0 ml-4 text-7xl sm:text-8xl" style={{ transform: 'rotate(-25deg)', marginRight: '-8px' }}>
+                                🚀
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1006,7 +1032,7 @@ export default function StudentDashboard() {
                 {activeTab === 'tests' && (
                     <div className="mb-8">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            📚 Available Tests for Class {user.studentClass}
+                            📚 Available Tests
                         </h3>
 
                         <div className="mb-5 relative">
@@ -1085,6 +1111,7 @@ export default function StudentDashboard() {
                                                                     next.add('subject');
                                                                     return next;
                                                                 });
+                                                                setTimeout(() => setShowFilters(false), 200);
                                                             }}
                                                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                                                 filterSubject === subject
@@ -1112,6 +1139,7 @@ export default function StudentDashboard() {
                                                                     next.add('type');
                                                                     return next;
                                                                 });
+                                                                setTimeout(() => setShowFilters(false), 200);
                                                             }}
                                                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                                                                 filterType === type
@@ -1144,6 +1172,7 @@ export default function StudentDashboard() {
                                                                     next.add('status');
                                                                     return next;
                                                                 });
+                                                                setTimeout(() => setShowFilters(false), 200);
                                                             }}
                                                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                                                                 filterStatus === status
@@ -1298,7 +1327,7 @@ export default function StudentDashboard() {
                                 )}
                             </div>
                         ) : (
-                            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+                            <div className="space-y-2.5">
                                 {filteredTests.map((test, index) => {
                                     const hasTaken = takenTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
@@ -1314,102 +1343,128 @@ export default function StudentDashboard() {
                                             : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : null))
                                         : null;
 
+                                    // Subject icon config
+                                    const subjectName = test.isCombinedSubject ? 'Combined' : (test.subject || 'General');
+                                    const subjectIcons: Record<string, { emoji: string; bg: string; text: string }> = {
+                                        'Mathematics': { emoji: '📐', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600' },
+                                        'Science': { emoji: '🔬', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-600' },
+                                        'Hindi': { emoji: 'अ', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600' },
+                                        'English': { emoji: 'A', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-600' },
+                                        'Social Science': { emoji: '🌍', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600' },
+                                        'Combined': { emoji: '📚', bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-600' },
+                                    };
+                                    const iconConfig = subjectIcons[subjectName] || { emoji: '❓', bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600' };
+
+                                    // Total marks
+                                    const totalMarks = test.marksPerQuestion && test.questionCount ? test.marksPerQuestion * test.questionCount : null;
+
                                     return (
-                                        <div key={test.id} className={`${isExpired ? 'opacity-60' : ''}`}>
-                                            {/* Main Row — always visible */}
+                                        <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden ${isExpired ? 'opacity-60' : ''} hover:shadow-md transition-shadow`}>
+                                            {/* Main Row */}
                                             <div
-                                                className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isExpanded ? 'bg-gray-50 dark:bg-gray-800/40' : ''}`}
+                                                className="flex items-center gap-3 px-4 py-4 cursor-pointer"
                                                 onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
                                             >
-                                                {/* Row Number */}
-                                                <span className="text-xs text-gray-400 dark:text-gray-500 font-mono w-5 shrink-0 hidden sm:block">
-                                                    {String(index + 1).padStart(2, '0')}
-                                                </span>
-
-                                                {/* Left: Status indicator dot */}
-                                                <div className={`w-2 h-2 rounded-full shrink-0 ${
-                                                    hasTaken ? 'bg-emerald-500' :
-                                                    isExpired ? 'bg-red-400' :
-                                                    isScheduled ? 'bg-amber-400 animate-pulse' :
-                                                    'bg-blue-500'
-                                                }`} />
-
-                                                {/* Center: Title + metadata */}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`font-semibold text-sm truncate ${hasTaken ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
-                                                        {test.title}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                                        {isPdf ? (
-                                                            <span>📄 PDF</span>
-                                                        ) : (
-                                                            <span>{test.questionCount || '?'} Qs</span>
-                                                        )}
-                                                        {test.duration && <span>· {test.duration} min</span>}
-                                                        {test.marksPerQuestion && test.questionCount && <span>· {test.marksPerQuestion * test.questionCount} marks</span>}
-                                                    </p>
+                                                {/* Subject Icon Circle */}
+                                                <div className={`w-11 h-11 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0`}>
+                                                    {isPdf ? (
+                                                        <span className="text-lg">📄</span>
+                                                    ) : (
+                                                        <span className={`text-lg font-bold ${iconConfig.text}`}>{iconConfig.emoji}</span>
+                                                    )}
                                                 </div>
 
-                                                {/* Score / Status badge */}
-                                                <div className="shrink-0 flex items-center gap-2">
-                                                    {hasTaken && scorePercent !== null ? (
-                                                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
-                                                            scorePercent >= 70 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
-                                                            scorePercent >= 40 ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
-                                                            'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
-                                                        }`}>
-                                                            {result?.isPdfTest ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : `${result?.score}/${result?.totalQuestions}`}
-                                                        </span>
-                                                    ) : hasTaken && isPdf && pdfResult && !pdfResult.pdfEvaluated ? (
-                                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                                                            Awaiting
-                                                        </span>
-                                                    ) : isExpired ? (
-                                                        <span className="text-xs font-medium text-red-400">Expired</span>
-                                                    ) : isScheduled ? (
-                                                        <span className="text-xs font-medium text-amber-500">Upcoming</span>
-                                                    ) : null}
+                                                {/* Center: Title + Meta + Status */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                                        {test.title}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                        {isPdf ? 'PDF Test' : (
+                                                            <>{test.questionCount || '?'} Questions · {test.duration || '?'} min</>
+                                                        )}
+                                                    </p>
+                                                    {totalMarks && !isPdf && (
+                                                        <p className="text-xs text-gray-400 dark:text-gray-500">{totalMarks} marks</p>
+                                                    )}
+                                                    {/* Status badge */}
+                                                    <div className="mt-1">
+                                                        {isExpired ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Expired
+                                                            </span>
+                                                        ) : isScheduled ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-500">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Scheduled
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-500">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
 
-                                                    {/* Subject pill — desktop only */}
-                                                    <span className="hidden md:inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">
-                                                        {test.isCombinedSubject ? 'Combined' : test.subject}
-                                                    </span>
+                                                {/* Score Pill */}
+                                                <div className="shrink-0">
+                                                    {hasTaken && result && !isPdf ? (
+                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                                            scorePercent !== null && scorePercent >= 70 ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' :
+                                                            scorePercent !== null && scorePercent >= 40 ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' :
+                                                            'bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400'
+                                                        }`}>
+                                                            {result.score}/{result.totalQuestions}
+                                                        </span>
+                                                    ) : hasTaken && isPdf && pdfResult ? (
+                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                                            pdfResult.pdfEvaluated ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600'
+                                                        }`}>
+                                                            {pdfResult.pdfEvaluated ? `${pdfResult.pdfMarksAwarded}/${pdfResult.pdfMaxMarks}` : 'Awaiting'}
+                                                        </span>
+                                                    ) : !hasTaken && !isPdf && test.questionCount ? (
+                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500">
+                                                            0/{test.questionCount}
+                                                        </span>
+                                                    ) : null}
                                                 </div>
 
                                                 {/* Action Button */}
                                                 <div className="shrink-0">
                                                     {hasTaken ? (
-                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                                            ✓ Done
-                                                        </span>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setExpandedTestId(expandedTestId === test.id ? null : test.id); }}
+                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                        >
+                                                            View Result <ArrowRight className="w-3 h-3" />
+                                                        </button>
                                                     ) : isExpired ? (
-                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700">
+                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400">
                                                             Missed
                                                         </span>
                                                     ) : isScheduled ? (
-                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                                                            Scheduled
+                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                                            Upcoming
                                                         </span>
                                                     ) : isPdf ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setSelectedPdfTest(test); }}
-                                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
                                                         >
-                                                            View PDF
+                                                            Start <ArrowRight className="w-3 h-3" />
                                                         </button>
                                                     ) : (
                                                         <Link
                                                             href={`/test/${test.id}`}
                                                             onClick={(e) => e.stopPropagation()}
-                                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
                                                         >
-                                                            Attempt
+                                                            Start <ArrowRight className="w-3 h-3" />
                                                         </Link>
                                                     )}
                                                 </div>
 
-                                                {/* Expand chevron */}
-                                                <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                {/* Expand Chevron */}
+                                                <ChevronDown className={`w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                             </div>
 
                                             {/* Expanded Dropdown Details */}
@@ -1423,6 +1478,76 @@ export default function StudentDashboard() {
                                                         className="overflow-hidden"
                                                     >
                                                         <div className="px-4 pb-4 pt-1 bg-gray-50/70 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800">
+                                                            {hasTaken && result ? (
+                                                                /* ── Result View (like My Reports) ── */
+                                                                <div>
+                                                                    {/* Score Summary Header */}
+                                                                    <div className="flex items-center gap-4 mb-3 p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                                                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold text-white ${
+                                                                            scorePercent !== null && scorePercent >= 70 ? 'bg-emerald-500' :
+                                                                            scorePercent !== null && scorePercent >= 40 ? 'bg-amber-500' :
+                                                                            'bg-red-500'
+                                                                        }`}>
+                                                                            {scorePercent !== null ? `${scorePercent}%` : '—'}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                                {result.isPdfTest
+                                                                                    ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks} marks` : 'Awaiting evaluation')
+                                                                                    : `${result.score}/${result.totalQuestions} correct`
+                                                                                }
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                                                {result.subject} • Completed {result.timestamp ? new Date(result.timestamp instanceof Date ? result.timestamp : (result.timestamp as {toDate: () => Date}).toDate()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Score Progress Bar */}
+                                                                    {scorePercent !== null && (
+                                                                        <div className="mb-3">
+                                                                            <div className="flex items-center justify-between text-xs mb-1">
+                                                                                <span className="text-gray-500">Score</span>
+                                                                                <span className={`font-bold ${scorePercent >= 70 ? 'text-emerald-600' : scorePercent >= 40 ? 'text-amber-600' : 'text-red-500'}`}>{scorePercent}%</span>
+                                                                            </div>
+                                                                            <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                                                <div
+                                                                                    className={`h-full rounded-full transition-all duration-500 ${scorePercent >= 70 ? 'bg-emerald-500' : scorePercent >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                                    style={{ width: `${scorePercent}%` }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* PDF result / remarks */}
+                                                                    {isPdf && pdfResult && (
+                                                                        <div className="mb-3 space-y-2">
+                                                                            {pdfResult.pdfEvaluated && pdfResult.pdfTeacherRemarks && (
+                                                                                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                                                                                    <p className="text-xs font-semibold text-green-700 dark:text-green-400">Teacher Remarks:</p>
+                                                                                    <p className="text-sm text-green-600 dark:text-green-500 mt-0.5">&quot;{pdfResult.pdfTeacherRemarks}&quot;</p>
+                                                                                </div>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => downloadPdfTest(test)}
+                                                                                className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                                                            >
+                                                                                <Download className="w-3.5 h-3.5" /> Re-download PDF
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* View Full Report Button */}
+                                                                    <button
+                                                                        onClick={() => setSelectedReport(result)}
+                                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium text-sm hover:bg-[#1243c7] transition-colors"
+                                                                    >
+                                                                        <FileText className="w-4 h-4" /> View Full Report
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                /* ── Non-completed: show test info ── */
+                                                                <>
                                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                                                                 {/* Subject */}
                                                                 <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
@@ -1454,17 +1579,10 @@ export default function StudentDashboard() {
                                                                         <p className="text-[10px] text-gray-400 mt-0.5">{test.marksPerQuestion * test.questionCount} marks</p>
                                                                     )}
                                                                 </div>
-                                                                {/* Status / Score */}
+                                                                {/* Status */}
                                                                 <div className="bg-white dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-800">
                                                                     <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Status</p>
-                                                                    {hasTaken && result ? (
-                                                                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                                                                            {result.isPdfTest
-                                                                                ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks} marks` : 'Awaiting marks')
-                                                                                : `${result.score}/${result.totalQuestions} correct`
-                                                                            }
-                                                                        </p>
-                                                                    ) : isExpired ? (
+                                                                    {isExpired ? (
                                                                         <p className="text-sm font-medium text-red-500 mt-0.5">⏰ Expired</p>
                                                                     ) : isScheduled ? (
                                                                         <p className="text-sm font-medium text-amber-500 mt-0.5">⏳ Scheduled</p>
@@ -1498,40 +1616,6 @@ export default function StudentDashboard() {
                                                                 </div>
                                                             )}
 
-                                                            {/* PDF result / remarks */}
-                                                            {isPdf && hasTaken && pdfResult && (
-                                                                <div className="mb-3 space-y-2">
-                                                                    {pdfResult.pdfEvaluated && pdfResult.pdfTeacherRemarks && (
-                                                                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                                                                            <p className="text-xs font-semibold text-green-700 dark:text-green-400">Teacher Remarks:</p>
-                                                                            <p className="text-sm text-green-600 dark:text-green-500 mt-0.5">&quot;{pdfResult.pdfTeacherRemarks}&quot;</p>
-                                                                        </div>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => downloadPdfTest(test)}
-                                                                        className="flex items-center justify-center gap-2 w-full py-2 text-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                                                    >
-                                                                        <Download className="w-3.5 h-3.5" /> Re-download PDF
-                                                                    </button>
-                                                                </div>
-                                                            )}
-
-                                                            {/* MCQ result score bar */}
-                                                            {hasTaken && result && !result.isPdfTest && scorePercent !== null && (
-                                                                <div className="mb-3">
-                                                                    <div className="flex items-center justify-between text-xs mb-1">
-                                                                        <span className="text-gray-500">Score</span>
-                                                                        <span className={`font-bold ${scorePercent >= 70 ? 'text-emerald-600' : scorePercent >= 40 ? 'text-amber-600' : 'text-red-500'}`}>{scorePercent}%</span>
-                                                                    </div>
-                                                                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                                        <div
-                                                                            className={`h-full rounded-full transition-all duration-500 ${scorePercent >= 70 ? 'bg-emerald-500' : scorePercent >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                                                            style={{ width: `${scorePercent}%` }}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
                                                             {/* Action buttons row */}
                                                             <div className="flex items-center gap-2">
                                                                 {!hasTaken && !isExpired && !isScheduled && (
@@ -1561,13 +1645,9 @@ export default function StudentDashboard() {
                                                                         </Link>
                                                                     )
                                                                 )}
-                                                                {hasTaken && result && (
-                                                                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                                                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                                                                        Completed {result.timestamp ? new Date(result.timestamp instanceof Date ? result.timestamp : (result.timestamp as {toDate: () => Date}).toDate()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
-                                                                    </div>
-                                                                )}
                                                             </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </motion.div>
                                                 )}
@@ -2892,7 +2972,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/20"
+                className="mb-6 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white"
             >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -3040,7 +3120,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20 cursor-pointer hover:shadow-xl transition-shadow"
+            className="mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg hover:shadow-orange-500/20 transition-shadow"
             onClick={() => setIsPlaying(true)}
         >
             <div className="flex items-center justify-between">
