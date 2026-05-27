@@ -1836,7 +1836,7 @@ export default function StudentDashboard() {
                 {activeTab === 'notes' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            📚 Study Notes for Class {user.studentClass}
+                            📚 Study Notes
                         </h3>
                         {notes.length === 0 ? (
                             <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -1845,53 +1845,81 @@ export default function StudentDashboard() {
                                 <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Check back later for new materials from your teachers!</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {notes.map((note, index) => (
-                                    <motion.div
-                                        key={note.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.05 * index }}
-                                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:shadow-lg transition-shadow ${!readNoteIds.has(note.id) ? 'ring-2 ring-green-500' : ''}`}
-                                    >
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                    <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB] text-xs font-medium rounded-full">
-                                                        {note.subject}
-                                                    </span>
-                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.contentType === 'json' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
-                                                        {note.contentType.toUpperCase()}
-                                                    </span>
-                                                    {!readNoteIds.has(note.id) && (
-                                                        <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full animate-pulse">
-                                                            New
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h4 className="font-semibold text-gray-900 dark:text-white">{note.title}</h4>
-                                                {note.description && (
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{note.description}</p>
-                                                )}
-                                            </div>
-                                        </div>
+                            <div className="space-y-2.5">
+                                {notes.map((note, index) => {
+                                    const isRead = readNoteIds.has(note.id);
+                                    const noteSubjectIcons: Record<string, { emoji: string; bg: string; text: string }> = {
+                                        'Mathematics': { emoji: '📐', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600' },
+                                        'Science': { emoji: '🔬', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-600' },
+                                        'Hindi': { emoji: 'अ', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600' },
+                                        'English': { emoji: 'A', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-600' },
+                                        'Social Science': { emoji: '🌍', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600' },
+                                    };
+                                    const noteIcon = noteSubjectIcons[note.subject] || { emoji: '📝', bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600' };
 
-                                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                            Added: {note.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </div>
+                                    const typeLabel = note.contentType === 'json' ? 'Rich Text' : note.contentType === 'pdf' ? 'PDF' : 'Text';
+                                    const typeIcon = note.contentType === 'pdf' ? '📄' : note.contentType === 'json' ? '📝' : '📃';
 
-                                        <button
-                                            onClick={() => {
-                                                handleMarkNoteAsRead(note.id);
-                                                setSelectedNote(note);
-                                            }}
-                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                    return (
+                                        <motion.div
+                                            key={note.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.03 * index }}
+                                            className={`bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden hover:shadow-md transition-shadow ${!isRead ? 'border-green-300 dark:border-green-700 ring-1 ring-green-200 dark:ring-green-800' : 'border-gray-200 dark:border-gray-800'}`}
                                         >
-                                            <BookOpen className="w-4 h-4" />
-                                            {readNoteIds.has(note.id) ? 'View Notes' : 'Read Notes'}
-                                        </button>
-                                    </motion.div>
-                                ))}
+                                            <div
+                                                className="flex items-center gap-3 px-4 py-4 cursor-pointer"
+                                                onClick={() => {
+                                                    handleMarkNoteAsRead(note.id);
+                                                    setSelectedNote(note);
+                                                }}
+                                            >
+                                                {/* Subject Icon */}
+                                                <div className={`w-11 h-11 rounded-xl ${noteIcon.bg} flex items-center justify-center shrink-0`}>
+                                                    <span className={`text-lg font-bold ${noteIcon.text}`}>{noteIcon.emoji}</span>
+                                                </div>
+
+                                                {/* Center: Title + Meta + Status */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2">
+                                                        {note.title}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                        {note.subject} · {typeIcon} {typeLabel}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                                                        {note.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </p>
+                                                    {/* Status badge */}
+                                                    <div className="mt-1">
+                                                        {!isRead ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-600">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> New
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Read
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Button */}
+                                                <div className="shrink-0">
+                                                    <button
+                                                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                    >
+                                                        {isRead ? 'View' : 'Read'} <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+
+                                                {/* Chevron */}
+                                                <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
                         )}
                     </motion.div>
