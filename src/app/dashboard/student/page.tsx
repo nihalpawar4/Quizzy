@@ -986,8 +986,8 @@ export default function StudentDashboard() {
                 )}
 
 
-                {/* Daily Quiz Challenge — shown on Tests tab ONLY if not completed */}
-                {activeTab === 'tests' && !dailyQuizCompleted && (
+                {/* Daily Quiz Challenge — only shown when loaded and not completed */}
+                {activeTab === 'tests' && !dailyQuizLoading && !dailyQuizCompleted && (
                     <DailyQuizCard
                         questions={dailyQuizQuestions}
                         completed={dailyQuizCompleted}
