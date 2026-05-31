@@ -197,6 +197,9 @@ export default function TestPage() {
     // Review modal state
     const [showReviewModal, setShowReviewModal] = useState(false);
 
+    // Exit confirmation modal state
+    const [showExitModal, setShowExitModal] = useState(false);
+
     // Flagged questions for review
     const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
 
@@ -1360,10 +1363,74 @@ export default function TestPage() {
                 )}
             </AnimatePresence>
 
+            {/* Exit Confirmation Modal */}
+            <AnimatePresence>
+                {showExitModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+                        onClick={() => setShowExitModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden"
+                        >
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-center">
+                                <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <AlertTriangle className="w-7 h-7 text-white" />
+                                </div>
+                                <h3 className="text-lg font-bold text-white">Exit Test?</h3>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                {/* Progress info */}
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Your progress</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        {answers.filter(a => a !== null && a !== '').length} <span className="text-base font-normal text-gray-400">/ {questions.length}</span>
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">questions answered</p>
+                                </div>
+
+                                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                                    If you leave now, your progress will be <strong className="text-red-600 dark:text-red-400">lost</strong> and the test will not be submitted.
+                                </p>
+
+                                {/* Actions */}
+                                <div className="flex flex-col gap-2.5">
+                                    <button
+                                        onClick={() => setShowExitModal(false)}
+                                        className="w-full py-3 bg-[#1650EB] text-white rounded-xl font-semibold hover:bg-[#1243c7] transition-colors"
+                                    >
+                                        ← Resume Test
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+                                            document.body.classList.remove('modal-open');
+                                            router.push('/dashboard/student');
+                                        }}
+                                        className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400 rounded-xl font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    >
+                                        Leave Test
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <header className="test-header zen-hide bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
                 <div className="test-desktop-max-w mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-                    <button onClick={() => { if (confirm('Are you sure you want to leave? Your progress will be lost.')) { if (document.fullscreenElement) document.exitFullscreen().catch(() => { }); router.push('/dashboard/student'); } }} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <button onClick={() => setShowExitModal(true)} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                         <span className="hidden sm:inline">Exit Test</span>
                     </button>
