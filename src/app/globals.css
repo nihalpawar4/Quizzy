@@ -937,6 +937,226 @@ body.modal-open {
   }
 }
 
+/* ==================== DESKTOP SPLIT LAYOUT ==================== */
+
+/* Max width container — full width on desktop */
+.test-desktop-max-w {
+  max-width: 56rem;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 1024px) {
+  .test-desktop-max-w {
+    max-width: 100%;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* Desktop split layout container */
+.test-desktop-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px;
+}
+
+@media (min-width: 1024px) {
+  .test-desktop-layout {
+    flex-direction: row;
+    gap: 24px;
+    padding: 20px 0;
+    align-items: flex-start;
+  }
+}
+
+/* Left pane — question area */
+.test-question-pane {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 100px;
+}
+
+@media (min-width: 1024px) {
+  .test-question-pane {
+    padding-bottom: 24px;
+    flex: 1 1 0%;
+  }
+
+  .test-question-pane .question-card {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .test-question-pane .desktop-inline-nav {
+    margin-top: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .test-question-pane {
+    padding-bottom: 140px;
+  }
+}
+
+/* Right pane — navigator sidebar (sticky + scrollable) */
+.test-navigator-pane {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 70px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  padding-bottom: 16px;
+}
+
+.test-navigator-pane::-webkit-scrollbar {
+  width: 4px;
+}
+
+.test-navigator-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.test-navigator-pane::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 4px;
+}
+
+.test-navigator-pane::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Navigator question grid — 6 columns */
+.nav-question-grid {
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 6px !important;
+}
+
+/* Hide mobile bottom nav on desktop */
+@media (min-width: 1024px) {
+  .test-navigation {
+    display: none !important;
+  }
+}
+
+/* Glass card for navigator panels */
+.nav-panel-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark .nav-panel-card {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Timer danger state */
+.nav-panel-card.timer-danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(254, 242, 242, 0.9);
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+.dark .nav-panel-card.timer-danger {
+  background: rgba(127, 29, 29, 0.3);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+@keyframes timerPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1); }
+}
+
+/* ---- Navigation Dot States ---- */
+.nav-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.nav-dot:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nav-dot:active {
+  transform: scale(0.95);
+}
+
+/* Current question */
+.nav-dot-current {
+  background: #1650EB;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(22, 80, 235, 0.3);
+  font-weight: 700;
+}
+
+/* Answered */
+.nav-dot-answered {
+  background: #22c55e;
+  color: white;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Unanswered */
+.nav-dot-unanswered {
+  background: rgba(156, 163, 175, 0.15);
+  color: #6b7280;
+  border-color: rgba(156, 163, 175, 0.3);
+}
+
+.dark .nav-dot-unanswered {
+  background: rgba(75, 85, 99, 0.3);
+  color: #9ca3af;
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+/* Flagged (unanswered) */
+.nav-dot-flagged {
+  background: #f59e0b;
+  color: white;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Flagged + answered */
+.nav-dot-flagged-answered {
+  background: #22c55e;
+  color: white;
+  border-color: #f59e0b;
+  border-width: 2px;
+}
+
+/* Flag button hover effect */
+.flag-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.flag-btn:active {
+  transform: translateY(0);
+}
+
 /* Review modal mobile fixes */
 .review-modal-overlay {
   position: fixed;

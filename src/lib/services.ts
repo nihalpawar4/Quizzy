@@ -408,7 +408,29 @@ export async function submitTestResult(result: Omit<TestResult, 'id' | 'timestam
         ...(result.endTime && { endTime: Timestamp.fromDate(result.endTime) })
     };
 
-    const docRef = await addDoc(resultsRef, resultData);
+    // Strip any undefined values — Firestore rejects them
+    const sanitize = (obj: Record<string, unknown>): Record<string, unknown> => {
+        const clean: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(obj)) {
+            if (val === undefined) continue;
+            if (Array.isArray(val)) {
+                clean[key] = val.map(item =>
+                    item && typeof item === 'object' && !Array.isArray(item)
+                        ? sanitize(item as Record<string, unknown>)
+                        : item
+                );
+            } else if (val && typeof val === 'object' && !(val instanceof Timestamp) && !(val instanceof Date)) {
+                clean[key] = sanitize(val as Record<string, unknown>);
+            } else {
+                clean[key] = val;
+            }
+        }
+        return clean;
+    };
+
+    const cleanData = sanitize(resultData as unknown as Record<string, unknown>);
+
+    const docRef = await addDoc(resultsRef, cleanData);
     return docRef.id;
 }
 

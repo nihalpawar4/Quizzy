@@ -1,5 +1,5 @@
 // Quizy Service Worker - By Nihal Pawar
-const CACHE_NAME = 'quizy-pwa-v1';
+const CACHE_NAME = 'quizy-pwa-v3';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache immediately on install
@@ -12,6 +12,8 @@ const STATIC_ASSETS = [
 ];
 
 // Install event - cache static assets
+// NOTE: We do NOT call self.skipWaiting() here so the new SW
+// waits until the user taps "Update Now" in the app UI.
 self.addEventListener('install', (event) => {
     console.log('[Quizy SW] Installing Service Worker...');
     event.waitUntil(
@@ -20,7 +22,6 @@ self.addEventListener('install', (event) => {
             return cache.addAll(STATIC_ASSETS);
         })
     );
-    self.skipWaiting();
 });
 
 // Activate event - clean up old caches
@@ -123,6 +124,14 @@ self.addEventListener('notificationclick', (event) => {
 
     if (event.action === 'open' || !event.action) {
         event.waitUntil(clients.openWindow('/dashboard'));
+    }
+});
+
+// Listen for SKIP_WAITING message from the client (sent when user taps "Update Now")
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        console.log('[Quizy SW] Received SKIP_WAITING, activating new version...');
+        self.skipWaiting();
     }
 });
 
