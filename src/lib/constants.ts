@@ -88,5 +88,7 @@ export const COLLECTIONS = {
     MISTAKE_BUCKET: 'mistakeBucket',
     // Daily Quiz Challenge
     DAILY_QUIZ_RESULTS: 'dailyQuizResults',
+    // Games Zone
+    GAME_STATS: 'gameStats',
 } as const;
 

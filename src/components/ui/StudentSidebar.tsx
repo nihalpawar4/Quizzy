@@ -17,6 +17,7 @@ import {
     Settings,
     ChevronLeft,
     Home,
+    Gamepad2,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -104,6 +105,14 @@ export default function StudentSidebar({
             badge: pendingHomeworkCount,
             activeColor: 'bg-indigo-500',
         },
+        // {
+        //     id: 'games',
+        //     label: 'Games',
+        //     shortLabel: 'Games',
+        //     icon: Gamepad2,
+        //     tab: 'games',
+        //     activeColor: 'bg-orange-500',
+        // },
     ];
 
     const quickItems: NavItem[] = [
@@ -241,7 +250,7 @@ export default function StudentSidebar({
         );
     };
 
-    // Mobile bottom tab items: Tests, Practice, Notes, Homework (Reports moved to profile dropdown)
+    // Mobile bottom tab items: Tests, Practice, Notes, Homework (Games disabled, Reports moved to profile dropdown)
     const mobileBottomItems: NavItem[] = [
         studyItems.find(i => i.id === 'tests')!,
         {

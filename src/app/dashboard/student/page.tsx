@@ -39,7 +39,7 @@ import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, del
 import { subscribeToMistakes, subscribeToMasteredMistakes, recordAttempt } from '@/services/mistakeBucketService';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
-import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser } from '@/types';
+import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser, GameStats } from '@/types';
 import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -56,6 +56,9 @@ import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import StudentSidebar from '@/components/ui/StudentSidebar';
+// import GamesZone from '@/components/games/GamesZone';
+// import { subscribeToCoins } from '@/services/coinService';
+// import { subscribeToGameStats } from '@/services/gameService';
 
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
@@ -125,6 +128,11 @@ export default function StudentDashboard() {
 
     // PDF Test viewer state
     const [selectedPdfTest, setSelectedPdfTest] = useState<Test | null>(null);
+
+    // Games Zone state (disabled)
+    // const [userCoins, setUserCoins] = useState(0);
+    // const [gameStats, setGameStats] = useState<GameStats | null>(null);
+    // const [coinsRefreshKey, setCoinsRefreshKey] = useState(0);
 
     // Mobile swipe-to-switch-tab (Instagram-style)
     const mobileTabOrder: Array<'tests' | 'practice' | 'notes' | 'homework'> = ['tests', 'practice', 'notes', 'homework'];
@@ -572,6 +580,20 @@ export default function StudentDashboard() {
         return () => { unsub1(); unsub2(); };
     }, [user?.uid]);
 
+    // Real-time listener for coins (disabled)
+    // useEffect(() => {
+    //     if (!user?.uid) return;
+    //     const unsub = subscribeToCoins(user.uid, setUserCoins);
+    //     return () => unsub();
+    // }, [user?.uid, coinsRefreshKey]);
+
+    // Real-time listener for game stats (disabled)
+    // useEffect(() => {
+    //     if (!user?.uid) return;
+    //     const unsub = subscribeToGameStats(user.uid, setGameStats);
+    //     return () => unsub();
+    // }, [user?.uid]);
+
     // Load Daily Quiz Challenge data
     useEffect(() => {
         if (!user?.uid || !user?.studentClass) return;
@@ -931,57 +953,150 @@ export default function StudentDashboard() {
                 {/* Welcome Section - Only shown on Tests tab */}
                 {activeTab === 'tests' && (
                 <div className="mb-5">
-                    {/* Welcome CTA Banner */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4338CA] via-[#1650EB] to-[#3B82F6] p-5 sm:p-6 min-h-[140px]">
-                        {/* Animated sparkles */}
+                    {/* Welcome CTA Banner — Inspired by reference */}
+                    {(() => {
+                        const hour = currentTime ? currentTime.getHours() : 18;
+                        const bannerGradient = hour < 12
+                            ? 'linear-gradient(135deg, #be185d 0%, #e11d48 15%, #f97316 40%, #f59e0b 65%, #38bdf8 100%)'
+                            : hour < 17
+                            ? 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 30%, #38bdf8 55%, #facc15 100%)'
+                            : 'linear-gradient(135deg, #1e1b4b 0%, #1e1b4b 25%, #312e81 50%, #5b21b6 80%, #1e3a5f 100%)';
+                        const nameGradient = hour < 12
+                            ? 'linear-gradient(135deg, #fff7ed, #fbbf24, #f97316)'
+                            : hour < 17
+                            ? 'linear-gradient(135deg, #fde047, #ffffff, #fde047)'
+                            : 'linear-gradient(135deg, #f59e0b, #f97316, #fbbf24)';
+                        const accentColor = hour < 12 ? '#fb923c' : hour < 17 ? '#38bdf8' : '#a78bfa';
+                        return (
+                    <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 pb-5 sm:pb-6" style={{ background: bannerGradient }}>
                         <style dangerouslySetInnerHTML={{ __html: `
-                            @keyframes sparkle-float { 0%,100%{transform:translateY(0) scale(1);opacity:0.4} 50%{transform:translateY(-12px) scale(1.3);opacity:0.9} }
-                            @keyframes sparkle-drift { 0%,100%{transform:translateX(0) translateY(0);opacity:0.3} 50%{transform:translateX(8px) translateY(-6px);opacity:0.8} }
-                            @keyframes sparkle-pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:0.7;transform:scale(1.2)} }
-                            .sparkle-1{animation:sparkle-float 3s ease-in-out infinite}
-                            .sparkle-2{animation:sparkle-drift 4s ease-in-out infinite 0.5s}
-                            .sparkle-3{animation:sparkle-pulse 2.5s ease-in-out infinite 1s}
-                            .sparkle-4{animation:sparkle-float 3.5s ease-in-out infinite 1.5s}
-                            .sparkle-5{animation:sparkle-drift 3s ease-in-out infinite 0.8s}
+                            @keyframes sparkle-twinkle { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+                            @keyframes dot-pulse { 0%,100%{opacity:0.08} 50%{opacity:0.15} }
+                            @keyframes wave-flow { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+                            .sparkle-a{animation:sparkle-twinkle 2s ease-in-out infinite}
+                            .sparkle-b{animation:sparkle-twinkle 3s ease-in-out infinite 0.7s}
+                            .sparkle-c{animation:sparkle-twinkle 2.5s ease-in-out infinite 1.2s}
+                            .sparkle-d{animation:sparkle-twinkle 3.5s ease-in-out infinite 0.3s}
+                            .sparkle-e{animation:sparkle-twinkle 2.8s ease-in-out infinite 1.8s}
                         ` }} />
-                        {/* Decorative background circles */}
+
+                        {/* Background decorative elements */}
                         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                            <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full" />
-                            <div className="absolute top-12 right-28 w-20 h-20 bg-white/5 rounded-full" />
-                            <div className="absolute -bottom-12 -left-8 w-44 h-44 bg-white/5 rounded-full" />
-                            {/* Sparkles */}
-                            <div className="sparkle-1 absolute top-4 right-16 text-yellow-300/60 text-[10px]">✦</div>
-                            <div className="sparkle-2 absolute top-14 right-40 text-white/40 text-xs">✧</div>
-                            <div className="sparkle-3 absolute bottom-6 right-24 text-yellow-200/50 text-[8px]">✦</div>
-                            <div className="sparkle-4 absolute top-8 left-[55%] text-white/30 text-[10px]">✧</div>
-                            <div className="sparkle-5 absolute bottom-3 left-[45%] text-yellow-300/40 text-[8px]">✦</div>
+                            {/* Large circle behind mascot area */}
+                            <div className="absolute right-[-10%] top-1/2 -translate-y-1/2 w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] rounded-full" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                            <div className="absolute right-[5%] top-[20%] w-[120px] h-[120px] sm:w-[160px] sm:h-[160px] rounded-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
+
+                            {/* Dot grid pattern */}
+                            <div className="absolute right-[25%] top-[15%] w-20 h-16 sm:w-24 sm:h-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px)', backgroundSize: '8px 8px', animation: 'dot-pulse 4s ease-in-out infinite' }} />
+
+                            {/* Sparkle stars */}
+                            <div className="sparkle-a absolute top-4 left-[8%] text-yellow-300/70 text-xs">✦</div>
+                            <div className="sparkle-b absolute top-6 right-[35%] text-white/40 text-[10px]">✦</div>
+                            <div className="sparkle-c absolute bottom-12 right-[20%] text-white/30 text-xs">✦</div>
+                            <div className="sparkle-d absolute top-[35%] right-[45%] text-yellow-200/40 text-[8px]">✧</div>
+                            <div className="sparkle-e absolute bottom-8 left-[30%] text-white/20 text-[10px]">✦</div>
+
+                            {/* Curved wave line at bottom */}
+                            <svg className="absolute bottom-0 left-0 w-full h-12 sm:h-16" viewBox="0 0 1200 60" preserveAspectRatio="none" style={{ opacity: 0.08 }}>
+                                <path d="M0,40 C200,10 400,50 600,30 C800,10 1000,50 1200,25" stroke="white" strokeWidth="1.5" fill="none" />
+                                <path d="M0,50 C200,25 400,55 600,40 C800,20 1000,55 1200,35" stroke={accentColor} strokeWidth="1" fill="none" style={{ opacity: 0.5 }} />
+                            </svg>
                         </div>
 
-                        <div className="relative flex items-center justify-between">
-                            {/* Left: Text */}
-                            <div className="flex-1">
-                                <p className="text-white/70 text-xs sm:text-sm font-medium flex items-center gap-1.5 mb-1">
-                                    <span className="text-base">
-                                        {!currentTime ? '👋' : currentTime.getHours() < 12 ? '🌅' : currentTime.getHours() < 17 ? '☀️' : '🌙'}
+                        {/* Content */}
+                        <div className="relative flex items-start justify-between gap-4">
+                            {/* Left: Text content */}
+                            <div className="flex-1 min-w-0 z-10">
+                                {/* Greeting */}
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-lg sm:text-xl">
+                                        {!currentTime ? '👋' : hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'}
                                     </span>
-                                    {!currentTime ? 'Welcome' : currentTime.getHours() < 12 ? 'Good Morning' : currentTime.getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
-                                </p>
-                                <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-                                    Welcome back,
-                                    <br />
-                                    <span className="text-yellow-300">{user.name}!</span> 👋
+                                    <span className="text-white/70 text-sm sm:text-base font-medium">
+                                        {!currentTime ? 'Welcome' : hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'}
+                                    </span>
+                                </div>
+
+                                {/* Name — horizontal on desktop, stacked on mobile */}
+                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white leading-tight tracking-tight">
+                                    Welcome back,{' '}
+                                    <span className="font-extrabold" style={{ background: nameGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                        {user.name}!
+                                    </span> 👋
                                 </h2>
-                                <p className="text-white/60 text-xs sm:text-sm mt-1.5">
-                                    Class {user.studentClass} Student
+
+                                {/* Motivational subtitle */}
+                                <p className="text-white/50 text-sm mt-2 leading-relaxed hidden sm:block">
+                                    Great to see you again. Let&apos;s continue your <span style={{ color: accentColor }} className="font-semibold">learning journey</span>.
                                 </p>
+
+                                {/* Keep going card */}
+                                {(() => {
+                                    const thoughts = [
+                                        { icon: '📖', title: 'Keep going!', sub: 'Consistency today, success tomorrow.' },
+                                        { icon: '🧠', title: 'Stay curious!', sub: 'Every question leads to growth.' },
+                                        { icon: '🎯', title: 'Stay focused!', sub: 'Small steps lead to big wins.' },
+                                        { icon: '💪', title: 'You got this!', sub: 'Believe in your amazing potential.' },
+                                        { icon: '🌟', title: 'Shine bright!', sub: 'Your effort will always pay off.' },
+                                        { icon: '🔥', title: "You're on fire!", sub: 'Keep the momentum going strong.' },
+                                        { icon: '📚', title: 'Learn daily!', sub: 'Knowledge is your greatest superpower.' },
+                                        { icon: '🏆', title: 'Be a champion!', sub: 'Winners never quit, quitters never win.' },
+                                        { icon: '⚡', title: 'Power up!', sub: 'Every lesson makes you stronger.' },
+                                        { icon: '🌱', title: 'Grow daily!', sub: 'Progress matters more than perfection.' },
+                                        { icon: '🚀', title: 'Aim higher!', sub: 'The sky is never the limit.' },
+                                        { icon: '💡', title: 'Think smart!', sub: 'Understanding beats memorizing every time.' },
+                                        { icon: '🎓', title: 'Dream big!', sub: 'Education opens doors to everything.' },
+                                        { icon: '✨', title: 'Be brilliant!', sub: 'Your hard work creates magic.' },
+                                        { icon: '🧩', title: 'Solve it!', sub: 'Every problem has a solution.' },
+                                        { icon: '📝', title: 'Practice more!', sub: 'Repetition is the mother of mastery.' },
+                                        { icon: '🎪', title: 'Have fun!', sub: 'Learning is an exciting adventure.' },
+                                        { icon: '🌈', title: 'Stay positive!', sub: 'Great things take time and patience.' },
+                                        { icon: '🔑', title: 'Unlock potential!', sub: 'You are capable of amazing things.' },
+                                        { icon: '🎵', title: 'Find your rhythm!', sub: 'Steady effort creates lasting results.' },
+                                        { icon: '🛤️', title: 'Trust the process!', sub: 'Every expert was once a beginner.' },
+                                        { icon: '💎', title: 'Be unstoppable!', sub: 'Pressure creates diamonds, keep pushing.' },
+                                        { icon: '🌊', title: 'Ride the wave!', sub: 'Embrace challenges, they build character.' },
+                                        { icon: '🏅', title: 'Earn your badge!', sub: 'Discipline today, freedom tomorrow always.' },
+                                        { icon: '🦅', title: 'Soar high!', sub: 'Your potential is limitless and infinite.' },
+                                    ];
+                                    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+                                    const t = thoughts[dayOfYear % thoughts.length];
+                                    return (
+                                <div className="mt-3 sm:mt-4 inline-flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/[0.08]">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${accentColor}22` }}>
+                                        <span className="text-base">{t.icon}</span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-white text-xs sm:text-sm font-bold">{t.title}</p>
+                                        <p className="text-white/45 text-[10px] sm:text-xs">{t.sub}</p>
+                                    </div>
+                                </div>
+                                    );
+                                })()}
                             </div>
 
-                            {/* Right: Rocket — large */}
-                            <div className="shrink-0 ml-4 text-7xl sm:text-8xl" style={{ transform: 'rotate(-25deg)', marginRight: '-8px' }}>
-                                🚀
+                            {/* Right: Student Mascot */}
+                            <div className="shrink-0 relative hidden sm:block" style={{ marginRight: '-32px', marginBottom: '-48px', marginTop: '-40px' }}>
+                                <img 
+                                    src="/images/student-mascot.png" 
+                                    alt="Student mascot" 
+                                    className="w-64 h-64 sm:w-80 sm:h-80 object-contain relative z-10"
+                                    style={{ filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.35))' }}
+                                />
+                            </div>
+                            {/* Mobile mascot — smaller, overlapping right */}
+                            <div className="shrink-0 relative sm:hidden" style={{ marginRight: '-24px', marginBottom: '-40px', marginTop: '-32px' }}>
+                                <img 
+                                    src="/images/student-mascot.png" 
+                                    alt="Student mascot" 
+                                    className="w-48 h-48 object-contain relative z-10"
+                                    style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.3))' }}
+                                />
                             </div>
                         </div>
                     </div>
+                        );
+                    })()}
                 </div>
                 )}
 
@@ -1943,6 +2058,18 @@ export default function StudentDashboard() {
                         onRecordAttempt={recordAttempt}
                     />
                 )}
+
+                {/* Games Zone Tab (disabled)
+                {activeTab === 'games' && (
+                    <GamesZone
+                        userId={user.uid}
+                        userName={user.name}
+                        coins={userCoins}
+                        gameStats={gameStats}
+                        onCoinsChange={() => setCoinsRefreshKey(k => k + 1)}
+                    />
+                )}
+                */}
 
 
             </main>

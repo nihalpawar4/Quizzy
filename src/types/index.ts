@@ -22,6 +22,8 @@ export interface User {
     hideContactInfo?: boolean; // If true, hide email from students
     // Pending class change (awaiting teacher approval)
     pendingClassChange?: number; // Requested class number
+    // Game coins
+    coins?: number; // Virtual currency earned from games
 }
 
 // Class change request (requires teacher approval)
@@ -176,6 +178,22 @@ export interface DailyQuizResult {
     score: number;           // correct answers
     totalQuestions: number;  // always 5
     completedAt: Date;
+}
+
+// Game Stats for Games Zone
+export interface GameStats {
+    id: string;
+    userId: string;
+    userName: string;
+    gamesPlayed: number;
+    wordsFound: number;
+    bestTime: number; // in seconds
+    bestScore: number;
+    totalScore: number;
+    badgesEarned: number;
+    dayStreak: number;
+    lastPlayedDate?: string; // YYYY-MM-DD
+    updatedAt: Date;
 }
 
 // Auth Context Types
