@@ -111,6 +111,7 @@ export default function StudentDashboard() {
     const [showFilters, setShowFilters] = useState(false);
     const [filterTouched, setFilterTouched] = useState<Set<string>>(new Set());
     const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
+    const [reportFilterSubject, setReportFilterSubject] = useState<string>('All');
 
     // Practice Mode - Mistake Bucket state
     const [mistakeBucketItems, setMistakeBucketItems] = useState<MistakeBucketItem[]>([]);
@@ -956,17 +957,26 @@ export default function StudentDashboard() {
                     {/* Welcome CTA Banner — Inspired by reference */}
                     {(() => {
                         const hour = currentTime ? currentTime.getHours() : 18;
-                        const bannerGradient = hour < 12
+                        // 4 periods: morning (5-11), afternoon (12-16), evening (17-19), night (20-4)
+                        const isMorning = hour >= 5 && hour < 12;
+                        const isAfternoon = hour >= 12 && hour < 17;
+                        const isEvening = hour >= 17 && hour < 20;
+                        // night: hour >= 20 || hour < 5
+                        const bannerGradient = isMorning
                             ? 'linear-gradient(135deg, #be185d 0%, #e11d48 15%, #f97316 40%, #f59e0b 65%, #38bdf8 100%)'
-                            : hour < 17
+                            : isAfternoon
                             ? 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 30%, #38bdf8 55%, #facc15 100%)'
-                            : 'linear-gradient(135deg, #1e1b4b 0%, #1e1b4b 25%, #312e81 50%, #5b21b6 80%, #1e3a5f 100%)';
-                        const nameGradient = hour < 12
-                            ? 'linear-gradient(135deg, #fff7ed, #fbbf24, #f97316)'
-                            : hour < 17
-                            ? 'linear-gradient(135deg, #fde047, #ffffff, #fde047)'
-                            : 'linear-gradient(135deg, #f59e0b, #f97316, #fbbf24)';
-                        const accentColor = hour < 12 ? '#fb923c' : hour < 17 ? '#38bdf8' : '#a78bfa';
+                            : isEvening
+                            ? 'linear-gradient(135deg, #1e1b4b 0%, #312e81 30%, #5b21b6 60%, #7c3aed 100%)'
+                            : 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 30%, #1e293b 60%, #0f172a 100%)';
+                        const nameGradient = isMorning
+                            ? 'linear-gradient(135deg, #ffffff, #e0f2fe, #bae6fd)'
+                            : isAfternoon
+                            ? 'linear-gradient(135deg, #1e3a5f, #ffffff, #1e3a5f)'
+                            : isEvening
+                            ? 'linear-gradient(135deg, #67e8f9, #a5f3fc, #ffffff)'
+                            : 'linear-gradient(135deg, #34d399, #6ee7b7, #a7f3d0)';
+                        const accentColor = isMorning ? '#fb923c' : isAfternoon ? '#38bdf8' : isEvening ? '#a78bfa' : '#34d399';
                         return (
                     <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 pb-5 sm:pb-6" style={{ background: bannerGradient }}>
                         <style dangerouslySetInnerHTML={{ __html: `
@@ -1010,10 +1020,10 @@ export default function StudentDashboard() {
                                 {/* Greeting */}
                                 <div className="flex items-center gap-2 mb-4">
                                     <span className="text-lg sm:text-xl">
-                                        {!currentTime ? '👋' : hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'}
+                                        {!currentTime ? '👋' : isMorning ? '🌅' : isAfternoon ? '☀️' : isEvening ? '🌙' : '🌌'}
                                     </span>
                                     <span className="text-white/70 text-sm sm:text-base font-medium">
-                                        {!currentTime ? 'Welcome' : hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'}
+                                        {!currentTime ? 'Welcome' : isMorning ? 'Good Morning' : isAfternoon ? 'Good Afternoon' : isEvening ? 'Good Evening' : 'Good Night'}
                                     </span>
                                 </div>
 
@@ -1030,7 +1040,7 @@ export default function StudentDashboard() {
                                     Great to see you again. Let&apos;s continue your <span style={{ color: accentColor }} className="font-semibold">learning journey</span>.
                                 </p>
 
-                                {/* Keep going card */}
+                                {/* Keep going card — desktop only */}
                                 {(() => {
                                     const thoughts = [
                                         { icon: '📖', title: 'Keep going!', sub: 'Consistency today, success tomorrow.' },
@@ -1062,7 +1072,7 @@ export default function StudentDashboard() {
                                     const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
                                     const t = thoughts[dayOfYear % thoughts.length];
                                     return (
-                                <div className="mt-3 sm:mt-4 inline-flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/[0.08]">
+                                <div className="mt-3 sm:mt-4 hidden sm:inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/[0.08]">
                                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${accentColor}22` }}>
                                         <span className="text-base">{t.icon}</span>
                                     </div>
@@ -1073,6 +1083,8 @@ export default function StudentDashboard() {
                                 </div>
                                     );
                                 })()}
+
+
                             </div>
 
                             {/* Right: Student Mascot */}
@@ -1781,170 +1793,271 @@ export default function StudentDashboard() {
                 {/* My Reports Tab */}
                 {activeTab === 'reports' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                📊 My Test Reports
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Reports available instantly for 24 hours</p>
+                        {/* Reports Header */}
+                        {(() => {
+                            const allSubjects = [...new Set(results.map(r => r.subject))];
+                            const filteredResults = reportFilterSubject === 'All' ? results : results.filter(r => r.subject === reportFilterSubject);
+
+                            // Combined score calculation
+                            const scorableResults = filteredResults.filter(r => !r.isPdfTest && r.totalQuestions > 0);
+                            const pdfEvaluatedResults = filteredResults.filter(r => r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0);
+                            const totalScorable = scorableResults.length + pdfEvaluatedResults.length;
+                            const combinedScore = totalScorable > 0
+                                ? Math.round(
+                                    (
+                                        scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) +
+                                        pdfEvaluatedResults.reduce((acc, r) => acc + ((r.pdfMarksAwarded || 0) / (r.pdfMaxMarks || 1)) * 100, 0)
+                                    ) / totalScorable
+                                )
+                                : 0;
+
+                            // Circular progress values
+                            const circleRadius = 36;
+                            const circleCircumference = 2 * Math.PI * circleRadius;
+                            const circleOffset = circleCircumference - (combinedScore / 100) * circleCircumference;
+                            const scoreColor = combinedScore >= 70 ? '#22c55e' : combinedScore >= 40 ? '#f59e0b' : '#ef4444';
+
+                            // Subject color mapping for illustrations
+                            const subjectStyles: Record<string, { gradient: string; iconBg: string; iconColor: string; badgeBg: string; badgeText: string; letter: string }> = {
+                                'Mathematics': { gradient: 'from-blue-400 to-blue-600', iconBg: 'bg-blue-100 dark:bg-blue-900/40', iconColor: 'text-blue-600 dark:text-blue-400', badgeBg: 'bg-blue-100 dark:bg-blue-900/40', badgeText: 'text-blue-700 dark:text-blue-300', letter: '∑' },
+                                'Science': { gradient: 'from-emerald-400 to-emerald-600', iconBg: 'bg-emerald-100 dark:bg-emerald-900/40', iconColor: 'text-emerald-600 dark:text-emerald-400', badgeBg: 'bg-emerald-100 dark:bg-emerald-900/40', badgeText: 'text-emerald-700 dark:text-emerald-300', letter: '⚗' },
+                                'Hindi': { gradient: 'from-orange-400 to-red-500', iconBg: 'bg-orange-100 dark:bg-orange-900/40', iconColor: 'text-orange-600 dark:text-orange-400', badgeBg: 'bg-orange-100 dark:bg-orange-900/40', badgeText: 'text-orange-700 dark:text-orange-300', letter: 'अ' },
+                                'English': { gradient: 'from-purple-400 to-purple-600', iconBg: 'bg-purple-100 dark:bg-purple-900/40', iconColor: 'text-purple-600 dark:text-purple-400', badgeBg: 'bg-purple-100 dark:bg-purple-900/40', badgeText: 'text-purple-700 dark:text-purple-300', letter: 'A' },
+                                'Social Science': { gradient: 'from-amber-400 to-amber-600', iconBg: 'bg-amber-100 dark:bg-amber-900/40', iconColor: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-100 dark:bg-amber-900/40', badgeText: 'text-amber-700 dark:text-amber-300', letter: '🌍' },
+                                'Combined': { gradient: 'from-indigo-400 to-violet-600', iconBg: 'bg-indigo-100 dark:bg-indigo-900/40', iconColor: 'text-indigo-600 dark:text-indigo-400', badgeBg: 'bg-indigo-100 dark:bg-indigo-900/40', badgeText: 'text-indigo-700 dark:text-indigo-300', letter: '⊕' },
+                            };
+                            const defaultStyle = { gradient: 'from-slate-400 to-slate-600', iconBg: 'bg-slate-100 dark:bg-slate-800', iconColor: 'text-slate-600 dark:text-slate-400', badgeBg: 'bg-slate-100 dark:bg-slate-800', badgeText: 'text-slate-700 dark:text-slate-300', letter: '📝' };
+
+                            return (
+                                <>
+                        {/* Header with filter */}
+                        <div className="flex items-start justify-between mb-5">
+                            <div>
+                                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Reports</h2>
+                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">All your test reports in one place</p>
+                            </div>
+                            <div className="relative">
+                                <select
+                                    value={reportFilterSubject}
+                                    onChange={(e) => setReportFilterSubject(e.target.value)}
+                                    className="appearance-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 pr-9 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                >
+                                    <option value="All">All Subjects</option>
+                                    {allSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
-                        {results.length === 0 ? (
-                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-                                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600 dark:text-gray-400">No test reports yet. Complete a test to see your detailed analysis!</p>
+
+                        {/* Info Banner — illustration + circular gauge */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/30 border border-gray-200/80 dark:border-gray-800 p-5 sm:p-6 mb-6">
+                            <div className="flex items-center justify-between">
+                                {/* Left — illustration + text */}
+                                <div className="flex items-center gap-4">
+                                    {/* Report Illustration SVG */}
+                                    <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 relative">
+                                        <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                                            {/* Clipboard base */}
+                                            <rect x="18" y="16" width="52" height="68" rx="8" fill="url(#clipGrad)" opacity="0.15"/>
+                                            <rect x="22" y="20" width="52" height="68" rx="8" fill="white" stroke="url(#clipGrad)" strokeWidth="2"/>
+                                            {/* Clipboard top clip */}
+                                            <rect x="36" y="14" width="24" height="14" rx="4" fill="url(#clipGrad)"/>
+                                            <rect x="40" y="18" width="16" height="6" rx="2" fill="white"/>
+                                            {/* Text lines */}
+                                            <rect x="32" y="40" width="32" height="3" rx="1.5" fill="#c7d2fe"/>
+                                            <rect x="32" y="48" width="24" height="3" rx="1.5" fill="#e0e7ff"/>
+                                            <rect x="32" y="56" width="28" height="3" rx="1.5" fill="#c7d2fe"/>
+                                            <rect x="32" y="64" width="20" height="3" rx="1.5" fill="#e0e7ff"/>
+                                            {/* Check marks */}
+                                            <circle cx="36" cy="73" r="4" fill="#22c55e" opacity="0.2"/>
+                                            <path d="M34 73 L35.5 74.5 L38 72" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                            {/* Clock overlay */}
+                                            <circle cx="64" cy="72" r="14" fill="white" stroke="url(#clipGrad)" strokeWidth="2"/>
+                                            <circle cx="64" cy="72" r="10" fill="url(#clipGrad)" opacity="0.1"/>
+                                            <path d="M64 66 L64 72 L68 75" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/>
+                                            <defs>
+                                                <linearGradient id="clipGrad" x1="18" y1="16" x2="74" y2="88" gradientUnits="userSpaceOnUse">
+                                                    <stop stopColor="#818cf8"/>
+                                                    <stop offset="1" stopColor="#6366f1"/>
+                                                </linearGradient>
+                                            </defs>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Reports available</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">instantly for</p>
+                                        <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mt-0.5">24 Hours</p>
+                                    </div>
+                                </div>
+
+                                {/* Right — circular performance gauge */}
+                                <div className="text-center">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Overall Performance</p>
+                                    <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+                                        <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+                                            <circle cx="48" cy="48" r={circleRadius} fill="none" stroke="#e5e7eb" strokeWidth="6" className="dark:stroke-gray-700"/>
+                                            <circle cx="48" cy="48" r={circleRadius} fill="none" stroke={scoreColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={circleCircumference} strokeDashoffset={circleOffset} style={{ transition: 'stroke-dashoffset 1s ease' }}/>
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{combinedScore}%</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">Combined Score</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Report Cards */}
+                        {filteredResults.length === 0 ? (
+                            <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                                <svg className="w-20 h-20 mx-auto mb-4 text-gray-300 dark:text-gray-600" viewBox="0 0 96 96" fill="none">
+                                    <rect x="22" y="20" width="52" height="60" rx="8" fill="currentColor" opacity="0.15"/>
+                                    <rect x="32" y="36" width="32" height="3" rx="1.5" fill="currentColor" opacity="0.3"/>
+                                    <rect x="32" y="44" width="24" height="3" rx="1.5" fill="currentColor" opacity="0.2"/>
+                                    <rect x="32" y="52" width="28" height="3" rx="1.5" fill="currentColor" opacity="0.3"/>
+                                </svg>
+                                <p className="text-gray-600 dark:text-gray-400 font-medium">No test reports yet</p>
+                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Complete a test to see your detailed analysis!</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {results.map((result, index) => {
+                                {filteredResults.map((result, index) => {
                                     const reportAvailable = isReportAvailable(result);
                                     const reportExpired = isReportExpired(result);
                                     const scorePercent = result.isPdfTest
                                         ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : 0)
                                         : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : 0);
+                                    const style = subjectStyles[result.subject] || defaultStyle;
+                                    const scoreLabel = result.isPdfTest
+                                        ? (result.pdfEvaluated ? `Score: ${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Awaiting evaluation')
+                                        : `Score: ${result.score}/${result.totalQuestions}`;
+                                    const dateStr = new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + new Date(result.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
                                     return (
                                         <motion.div
                                             key={result.id}
-                                            initial={{ opacity: 0, y: 20 }}
+                                            initial={{ opacity: 0, y: 16 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.05 * index }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${reportExpired ? 'border-gray-300 dark:border-gray-700 opacity-60' : 'border-gray-200 dark:border-gray-800'}`}
+                                            transition={{ delay: 0.04 * index }}
+                                            className={`group relative bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden transition-all duration-200 ${
+                                                reportExpired
+                                                    ? 'border-gray-200 dark:border-gray-800'
+                                                    : 'border-gray-200 dark:border-gray-800 hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-200 dark:hover:border-indigo-800'
+                                            }`}
                                         >
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="inline-block px-3 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB] text-xs font-medium rounded-full">{result.subject}</span>
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${scorePercent >= 70 ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : scorePercent >= 40 ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'}`}>
-                                                            {scorePercent >= 70 ? <CheckCircle className="w-3 h-3" /> : scorePercent >= 40 ? <AlertCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                            <div
+                                                className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 cursor-pointer ${reportExpired ? 'opacity-70' : ''}`}
+                                                onClick={() => {
+                                                    if (reportAvailable && !reportExpired) {
+                                                        setSelectedReport(result);
+                                                    }
+                                                }}
+                                            >
+                                                {/* Left — Subject Icon */}
+                                                <div className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${style.iconBg} flex items-center justify-center`}>
+                                                    <span className={`text-xl sm:text-2xl font-bold ${style.iconColor}`}>{style.letter}</span>
+                                                </div>
+
+                                                {/* Center — Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    {/* Title */}
+                                                    <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">
+                                                        {result.testTitle}
+                                                    </h4>
+
+                                                    {/* Subject badge + Score badge */}
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.badgeBg} ${style.badgeText}`}>
+                                                            {result.subject}
+                                                        </span>
+                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                            scorePercent >= 70
+                                                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                                                                : scorePercent >= 40
+                                                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                                                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                                        }`}>
+                                                            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d={scorePercent >= 40 ? "M2 8L6 3L10 8" : "M2 4L6 9L10 4"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                                             {scorePercent}%
                                                         </span>
                                                         {reportExpired && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500">
+                                                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                                                                 Expired
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{result.testTitle}</h4>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {result.isPdfTest
-                                                            ? (result.pdfEvaluated
-                                                                ? `Marks: ${result.pdfMarksAwarded}/${result.pdfMaxMarks}`
-                                                                : 'Awaiting evaluation')
-                                                            : `Score: ${result.score}/${result.totalQuestions}`
-                                                        } • {new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+
+                                                    {/* Score + Date */}
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                                                        {scoreLabel} &bull; {dateStr}
                                                     </p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
+
+                                                    {/* Expired / Available status */}
                                                     {reportExpired ? (
-                                                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl">
-                                                            <Clock className="w-4 h-4" />
-                                                            <span className="text-sm">Report Expired</span>
+                                                        <div className="flex items-center gap-1.5 mt-2">
+                                                            <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 16 16" fill="none">
+                                                                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+                                                                <path d="M8 5v3.5l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                                                            </svg>
+                                                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500">Report Expired</span>
                                                         </div>
                                                     ) : reportAvailable ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() => downloadReport(result)}
-                                                                className="flex items-center gap-2 px-3 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
-                                                                title="Download PDF Report"
-                                                            >
-                                                                <Download className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setSelectedReport(result)}
-                                                                className="flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
-                                                            >
-                                                                <FileText className="w-4 h-4" /> View Report
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl">
-                                                            <Clock className="w-4 h-4" />
-                                                            <span className="text-sm">{getTimeRemaining(result)}</span>
+                                                        <div className="flex items-center gap-1.5 mt-2">
+                                                            <svg className="w-3.5 h-3.5 text-green-500" viewBox="0 0 16 16" fill="none">
+                                                                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+                                                                <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            </svg>
+                                                            <span className="text-xs font-medium text-green-600 dark:text-green-400">{getTimeRemaining(result)}</span>
                                                         </div>
-                                                    )}
+                                                    ) : null}
+                                                </div>
+
+                                                {/* Right — Decorative gradient document illustration */}
+                                                <div className="shrink-0 hidden sm:flex items-center gap-3">
+                                                    <div className={`w-14 h-16 rounded-xl bg-gradient-to-br ${style.gradient} flex items-center justify-center shadow-lg opacity-80`}>
+                                                        <svg className="w-8 h-8 text-white/90" viewBox="0 0 32 32" fill="none">
+                                                            <rect x="6" y="4" width="20" height="24" rx="3" fill="currentColor" opacity="0.3"/>
+                                                            <rect x="10" y="10" width="12" height="2" rx="1" fill="currentColor"/>
+                                                            <rect x="10" y="15" width="8" height="2" rx="1" fill="currentColor" opacity="0.6"/>
+                                                            <rect x="10" y="20" width="10" height="2" rx="1" fill="currentColor" opacity="0.4"/>
+                                                        </svg>
+                                                    </div>
+                                                </div>
+
+                                                {/* Chevron */}
+                                                <div className="shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
+                                                    <ArrowRight className="w-4 h-4 text-gray-400 dark:text-gray-500"/>
                                                 </div>
                                             </div>
+
+                                            {/* Action buttons row for available reports */}
+                                            {reportAvailable && !reportExpired && (
+                                                <div className="flex items-center gap-2 px-4 sm:px-5 pb-4 pt-0">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); downloadReport(result); }}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5"/> Download
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedReport(result); }}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                                    >
+                                                        <FileText className="w-3.5 h-3.5"/> View Report
+                                                    </button>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     );
                                 })}
                             </div>
                         )}
-
-                        {/* Recent Results Summary */}
-                        {results.length > 0 && (
-                            <div className="mt-8">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Recent Results</h3>
-                                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                                                {results.slice(0, 5).map((result) => (
-                                                    <tr key={result.id}>
-                                                        <td className="px-6 py-4">
-                                                            <div>
-                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{result.testTitle}</p>
-                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{result.subject}</p>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            {(() => {
-                                                                const pct = result.isPdfTest
-                                                                    ? (result.pdfEvaluated && result.pdfMaxMarks ? ((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) : 0)
-                                                                    : (result.totalQuestions > 0 ? result.score / result.totalQuestions : 0);
-                                                                const label = result.isPdfTest
-                                                                    ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Pending')
-                                                                    : `${result.score}/${result.totalQuestions}`;
-                                                                return (
-                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pct >= 0.7
-                                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                                        : pct >= 0.4
-                                                                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                                                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                                        }`}>
-                                                                        {label} ({Math.round(pct * 100)}%)
-                                                                    </span>
-                                                                );
-                                                            })()}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                            {result.timestamp.toLocaleDateString()}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Stats Summary */}
-                        {results.length > 0 && (
-                            <div className="mt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📈 Your Stats</h3>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="px-4 py-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-center">
-                                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{results.length}</p>
-                                        <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-0.5">Tests Taken</p>
-                                    </div>
-                                    <div className="px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-center">
-                                        <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{averageScore}%</p>
-                                        <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Avg Score</p>
-                                    </div>
-                                    <div className="px-4 py-4 bg-violet-50 dark:bg-violet-900/20 rounded-2xl text-center">
-                                        <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{tests.length}</p>
-                                        <p className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-0.5">Active Tests</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                                </>
+                            );
+                        })()}
                     </motion.div>
                 )}
+
 
 
                 {/* Study Notes Tab */}
