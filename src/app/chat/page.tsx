@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Chat Page - Real-Time Messaging
- * WhatsApp-like chat interface with Quizy theme
+ * Chat Page — Premium 2026 Messaging Experience
+ * Glass sidebar + premium chat window
+ * Linear/Arc/Discord inspired
  */
 
 import React, { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { ChatList, ChatWindow, NewChatModal } from '@/components/chat';
-import { MessageCircle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
@@ -47,7 +48,6 @@ export default function ChatPage() {
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [isMobileView, setIsMobileView] = useState(false);
 
-    // Check for mobile view
     useEffect(() => {
         const checkMobile = () => {
             setIsMobileView(window.innerWidth < 1024);
@@ -57,30 +57,26 @@ export default function ChatPage() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Redirect if not authenticated
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/auth/login');
         }
     }, [user, authLoading, router]);
 
-    // Loading state
     if (authLoading || !user) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 dark:bg-[#0c1025] flex items-center justify-center">
                 <MotivationalLoader />
             </div>
         );
     }
 
-    // Get the other participant ID for current chat
     const otherParticipantId = currentChat?.participants.find(id => id !== user.uid);
     const otherParticipantPresence = otherParticipantId ? getParticipantPresence(otherParticipantId) : null;
     const isOtherTyping = otherParticipantId && currentChat
         ? isUserTyping(otherParticipantId, currentChat.id)
         : false;
 
-    // Handle start new chat
     const handleStartNewChat = async (participantId: string, participantName: string, participantClass?: number) => {
         try {
             await startNewChat(participantId, participantName, participantClass);
@@ -91,7 +87,6 @@ export default function ChatPage() {
         }
     };
 
-    // Handle send message wrapper
     const handleSendMessage = async (text: string, replyTo?: { id: string; text: string; senderName: string }) => {
         try {
             await sendMessage(text, replyTo);
@@ -104,7 +99,7 @@ export default function ChatPage() {
     if (isMobileView && currentChat) {
         return (
             <div
-                className="bg-gray-50 dark:bg-gray-950 fixed inset-0 flex flex-col"
+                className="bg-gray-50 dark:bg-[#0c1025] fixed inset-0 flex flex-col"
                 style={{ height: '100dvh' }}
             >
                 <ChatWindow
@@ -130,39 +125,48 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0c1025]">
             {/* Header with Back Button - Mobile */}
-            <div className="lg:hidden border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-[#1650EB] to-[#6095DB]">
-                <div className="flex items-center gap-3 p-4">
+            <div className="lg:hidden border-b border-gray-200/60 dark:border-white/5 bg-white/80 dark:bg-[#0f1629]/80 backdrop-blur-xl">
+                <div className="flex items-center gap-3 px-4 py-3">
                     <Link
                         href="/dashboard"
-                        className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        className="p-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all duration-200"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-lg font-bold text-white">Messages</h1>
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center shadow-md shadow-[#1650EB]/20">
+                            <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="none">
+                                <path d="M4 4h12a2 2 0 012 2v7a2 2 0 01-2 2H8l-4 3V6a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity="0.15" strokeLinejoin="round"/>
+                            </svg>
+                        </div>
+                        <h1 className="text-lg font-bold text-gray-900 dark:text-white">Messages</h1>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex h-[calc(100vh-65px)] lg:h-screen">
+            <div className="flex h-[calc(100vh-57px)] lg:h-screen">
                 {/* Chat List - Sidebar */}
                 <div className={`
                     ${isMobileView ? 'w-full' : 'w-80 lg:w-96'}
-                    border-r border-gray-200 dark:border-gray-800 flex-shrink-0
+                    border-r border-gray-200/60 dark:border-white/5 flex-shrink-0 flex flex-col
                 `}>
-                    <ChatList
-                        chats={chats}
-                        currentUserId={user.uid}
-                        currentUserRole={user.role}
-                        currentChatId={currentChat?.id}
-                        presenceMap={presenceMap}
-                        onSelectChat={setCurrentChat}
-                        onDeleteChat={deleteChat}
-                        onNewChat={() => setShowNewChatModal(true)}
-                        onPinChat={pinChat}
-                        onUnpinChat={unpinChat}
-                        isLoading={isLoading}
-                    />
+                    <div className="flex-1 min-h-0">
+                        <ChatList
+                            chats={chats}
+                            currentUserId={user.uid}
+                            currentUserRole={user.role}
+                            currentChatId={currentChat?.id}
+                            presenceMap={presenceMap}
+                            onSelectChat={setCurrentChat}
+                            onDeleteChat={deleteChat}
+                            onNewChat={() => setShowNewChatModal(true)}
+                            onPinChat={pinChat}
+                            onUnpinChat={unpinChat}
+                            isLoading={isLoading}
+                        />
+                    </div>
                 </div>
 
                 {/* Chat Window - Main Area (Desktop) */}
@@ -190,10 +194,15 @@ export default function ChatPage() {
                                 />
                             </div>
                         ) : (
-                            // Empty state
-                            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 p-8 text-center">
-                                <div className="w-24 h-24 rounded-full bg-[#1650EB]/10 flex items-center justify-center mb-6">
-                                    <MessageCircle className="w-12 h-12 text-[#1650EB]" />
+                            /* Empty state */
+                            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0c1025] p-8 text-center">
+                                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#1650EB]/10 to-[#6095DB]/10 dark:from-[#1650EB]/15 dark:to-blue-500/15 flex items-center justify-center mb-6">
+                                    <svg className="w-12 h-12 text-[#6095DB]" viewBox="0 0 48 48" fill="none">
+                                        <path d="M8 8h32a4 4 0 014 4v18a4 4 0 01-4 4H18l-10 8V12a4 4 0 014-4z" stroke="currentColor" strokeWidth="2.5" fill="currentColor" fillOpacity="0.08" strokeLinejoin="round"/>
+                                        <circle cx="18" cy="21" r="2" fill="currentColor" opacity="0.6"/>
+                                        <circle cx="24" cy="21" r="2" fill="currentColor" opacity="0.6"/>
+                                        <circle cx="30" cy="21" r="2" fill="currentColor" opacity="0.6"/>
+                                    </svg>
                                 </div>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                                     Your Messages
@@ -203,7 +212,7 @@ export default function ChatPage() {
                                 </p>
                                 <button
                                     onClick={() => setShowNewChatModal(true)}
-                                    className="px-6 py-3 bg-gradient-to-r from-[#1650EB] to-[#6095DB] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#1650EB]/30 transition-all duration-200"
+                                    className="px-6 py-3 bg-gradient-to-r from-[#1650EB] to-[#6095DB] text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-[#1650EB]/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                     Start New Chat
                                 </button>

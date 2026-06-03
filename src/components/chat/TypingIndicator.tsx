@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Typing Indicator Component
- * Shows animated dots when someone is typing
+ * Typing Indicator Component — Premium 2026 Redesign
+ * Glass bubble with animated dots
  */
 
 import React from 'react';
@@ -37,16 +37,16 @@ export default function TypingIndicator({ userName }: TypingIndicatorProps) {
 }
 
 /**
- * Inline typing indicator for chat bubbles
+ * Inline typing indicator bubble for chat — glass style
  */
 export function TypingBubble() {
     return (
-        <div className="flex items-start gap-3 animate-fadeIn">
+        <div className="flex items-start gap-2 animate-fadeIn">
             {/* Avatar placeholder */}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex-shrink-0" />
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex-shrink-0" />
 
             {/* Typing bubble */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 max-w-xs shadow-sm">
+            <div className="bg-white dark:bg-white/[0.07] border border-gray-100 dark:border-white/10 rounded-[22px] rounded-bl-md px-4 py-3 max-w-xs shadow-sm">
                 <div className="flex gap-1.5 items-center h-5">
                     <span
                         className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"

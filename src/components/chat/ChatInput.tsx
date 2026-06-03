@@ -2,7 +2,7 @@
 
 /**
  * Chat Input Component
- * Clean chat input with emoji picker
+ * Clean chat input with emoji picker and send button
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -76,7 +76,7 @@ export default function ChatInput({
     };
 
     return (
-        <div className="bg-white dark:bg-gray-950 px-3 py-2">
+        <div className="bg-white/80 dark:bg-[#0c1025]/80 backdrop-blur-xl px-3 py-2 border-t border-gray-100 dark:border-white/5">
             <div className="flex items-end gap-2">
                 {/* Emoji Button */}
                 <div className="relative flex-shrink-0">
@@ -85,7 +85,7 @@ export default function ChatInput({
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                         className={`p-2 rounded-full transition-all ${showEmojiPicker
                                 ? 'text-[#1650EB] bg-[#1650EB]/10'
-                                : 'text-gray-400 hover:text-[#1650EB] hover:bg-gray-100 dark:hover:bg-gray-800'
+                                : 'text-gray-400 hover:text-[#1650EB] hover:bg-gray-100 dark:hover:bg-white/5'
                             }`}
                     >
                         <Smile className="w-6 h-6" />
@@ -107,7 +107,7 @@ export default function ChatInput({
                         placeholder={placeholder}
                         disabled={disabled}
                         rows={1}
-                        className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 px-4 py-2.5 rounded-2xl resize-none outline-none text-sm focus:ring-2 focus:ring-[#1650EB]/20"
+                        className="w-full bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 px-4 py-2.5 rounded-2xl resize-none outline-none text-sm focus:ring-2 focus:ring-[#1650EB]/20 border border-transparent focus:border-[#1650EB]/30 dark:focus:border-[#1650EB]/30 transition-all"
                         style={{ minHeight: '42px', maxHeight: '120px' }}
                     />
                 </div>
@@ -118,8 +118,8 @@ export default function ChatInput({
                     onClick={handleSend}
                     disabled={!message.trim() || disabled}
                     className={`p-2.5 rounded-full flex-shrink-0 transition-all ${message.trim()
-                            ? 'bg-gradient-to-r from-[#1650EB] to-[#6095DB] text-white shadow-lg hover:shadow-xl active:scale-95'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                            ? 'bg-gradient-to-r from-[#1650EB] to-[#6095DB] text-white shadow-lg shadow-[#1650EB]/20 hover:shadow-xl active:scale-95'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400'
                         }`}
                 >
                     <Send className="w-5 h-5" />

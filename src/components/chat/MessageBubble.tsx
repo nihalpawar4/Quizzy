@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Message Bubble Component
- * WhatsApp-style message display with premium design, tails, and selection mode
- * Long-press on mobile / right-click on desktop to show actions
+ * Message Bubble Component — Premium 2026 Redesign
+ * Modern rounded message bubbles with glass effects
+ * Linear/Telegram Premium inspired
  */
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -23,7 +23,6 @@ interface MessageBubbleProps {
     onDelete?: (messageId: string) => void;
     onDeleteForEveryone?: (messageId: string) => void;
     onForward?: (message: Message) => void;
-    // Selection mode props
     isSelectionMode?: boolean;
     isSelected?: boolean;
     onToggleSelect?: (messageId: string) => void;
@@ -57,7 +56,6 @@ export default function MessageBubble({
         longPressTimerRef.current = setTimeout(() => {
             if (isSelectionMode) return;
             setShowActions(true);
-            // Haptic feedback on supported devices
             if (navigator.vibrate) navigator.vibrate(30);
         }, 500);
     }, [isSelectionMode]);
@@ -69,21 +67,18 @@ export default function MessageBubble({
         }
     }, []);
 
-    // Right click for desktop
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         if (isSelectionMode) return;
         e.preventDefault();
         setShowActions(true);
     }, [isSelectionMode]);
 
-    // Click handler - in selection mode, toggle select
     const handleClick = useCallback(() => {
         if (isSelectionMode) {
             onToggleSelect?.(message.id);
         }
     }, [isSelectionMode, message.id, onToggleSelect]);
 
-    // Copy message text
     const handleCopy = useCallback(() => {
         navigator.clipboard.writeText(message.text).then(() => {
             setCopyFeedback(true);
@@ -92,7 +87,6 @@ export default function MessageBubble({
         setShowActions(false);
     }, [message.text]);
 
-    // Delete message for me
     const handleDelete = useCallback(() => {
         if (showDeleteConfirm) {
             onDelete?.(message.id);
@@ -103,25 +97,21 @@ export default function MessageBubble({
         }
     }, [message.id, onDelete, showDeleteConfirm]);
 
-    // Delete message for everyone (only for own messages)
     const handleDeleteForEveryone = useCallback(() => {
         onDeleteForEveryone?.(message.id);
         setShowActions(false);
     }, [message.id, onDeleteForEveryone]);
 
-    // Reply to message
     const handleReply = useCallback(() => {
         onReply?.(message);
         setShowActions(false);
     }, [message, onReply]);
 
-    // Forward message
     const handleForward = useCallback(() => {
         onForward?.(message);
         setShowActions(false);
     }, [message, onForward]);
 
-    // Enter selection mode
     const handleSelect = useCallback(() => {
         onEnterSelectionMode?.(message.id);
         setShowActions(false);
@@ -132,10 +122,10 @@ export default function MessageBubble({
             <div
                 ref={bubbleRef}
                 className={`
-                    flex items-end gap-2 group relative px-1 py-0.5 rounded-lg transition-colors duration-150
+                    flex items-end gap-2 group relative px-1 py-0.5 rounded-xl transition-colors duration-200
                     ${isOwn ? 'flex-row-reverse' : 'flex-row'}
                     ${isNew ? 'animate-slideInMessage' : ''}
-                    ${isSelected ? 'msg-selected' : ''}
+                    ${isSelected ? 'bg-[#1650EB]/10 dark:bg-[#1650EB]/10' : ''}
                     ${isSelectionMode ? 'cursor-pointer' : ''}
                 `}
                 onTouchStart={isSelectionMode ? undefined : handleTouchStart}
@@ -151,7 +141,7 @@ export default function MessageBubble({
                             w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
                             ${isSelected
                                 ? 'bg-[#1650EB] border-[#1650EB] scale-110'
-                                : 'border-gray-400 dark:border-gray-600'
+                                : 'border-gray-300 dark:border-gray-600'
                             }
                         `}>
                             {isSelected && (
@@ -165,7 +155,7 @@ export default function MessageBubble({
 
                 {/* Avatar (only for received messages with tail) */}
                 {showAvatar && !isOwn && (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold shadow-md mb-0.5">
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold shadow-md shadow-[#1650EB]/20 mb-0.5">
                         {senderInitial || message.senderName.charAt(0).toUpperCase()}
                     </div>
                 )}
@@ -177,19 +167,19 @@ export default function MessageBubble({
                 {/* Message Content */}
                 <div
                     className={`
-                        max-w-[75%] md:max-w-[60%]
+                        max-w-[75%] md:max-w-[60%] relative
                         ${isOwn
-                            ? `msg-bubble-own ${showTail ? 'msg-bubble-tail' : ''} bg-gradient-to-br from-[#1650EB] to-[#4A7FE0] ${showTail ? 'rounded-2xl rounded-br-[4px]' : 'rounded-2xl rounded-br-sm'}`
-                            : `msg-bubble-other ${showTail ? 'msg-bubble-tail' : ''} bg-white dark:bg-gray-800 ${showTail ? 'rounded-2xl rounded-bl-[4px]' : 'rounded-2xl rounded-bl-sm'} border border-gray-100 dark:border-gray-700`
+                            ? `bg-gradient-to-br from-[#1650EB] to-[#6095DB] ${showTail ? 'rounded-[22px] rounded-br-md' : 'rounded-[22px] rounded-br-sm'} shadow-md shadow-[#1650EB]/15`
+                            : `bg-white dark:bg-white/[0.07] ${showTail ? 'rounded-[22px] rounded-bl-md' : 'rounded-[22px] rounded-bl-sm'} border border-gray-100 dark:border-white/10 shadow-sm`
                         }
-                        px-3 py-2 shadow-sm hover:shadow-md transition-all duration-200
-                        ${showActions ? 'ring-2 ring-[#1650EB]/40' : ''}
+                        px-3.5 py-2.5 transition-all duration-200
+                        ${showActions ? 'ring-2 ring-[#1650EB]/30' : ''}
                     `}
                 >
-                    {/* Reply preview if replying to another message */}
+                    {/* Reply preview */}
                     {message.replyTo && (
                         <div className={`
-                            mb-1.5 px-2.5 py-1.5 rounded-lg text-xs border-l-[3px]
+                            mb-2 px-2.5 py-1.5 rounded-xl text-xs border-l-[3px]
                             ${isOwn
                                 ? 'bg-white/15 border-l-white/50 text-white/85'
                                 : 'bg-[#1650EB]/5 dark:bg-[#1650EB]/10 border-l-[#1650EB] text-gray-600 dark:text-gray-300'
@@ -203,28 +193,29 @@ export default function MessageBubble({
                     )}
 
                     {/* Message Text */}
-                    <p className={`text-[14.5px] break-words whitespace-pre-wrap leading-[1.45] ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                    <p className={`text-[14.5px] break-words whitespace-pre-wrap leading-[1.45] ${
+                        isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'
+                    }`}>
                         {message.text}
                     </p>
 
-                    {/* Time and Status — WhatsApp-style inline bottom-right */}
+                    {/* Time and Status */}
                     <div className={`
                         flex items-center gap-1 mt-0.5 float-right ml-3 -mb-0.5
                         ${isOwn ? 'justify-end' : 'justify-start'}
                     `}>
-                        <span className={`text-[10px] leading-none ${isOwn ? 'text-white/55' : 'text-gray-400 dark:text-gray-500'}`}>
+                        <span className={`text-[10px] leading-none ${
+                            isOwn ? 'text-white/50' : 'text-gray-400 dark:text-gray-500'
+                        }`}>
                             {formatMessageTime(message.timestamp)}
                         </span>
-
-                        {/* Status icon only for own messages */}
                         {isOwn && (
                             <MessageStatusIcon status={message.status} size="small" />
                         )}
                     </div>
-                    {/* Clear float */}
                     <div className="clear-both" />
 
-                    {/* Copy feedback toast */}
+                    {/* Copy feedback */}
                     {copyFeedback && (
                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-full shadow-lg animate-fadeIn whitespace-nowrap z-50">
                             ✓ Copied
@@ -236,13 +227,11 @@ export default function MessageBubble({
             {/* Action Menu Overlay */}
             {showActions && (
                 <>
-                    {/* Backdrop */}
                     <div
                         className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]"
                         onClick={() => { setShowActions(false); setShowDeleteConfirm(false); }}
                     />
 
-                    {/* Action Sheet */}
                     <div className={`
                         fixed bottom-0 left-0 right-0 z-50 px-3 pb-6 pt-2
                         md:absolute md:bottom-auto md:left-auto md:right-auto md:px-0 md:pb-0 md:pt-0
@@ -250,7 +239,7 @@ export default function MessageBubble({
                         md:top-0
                     `}>
                         <div className="bg-white dark:bg-gray-900 rounded-2xl md:rounded-xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden w-full md:w-52 animate-slideUpSheet">
-                            {/* Close on mobile */}
+                            {/* Drag handle on mobile */}
                             <div className="md:hidden flex justify-center pt-2 pb-1">
                                 <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
                             </div>
@@ -285,7 +274,6 @@ export default function MessageBubble({
                                 Forward
                             </button>
 
-                            {/* Select for multi-select */}
                             <button
                                 onClick={handleSelect}
                                 className="w-full flex items-center gap-3 px-4 py-3.5 md:py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm active:bg-gray-100 dark:active:bg-gray-700"
@@ -308,7 +296,6 @@ export default function MessageBubble({
                                 {showDeleteConfirm ? 'Tap again to confirm' : 'Delete for me'}
                             </button>
 
-                            {/* Delete for everyone — only shown for own messages */}
                             {isOwn && (
                                 <button
                                     onClick={handleDeleteForEveryone}
@@ -319,7 +306,7 @@ export default function MessageBubble({
                                 </button>
                             )}
 
-                            {/* Cancel button for mobile */}
+                            {/* Cancel on mobile */}
                             <div className="md:hidden border-t border-gray-100 dark:border-gray-800">
                                 <button
                                     onClick={() => { setShowActions(false); setShowDeleteConfirm(false); }}
@@ -338,13 +325,13 @@ export default function MessageBubble({
 }
 
 /**
- * Date Separator Component
+ * Date Separator Component — Glass pill
  */
 export function DateSeparator({ date }: { date: string }) {
     return (
         <div className="flex items-center justify-center my-3">
-            <div className="bg-white/90 dark:bg-gray-800/90 px-4 py-1 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-700">
-                <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">
+            <div className="bg-gray-100/90 dark:bg-white/[0.07] px-4 py-1 rounded-full backdrop-blur-sm shadow-sm border border-gray-200/50 dark:border-white/5">
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                     {date}
                 </span>
             </div>
@@ -353,13 +340,13 @@ export function DateSeparator({ date }: { date: string }) {
 }
 
 /**
- * System Message Component (for notifications like "Chat started")
+ * System Message Component
  */
 export function SystemMessage({ text }: { text: string }) {
     return (
         <div className="flex items-center justify-center my-2">
-            <div className="bg-[#1650EB]/8 dark:bg-[#1650EB]/15 px-4 py-1 rounded-lg">
-                <span className="text-[11px] text-[#1650EB] dark:text-[#6095DB] font-medium">
+            <div className="bg-[#1650EB]/5 dark:bg-[#1650EB]/10 px-4 py-1 rounded-full">
+                <span className="text-[11px] text-[#1243c7] dark:text-[#6095DB] font-medium">
                     {text}
                 </span>
             </div>

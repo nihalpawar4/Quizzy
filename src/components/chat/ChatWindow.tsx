@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Chat Window Component
- * Main chat interface with messages and input - WhatsApp-like features
- * Call buttons in hamburger menu, smart last-seen, multi-select mode
+ * Chat Window Component — Premium 2026 Redesign
+ * Glass header, premium messages area, call buttons in hamburger
+ * Linear/Discord/Telegram Premium inspired
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -35,28 +35,22 @@ interface ChatWindowProps {
     onDeleteMessageForEveryone?: (messageId: string) => void;
 }
 
-// Solid background color options - many more solid colors
+// Solid background color options
 const BACKGROUND_COLORS = [
-    // Neutrals
     { name: 'White', value: 'bg-white dark:bg-gray-950', hex: '#ffffff' },
     { name: 'Gray', value: 'bg-gray-100 dark:bg-gray-900', hex: '#f3f4f6' },
     { name: 'Slate', value: 'bg-slate-200 dark:bg-slate-800', hex: '#e2e8f0' },
-    // Blues
     { name: 'Sky Blue', value: 'bg-sky-100 dark:bg-sky-900', hex: '#e0f2fe' },
     { name: 'Blue', value: 'bg-blue-100 dark:bg-blue-900', hex: '#dbeafe' },
     { name: 'Indigo', value: 'bg-indigo-100 dark:bg-indigo-900', hex: '#e0e7ff' },
-    // Greens
     { name: 'Mint', value: 'bg-emerald-100 dark:bg-emerald-900', hex: '#d1fae5' },
     { name: 'Green', value: 'bg-green-100 dark:bg-green-900', hex: '#dcfce7' },
     { name: 'Teal', value: 'bg-teal-100 dark:bg-teal-900', hex: '#ccfbf1' },
-    // Warm colors
     { name: 'Peach', value: 'bg-orange-100 dark:bg-orange-900', hex: '#ffedd5' },
     { name: 'Pink', value: 'bg-pink-100 dark:bg-pink-900', hex: '#fce7f3' },
     { name: 'Rose', value: 'bg-rose-100 dark:bg-rose-900', hex: '#ffe4e6' },
-    // Purple
     { name: 'Lavender', value: 'bg-purple-100 dark:bg-purple-900', hex: '#f3e8ff' },
     { name: 'Violet', value: 'bg-violet-100 dark:bg-violet-900', hex: '#ede9fe' },
-    // Yellow/Beige
     { name: 'Cream', value: 'bg-amber-50 dark:bg-amber-950', hex: '#fffbeb' },
     { name: 'Yellow', value: 'bg-yellow-100 dark:bg-yellow-900', hex: '#fef9c3' },
 ];
@@ -79,7 +73,7 @@ export default function ChatWindow({
     onDeleteMessage,
     onDeleteMessageForEveryone,
 }: ChatWindowProps) {
-    void _isSending; // Part of interface contract, used by parent
+    void _isSending;
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -101,6 +95,10 @@ export default function ChatWindow({
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
 
+    // Suppress unused var warnings
+    void showForwardModal;
+    void forwardMessage;
+
     // Track new messages for animation
     useEffect(() => {
         if (messages.length > prevMessageCountRef.current) {
@@ -109,34 +107,28 @@ export default function ChatWindow({
                 newIds.add(messages[i].id);
             }
             setNewMessageIds(newIds);
-            // Clear new flags after animation
             setTimeout(() => setNewMessageIds(new Set()), 600);
         }
         prevMessageCountRef.current = messages.length;
     }, [messages.length]);
 
-    // Handle reply
     const handleReply = useCallback((msg: Message) => {
         onSetReplyingTo?.(msg);
     }, [onSetReplyingTo]);
 
-    // Handle delete for me
     const handleDeleteMessage = useCallback((messageId: string) => {
         onDeleteMessage?.(messageId);
     }, [onDeleteMessage]);
 
-    // Handle delete for everyone
     const handleDeleteMessageForEveryone = useCallback((messageId: string) => {
         onDeleteMessageForEveryone?.(messageId);
     }, [onDeleteMessageForEveryone]);
 
-    // Handle forward
     const handleForward = useCallback((msg: Message) => {
         setForwardMessage(msg);
         setShowForwardModal(true);
     }, []);
 
-    // Handle send with reply
     const handleSendMessage = useCallback(async (text: string) => {
         const reply = replyingTo ? {
             id: replyingTo.id,
@@ -160,7 +152,6 @@ export default function ChatWindow({
             } else {
                 next.add(messageId);
             }
-            // Exit selection mode if nothing selected
             if (next.size === 0) {
                 setIsSelectionMode(false);
             }
@@ -169,17 +160,13 @@ export default function ChatWindow({
     }, []);
 
     const handleDeleteSelectedForMe = useCallback(() => {
-        selectedMessageIds.forEach(id => {
-            onDeleteMessage?.(id);
-        });
+        selectedMessageIds.forEach(id => { onDeleteMessage?.(id); });
         setSelectedMessageIds(new Set());
         setIsSelectionMode(false);
     }, [selectedMessageIds, onDeleteMessage]);
 
     const handleDeleteSelectedForEveryone = useCallback(() => {
-        selectedMessageIds.forEach(id => {
-            onDeleteMessageForEveryone?.(id);
-        });
+        selectedMessageIds.forEach(id => { onDeleteMessageForEveryone?.(id); });
         setSelectedMessageIds(new Set());
         setIsSelectionMode(false);
     }, [selectedMessageIds, onDeleteMessageForEveryone]);
@@ -200,13 +187,14 @@ export default function ChatWindow({
         }
         : { name: chat.studentName, id: chat.studentId, class: chat.studentClass };
 
-    // Group messages by date
     const groupedMessages = groupMessagesByDate(messages);
 
-    // Filter messages by search query
     const filteredMessages = searchQuery
         ? messages.filter(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()))
         : messages;
+
+    // Suppress unused
+    void filteredMessages;
 
     // Load saved preferences
     useEffect(() => {
@@ -214,7 +202,6 @@ export default function ChatWindow({
         const savedMuted = localStorage.getItem(`chatMuted_${chat.id}`);
         const savedStarred = localStorage.getItem(`chatStarred_${chat.id}`);
         const savedCustomColor = localStorage.getItem(`chatBgCustomColor_${chat.id}`);
-
         if (savedBg) {
             setBgColor(savedBg);
             if (savedBg.startsWith('custom-') && savedCustomColor) {
@@ -225,7 +212,6 @@ export default function ChatWindow({
         if (savedStarred) setIsStarred(savedStarred === 'true');
     }, [chat.id]);
 
-    // Close menu when chat changes
     useEffect(() => {
         setShowMenu(false);
         setShowClearConfirm(false);
@@ -236,28 +222,24 @@ export default function ChatWindow({
         setSelectedMessageIds(new Set());
     }, [chat.id]);
 
-    // Scroll to bottom when new messages arrive
     useEffect(() => {
         if (messagesEndRef.current && !showSearchMessages) {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, isTyping, showSearchMessages]);
 
-    // Handle clear history
     const handleClearHistory = () => {
         onClearHistory();
         setShowClearConfirm(false);
         setShowMenu(false);
     };
 
-    // Handle background change
     const handleBgChange = (color: string) => {
         setBgColor(color);
         localStorage.setItem(`chatBg_${chat.id}`, color);
         setShowBgPicker(false);
     };
 
-    // Handle mute toggle
     const handleMuteToggle = () => {
         const newMuted = !isMuted;
         setIsMuted(newMuted);
@@ -265,7 +247,6 @@ export default function ChatWindow({
         setShowMenu(false);
     };
 
-    // Handle star toggle
     const handleStarToggle = () => {
         const newStarred = !isStarred;
         setIsStarred(newStarred);
@@ -273,13 +254,11 @@ export default function ChatWindow({
         setShowMenu(false);
     };
 
-    // Copy chat ID
     const handleCopyChatId = () => {
         navigator.clipboard.writeText(chat.id);
         setShowMenu(false);
     };
 
-    // Initiate call from menu
     const handleCall = async (type: 'audio' | 'video') => {
         if (isInCall || isInitiatingCall) return;
         setShowMenu(false);
@@ -301,14 +280,14 @@ export default function ChatWindow({
     };
 
     return (
-        <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950">
+        <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-[#0c1025]">
             {/* Selection Mode Toolbar */}
             {isSelectionMode ? (
-                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 animate-slideDownToolbar">
+                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200/60 dark:border-white/5 bg-white/80 dark:bg-[#0f1629]/90 backdrop-blur-xl animate-slideDownToolbar">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleCancelSelection}
-                            className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                            className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-all duration-200"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -320,7 +299,7 @@ export default function ChatWindow({
                         <button
                             onClick={handleDeleteSelectedForMe}
                             disabled={selectedMessageIds.size === 0}
-                            className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200/50 dark:border-white/10"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
                             Delete for me
@@ -336,10 +315,10 @@ export default function ChatWindow({
                     </div>
                 </div>
             ) : (
-                /* Header - Fixed at top */
-                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-[#1650EB] to-[#6095DB]">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {/* Back Button - Always visible */}
+                /* Header */
+                <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200/60 dark:border-white/5 bg-gradient-to-r from-[#1650EB] to-[#6095DB] relative z-10">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                        {/* Back Button */}
                         <button
                             onClick={onBack}
                             className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 flex-shrink-0"
@@ -347,7 +326,7 @@ export default function ChatWindow({
                             <ArrowLeft className="w-5 h-5" />
                         </button>
 
-                        {/* Avatar with click to view info */}
+                        {/* Avatar */}
                         <button
                             onClick={() => setShowContactInfo(true)}
                             className="relative flex-shrink-0"
@@ -371,9 +350,9 @@ export default function ChatWindow({
                             </div>
                         </button>
 
-                        {/* Name and Status — no class badge here */}
+                        {/* Name and Status */}
                         <button onClick={() => setShowContactInfo(true)} className="text-left min-w-0 flex-1">
-                            <h3 className="font-semibold text-white flex items-center gap-2 truncate">
+                            <h3 className="font-semibold text-white flex items-center gap-2 truncate text-sm sm:text-base">
                                 {participant.name}
                                 {isStarred && <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 flex-shrink-0" />}
                                 {isMuted && <VolumeX className="w-3 h-3 text-white/60 flex-shrink-0" />}
@@ -391,18 +370,37 @@ export default function ChatWindow({
                         </button>
                     </div>
 
-                    {/* Actions — only search and hamburger menu */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                        {/* Search in chat */}
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                        {/* Search */}
                         <button
                             onClick={() => setShowSearchMessages(!showSearchMessages)}
-                            className={`p-2 rounded-full transition-all duration-200 ${showSearchMessages ? 'text-white bg-white/20' : 'text-white/80 hover:text-white hover:bg-white/10'
-                                }`}
+                            className={`p-2 rounded-full transition-all duration-200 ${
+                                showSearchMessages
+                                    ? 'text-white bg-white/20'
+                                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                            }`}
                         >
                             <Search className="w-5 h-5" />
                         </button>
 
-                        {/* More Menu (Hamburger) */}
+                        {/* Call buttons (visible on desktop) */}
+                        <button
+                            onClick={() => handleCall('audio')}
+                            disabled={isInCall || isInitiatingCall}
+                            className="hidden sm:flex p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-40"
+                        >
+                            <Phone className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => handleCall('video')}
+                            disabled={isInCall || isInitiatingCall}
+                            className="hidden sm:flex p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-40"
+                        >
+                            <Video className="w-5 h-5" />
+                        </button>
+
+                        {/* More Menu */}
                         <div className="relative">
                             <button
                                 onClick={() => setShowMenu(!showMenu)}
@@ -411,36 +409,35 @@ export default function ChatWindow({
                                 <MoreVertical className="w-5 h-5" />
                             </button>
 
-                            {/* Dropdown Menu */}
                             {showMenu && (
                                 <>
                                     <div
-                                        className="fixed inset-0 z-10"
+                                        className="fixed inset-0 z-[50]"
                                         onClick={() => setShowMenu(false)}
                                     />
-                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-20 overflow-hidden">
-                                        {/* Voice Call */}
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-white/10 rounded-2xl shadow-xl shadow-gray-200/30 dark:shadow-black/30 z-[60] overflow-hidden backdrop-blur-xl">
+                                        {/* Voice Call (shown on mobile) */}
                                         <button
                                             onClick={() => handleCall('audio')}
                                             disabled={isInCall || isInitiatingCall}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm ${
+                                            className={`w-full sm:hidden flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm ${
                                                 isInCall || isInitiatingCall
                                                     ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
                                             }`}
                                         >
                                             <Phone className="w-4 h-4 text-green-500" />
                                             Voice Call
                                         </button>
 
-                                        {/* Video Call */}
+                                        {/* Video Call (shown on mobile) */}
                                         <button
                                             onClick={() => handleCall('video')}
                                             disabled={isInCall || isInitiatingCall}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm border-b border-gray-100 dark:border-gray-800 ${
+                                            className={`w-full sm:hidden flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm border-b border-gray-100 dark:border-white/5 ${
                                                 isInCall || isInitiatingCall
                                                     ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
                                             }`}
                                         >
                                             <Video className="w-4 h-4 text-blue-500" />
@@ -450,7 +447,7 @@ export default function ChatWindow({
                                         {/* Contact Info */}
                                         <button
                                             onClick={() => { setShowContactInfo(true); setShowMenu(false); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm"
                                         >
                                             <Info className="w-4 h-4" />
                                             Contact Info
@@ -459,7 +456,7 @@ export default function ChatWindow({
                                         {/* Select Messages */}
                                         <button
                                             onClick={() => { setIsSelectionMode(true); setShowMenu(false); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm"
                                         >
                                             <CheckSquare className="w-4 h-4 text-purple-500" />
                                             Select Messages
@@ -468,7 +465,7 @@ export default function ChatWindow({
                                         {/* Star/Unstar */}
                                         <button
                                             onClick={handleStarToggle}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm"
                                         >
                                             <Star className={`w-4 h-4 ${isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                                             {isStarred ? 'Unstar Chat' : 'Star Chat'}
@@ -477,7 +474,7 @@ export default function ChatWindow({
                                         {/* Mute/Unmute */}
                                         <button
                                             onClick={handleMuteToggle}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm"
                                         >
                                             {isMuted ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                                             {isMuted ? 'Unmute Notifications' : 'Mute Notifications'}
@@ -486,7 +483,7 @@ export default function ChatWindow({
                                         {/* Background Color */}
                                         <button
                                             onClick={() => setShowBgPicker(!showBgPicker)}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm border-t border-gray-100 dark:border-gray-800"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm border-t border-gray-100 dark:border-white/5"
                                         >
                                             <Palette className="w-4 h-4" />
                                             Wallpaper
@@ -494,17 +491,18 @@ export default function ChatWindow({
 
                                         {/* Background Color Picker */}
                                         {showBgPicker && (
-                                            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 max-h-48 overflow-y-auto">
+                                            <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5 max-h-48 overflow-y-auto">
                                                 <p className="text-xs text-gray-500 mb-2">Choose background color</p>
                                                 <div className="grid grid-cols-8 gap-1.5">
                                                     {BACKGROUND_COLORS.map((color) => (
                                                         <button
                                                             key={color.name}
                                                             onClick={() => handleBgChange(color.value)}
-                                                            className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${bgColor === color.value
-                                                                ? 'border-[#1650EB] ring-2 ring-[#1650EB]/30'
-                                                                : 'border-gray-300 dark:border-gray-600 hover:scale-110'
-                                                                }`}
+                                                            className={`w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all ${
+                                                                bgColor === color.value
+                                                                    ? 'border-[#1650EB] ring-2 ring-[#1650EB]/30'
+                                                                    : 'border-gray-300 dark:border-gray-600 hover:scale-110'
+                                                            }`}
                                                             style={{ backgroundColor: color.hex }}
                                                             title={color.name}
                                                         >
@@ -512,7 +510,6 @@ export default function ChatWindow({
                                                         </button>
                                                     ))}
                                                 </div>
-                                                {/* Custom color input */}
                                                 <div className="mt-3 flex items-center gap-2">
                                                     <label className="text-xs text-gray-500">Custom:</label>
                                                     <input
@@ -524,7 +521,7 @@ export default function ChatWindow({
                                                             localStorage.setItem(`chatBg_${chat.id}`, customBg);
                                                             localStorage.setItem(`chatBgCustomColor_${chat.id}`, e.target.value);
                                                         }}
-                                                        className="w-8 h-8 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600"
+                                                        className="w-8 h-8 rounded-xl cursor-pointer border border-gray-300 dark:border-gray-600"
                                                         title="Pick custom color"
                                                     />
                                                 </div>
@@ -534,7 +531,7 @@ export default function ChatWindow({
                                         {/* Copy Chat ID */}
                                         <button
                                             onClick={handleCopyChatId}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm border-t border-gray-100 dark:border-gray-800"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 text-sm border-t border-gray-100 dark:border-white/5"
                                         >
                                             <Copy className="w-4 h-4" />
                                             Copy Chat ID
@@ -543,7 +540,7 @@ export default function ChatWindow({
                                         {/* Clear Chat */}
                                         <button
                                             onClick={() => setShowClearConfirm(true)}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 text-sm border-t border-gray-100 dark:border-gray-800"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all duration-200 text-sm border-t border-gray-100 dark:border-white/5"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                             Clear Chat
@@ -558,34 +555,34 @@ export default function ChatWindow({
 
             {/* Search Bar */}
             {showSearchMessages && (
-                <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                <div className="p-3 border-b border-gray-200/60 dark:border-white/5 bg-white/60 dark:bg-[#0f1629]/60 backdrop-blur-xl">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search messages..."
                             autoFocus
-                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 outline-none focus:border-[#1650EB] focus:ring-2 focus:ring-[#1650EB]/20"
+                            className="w-full bg-white/70 dark:bg-white/5 border border-gray-200/50 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-[#6095DB] dark:focus:border-[#1650EB] focus:ring-2 focus:ring-[#1650EB]/10 dark:focus:ring-[#1650EB]/15"
                         />
                         {searchQuery && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {filteredMessages.length} found
+                                {messages.filter(m => m.text.toLowerCase().includes(searchQuery.toLowerCase())).length} found
                             </span>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* Messages Area - Scrollable */}
+            {/* Messages Area */}
             <div
-                className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-1 ${bgColor.startsWith('custom-') ? '' : bgColor}`}
+                className={`flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-1 ${bgColor.startsWith('custom-') ? '' : bgColor}`}
                 style={bgColor.startsWith('custom-') && customBgColor ? { backgroundColor: customBgColor } : undefined}
             >
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center">
-                        <div className="w-20 h-20 rounded-full bg-[#1650EB]/10 dark:bg-[#1650EB]/20 flex items-center justify-center mb-4">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1650EB]/10 to-[#6095DB]/10 dark:from-[#1650EB]/20 dark:to-blue-500/20 flex items-center justify-center mb-4">
                             <span className="text-4xl">💬</span>
                         </div>
                         <h3 className="text-gray-900 dark:text-white font-semibold mb-2">Start the conversation!</h3>
@@ -595,10 +592,8 @@ export default function ChatWindow({
                     </div>
                 ) : (
                     <>
-                        {/* Chat started message */}
                         <SystemMessage text={`Chat with ${participant.name} started`} />
 
-                        {/* Messages grouped by date */}
                         {groupedMessages.map(({ date, messages: dateMessages }) => (
                             <div key={date}>
                                 <DateSeparator date={date} />
@@ -609,15 +604,12 @@ export default function ChatWindow({
                                             index === 0 ||
                                             dateMessages[index - 1]?.senderId !== message.senderId
                                         );
-                                        // Show tail for the first message in a consecutive group from same sender
                                         const showTail = index === 0 || dateMessages[index - 1]?.senderId !== message.senderId;
-
-                                        // Highlight if searching
                                         const isHighlighted = searchQuery && message.text.toLowerCase().includes(searchQuery.toLowerCase());
                                         const isNewMsg = newMessageIds.has(message.id);
 
                                         return (
-                                            <div key={message.id} className={isHighlighted ? 'bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-1 -m-1' : ''}>
+                                            <div key={message.id} className={isHighlighted ? 'bg-yellow-100/50 dark:bg-yellow-900/20 rounded-xl p-1 -m-1' : ''}>
                                                 <MessageBubble
                                                     message={message}
                                                     isOwn={isOwn}
@@ -641,10 +633,7 @@ export default function ChatWindow({
                             </div>
                         ))}
 
-                        {/* Typing indicator */}
                         {isTyping && <TypingBubble />}
-
-                        {/* Scroll anchor */}
                         <div ref={messagesEndRef} />
                     </>
                 )}
@@ -652,7 +641,7 @@ export default function ChatWindow({
 
             {/* Reply Bar */}
             {replyingTo && !isSelectionMode && (
-                <div className="flex-shrink-0 px-4 py-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3 animate-fadeIn">
+                <div className="flex-shrink-0 px-4 py-2.5 bg-white/80 dark:bg-[#0f1629]/80 backdrop-blur-xl border-t border-gray-200/60 dark:border-white/5 flex items-center gap-3 animate-fadeIn">
                     <div className="w-1 h-10 bg-[#1650EB] rounded-full flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-[#1650EB]">
@@ -665,14 +654,14 @@ export default function ChatWindow({
                     </div>
                     <button
                         onClick={() => onSetReplyingTo?.(null)}
-                        className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-all"
+                        className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
             )}
 
-            {/* Input - Fixed at bottom (hidden in selection mode) */}
+            {/* Input */}
             {!isSelectionMode && (
                 <div className="flex-shrink-0">
                     <ChatInput
@@ -687,26 +676,24 @@ export default function ChatWindow({
 
             {/* Clear History Confirmation Modal */}
             {showClearConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Clear Chat History</h3>
                             <button
                                 onClick={() => setShowClearConfirm(false)}
-                                className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                                className="p-1 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all duration-200"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-
                         <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
                             This will delete all messages in this chat for you. This action cannot be undone.
                         </p>
-
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowClearConfirm(false)}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200"
+                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200 border border-gray-200/50 dark:border-white/10"
                             >
                                 Cancel
                             </button>
@@ -723,13 +710,13 @@ export default function ChatWindow({
 
             {/* Contact Info Modal */}
             {showContactInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-white/10 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
                         {/* Header */}
                         <div className="bg-gradient-to-r from-[#1650EB] to-[#6095DB] p-6 text-center relative">
                             <button
                                 onClick={() => setShowContactInfo(false)}
-                                className="absolute top-4 right-4 p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all"
+                                className="absolute top-4 right-4 p-1 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -738,10 +725,10 @@ export default function ChatWindow({
                                 <img
                                     src={chat.participantPhotoURLs[participant.id]}
                                     alt={participant.name}
-                                    className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-white/20"
+                                    className="w-24 h-24 rounded-2xl object-cover mx-auto border-4 border-white/20"
                                 />
                             ) : (
-                                <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-3xl mx-auto border-4 border-white/20">
+                                <div className="w-24 h-24 rounded-2xl bg-white/20 flex items-center justify-center text-white font-bold text-3xl mx-auto border-4 border-white/20">
                                     {participant.name.charAt(0).toUpperCase()}
                                 </div>
                             )}
@@ -753,32 +740,30 @@ export default function ChatWindow({
 
                         {/* Info */}
                         <div className="p-4 space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
                                 <span className="text-sm text-gray-500">Status</span>
                                 <span className="text-sm text-gray-900 dark:text-white flex items-center gap-2">
                                     <OnlineStatus isOnline={presence?.isOnline || false} size="small" />
                                     {presence?.isOnline ? 'Online' : 'Offline'}
                                 </span>
                             </div>
-                            {/* Last Seen */}
                             {!presence?.isOnline && presence?.lastSeen && (
-                                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
                                     <span className="text-sm text-gray-500">Last Seen</span>
                                     <span className="text-sm text-gray-900 dark:text-white">
                                         {formatLastSeenFull(presence.lastSeen).replace('Last seen ', '')}
                                     </span>
                                 </div>
                             )}
-                            {/* Class — shown here for teacher viewing student */}
                             {currentUserRole === 'teacher' && 'class' in participant && (
-                                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
                                     <span className="text-sm text-gray-500">Class</span>
                                     <span className="text-sm text-gray-900 dark:text-white font-medium">
                                         Class {participant.class}
                                     </span>
                                 </div>
                             )}
-                            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
                                 <span className="text-sm text-gray-500">Messages</span>
                                 <span className="text-sm text-gray-900 dark:text-white">{messages.length}</span>
                             </div>
@@ -788,9 +773,8 @@ export default function ChatWindow({
                                     {new Date(chat.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                             </div>
-                            {/* Privacy Notice for Students viewing Teacher Info */}
                             {currentUserRole === 'student' && chat.teacherHidesContactInfo && (
-                                <div className="py-3 px-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                <div className="py-3 px-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl">
                                     <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
                                         <Info className="w-4 h-4" />
                                         Contact information is hidden for privacy
@@ -800,7 +784,7 @@ export default function ChatWindow({
                         </div>
 
                         {/* Actions */}
-                        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+                        <div className="p-4 border-t border-gray-100 dark:border-white/5">
                             <button
                                 onClick={() => setShowContactInfo(false)}
                                 className="w-full px-4 py-2.5 bg-[#1650EB] text-white rounded-xl text-sm font-medium hover:bg-[#1243c7] transition-all duration-200"

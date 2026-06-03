@@ -47,6 +47,7 @@ import { COLLECTIONS } from '@/lib/constants';
 import { subscribeToHomework, getStudentHomeworkCompletions } from '@/services/homeworkService';
 import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
+import NotesList from '@/components/notes/NotesList';
 import { getDailyQuizQuestions, hasCompletedDailyQuiz, submitDailyQuiz, getDailyQuizHistory } from '@/services/dailyQuizService';
 
 import { useChat } from '@/contexts/ChatContext';
@@ -2063,103 +2064,72 @@ export default function StudentDashboard() {
                 {/* Study Notes Tab */}
                 {activeTab === 'notes' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            📚 Study Notes
-                        </h3>
-                        {notes.length === 0 ? (
-                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-                                <BookMarked className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600 dark:text-gray-400">No study notes available for your class yet.</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Check back later for new materials from your teachers!</p>
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0">
+                                <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                                    <rect x="4" y="4" width="40" height="40" rx="12" fill="#eff6ff"/>
+                                    <rect x="8" y="8" width="32" height="32" rx="8" fill="#dbeafe"/>
+                                    <rect x="14" y="18" width="20" height="16" rx="2" fill="#fff" stroke="#3b82f6" strokeWidth="1.2"/>
+                                    <rect x="14" y="10" width="14" height="12" rx="2" fill="#fff" stroke="#3b82f6" strokeWidth="1.2"/>
+                                    <rect x="18" y="14" width="6" height="4" rx="1" fill="#3b82f6" opacity="0.3"/>
+                                    <path d="M18 22h10M18 26h6" stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round"/>
+                                    <circle cx="32" cy="14" r="4" fill="#3b82f6" opacity="0.15" stroke="#3b82f6" strokeWidth="1"/>
+                                    <path d="M30.5 14l1 1 2.5-2.5" stroke="#3b82f6" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
                             </div>
-                        ) : (
-                            <div className="space-y-2.5">
-                                {notes.map((note, index) => {
-                                    const isRead = readNoteIds.has(note.id);
-                                    const noteSubjectIcons: Record<string, { emoji: string; bg: string; text: string }> = {
-                                        'Mathematics': { emoji: '📐', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600' },
-                                        'Science': { emoji: '🔬', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-600' },
-                                        'Hindi': { emoji: 'अ', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600' },
-                                        'English': { emoji: 'A', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-600' },
-                                        'Social Science': { emoji: '🌍', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600' },
-                                    };
-                                    const noteIcon = noteSubjectIcons[note.subject] || { emoji: '📝', bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600' };
-
-                                    const typeLabel = note.contentType === 'json' ? 'Rich Text' : note.contentType === 'pdf' ? 'PDF' : 'Text';
-                                    const typeIcon = note.contentType === 'pdf' ? '📄' : note.contentType === 'json' ? '📝' : '📃';
-
-                                    return (
-                                        <motion.div
-                                            key={note.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.03 * index }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden hover:shadow-md transition-shadow ${!isRead ? 'border-green-300 dark:border-green-700 ring-1 ring-green-200 dark:ring-green-800' : 'border-gray-200 dark:border-gray-800'}`}
-                                        >
-                                            <div
-                                                className="flex items-center gap-3 px-4 py-4 cursor-pointer"
-                                                onClick={() => {
-                                                    handleMarkNoteAsRead(note.id);
-                                                    setSelectedNote(note);
-                                                }}
-                                            >
-                                                {/* Subject Icon */}
-                                                <div className={`w-11 h-11 rounded-xl ${noteIcon.bg} flex items-center justify-center shrink-0`}>
-                                                    <span className={`text-lg font-bold ${noteIcon.text}`}>{noteIcon.emoji}</span>
-                                                </div>
-
-                                                {/* Center: Title + Meta + Status */}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2">
-                                                        {note.title}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                                        {note.subject} · {typeIcon} {typeLabel}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                                                        {note.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                    </p>
-                                                    {/* Status badge */}
-                                                    <div className="mt-1">
-                                                        {!isRead ? (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-600">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> New
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Read
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Action Button */}
-                                                <div className="shrink-0">
-                                                    <button
-                                                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
-                                                    >
-                                                        {isRead ? 'View' : 'Read'} <ArrowRight className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-
-                                                {/* Chevron */}
-                                                <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                    Study Notes
+                                </h2>
+                                <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                                    All your notes in one place
+                                </p>
                             </div>
-                        )}
+                        </div>
+
+                        <NotesList
+                            notes={notes}
+                            readNoteIds={readNoteIds}
+                            onReadNote={handleMarkNoteAsRead}
+                            onOpenNote={(note) => setSelectedNote(note)}
+                        />
                     </motion.div>
                 )}
 
                 {/* Homework Tab */}
                 {activeTab === 'homework' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            📝 Homework for Class {user.studentClass}
-                        </h3>
-                        <HomeworkList homeworks={homeworks} loading={homeworkLoading} studentId={user?.uid} studentName={user?.name} />
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0">
+                                    <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                                        <rect x="4" y="4" width="40" height="40" rx="10" fill="#fef3c7"/>
+                                        <rect x="8" y="8" width="32" height="32" rx="7" fill="#fffbeb"/>
+                                        <rect x="14" y="13" width="20" height="22" rx="3" stroke="#f59e0b" strokeWidth="1.8" fill="white"/>
+                                        <path d="M18 19h12M18 24h8M18 29h10" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                                        <path d="M30 10l-3 5h6l-3-5z" fill="#f59e0b" opacity="0.6"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                        Homework for Class {user.studentClass}
+                                    </h2>
+                                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                                        Stay organized and complete your tasks ✨
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <HomeworkList
+                            homeworks={homeworks}
+                            loading={homeworkLoading}
+                            studentId={user?.uid}
+                            studentName={user?.name}
+                            userClass={user.studentClass || 0}
+                        />
                     </motion.div>
                 )}
 
@@ -2977,59 +2947,267 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
         );
     }
 
+    // Subject icon configs
+    const subjectIcons: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
+        'Combined': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#f3e8ff"/>
+                    <rect x="8" y="7" width="12" height="15" rx="2" fill="#fff" stroke="#a855f7" strokeWidth="1.3"/>
+                    <rect x="16" y="13" width="12" height="15" rx="2" fill="#fff" stroke="#a855f7" strokeWidth="1.3"/>
+                    <path d="M11 12h6M11 15h4" stroke="#a855f7" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
+                    <path d="M19 18h6M19 21h4" stroke="#a855f7" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
+                </svg>
+            ),
+            color: '#a855f7', bg: 'bg-purple-50 dark:bg-purple-900/20'
+        },
+        'Hindi': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#fef2f2"/>
+                    <rect x="8" y="8" width="20" height="20" rx="4" fill="#fff" stroke="#ef4444" strokeWidth="1.3"/>
+                    <text x="18" y="24" textAnchor="middle" fill="#ef4444" fontSize="13" fontWeight="bold" fontFamily="serif">अ</text>
+                </svg>
+            ),
+            color: '#ef4444', bg: 'bg-red-50 dark:bg-red-900/20'
+        },
+        'Mathematics': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#eff6ff"/>
+                    <rect x="8" y="8" width="20" height="20" rx="4" fill="#fff" stroke="#3b82f6" strokeWidth="1.3"/>
+                    <text x="14" y="19" fill="#3b82f6" fontSize="7" fontWeight="bold">÷</text>
+                    <text x="21" y="19" fill="#3b82f6" fontSize="7" fontWeight="bold">×</text>
+                    <text x="14" y="27" fill="#3b82f6" fontSize="7" fontWeight="bold">+</text>
+                    <text x="21" y="27" fill="#3b82f6" fontSize="7" fontWeight="bold">−</text>
+                    <line x1="18" y1="10" x2="18" y2="26" stroke="#3b82f6" strokeWidth="0.6" opacity="0.3"/>
+                    <line x1="10" y1="22" x2="26" y2="22" stroke="#3b82f6" strokeWidth="0.6" opacity="0.3"/>
+                </svg>
+            ),
+            color: '#3b82f6', bg: 'bg-blue-50 dark:bg-blue-900/20'
+        },
+        'Science': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#ecfdf5"/>
+                    <path d="M14 8v10l-4 8a2 2 0 001.8 3h12.4a2 2 0 001.8-3l-4-8V8" stroke="#10b981" strokeWidth="1.3" fill="none"/>
+                    <line x1="13" y1="8" x2="23" y2="8" stroke="#10b981" strokeWidth="1.3" strokeLinecap="round"/>
+                    <circle cx="16" cy="23" r="1.5" fill="#10b981" opacity="0.4"/>
+                    <circle cx="20" cy="21" r="1" fill="#10b981" opacity="0.3"/>
+                </svg>
+            ),
+            color: '#10b981', bg: 'bg-emerald-50 dark:bg-emerald-900/20'
+        },
+        'English': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#faf5ff"/>
+                    <rect x="8" y="8" width="20" height="20" rx="4" fill="#fff" stroke="#8b5cf6" strokeWidth="1.3"/>
+                    <text x="18" y="24" textAnchor="middle" fill="#8b5cf6" fontSize="13" fontWeight="bold">A</text>
+                </svg>
+            ),
+            color: '#8b5cf6', bg: 'bg-purple-50 dark:bg-purple-900/20'
+        },
+        'Social Science': {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#f0fdf4"/>
+                    <circle cx="18" cy="18" r="9" stroke="#22c55e" strokeWidth="1.3" fill="none"/>
+                    <ellipse cx="18" cy="18" rx="9" ry="3.5" stroke="#22c55e" strokeWidth="0.8" opacity="0.5"/>
+                    <line x1="18" y1="9" x2="18" y2="27" stroke="#22c55e" strokeWidth="0.8" opacity="0.5"/>
+                </svg>
+            ),
+            color: '#22c55e', bg: 'bg-green-50 dark:bg-green-900/20'
+        },
+    };
+
+    const getSubjectIcon = (subject: string) => {
+        return subjectIcons[subject] || {
+            icon: (
+                <svg viewBox="0 0 36 36" fill="none" className="w-full h-full">
+                    <rect width="36" height="36" rx="10" fill="#f9fafb"/>
+                    <rect x="10" y="8" width="16" height="20" rx="3" stroke="#6b7280" strokeWidth="1.3" fill="#fff"/>
+                    <path d="M14 14h8M14 18h5M14 22h6" stroke="#6b7280" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
+                </svg>
+            ),
+            color: '#6b7280', bg: 'bg-gray-50 dark:bg-gray-800'
+        };
+    };
+
+    // Coming soon feature config with SVG icons
+    const comingSoonFeatures = [
+        {
+            title: 'Timed Challenges', desc: 'Beat the clock on practice questions',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#eff6ff"/>
+                    <circle cx="20" cy="22" r="10" stroke="#3b82f6" strokeWidth="1.5" fill="#3b82f6" fillOpacity="0.06"/>
+                    <path d="M20 16v6l4 3" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M17 10h6" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+            ), color: '#3b82f6'
+        },
+        {
+            title: 'Weak Topic Analysis', desc: 'AI identifies your weakest subjects',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#f0fdf4"/>
+                    <rect x="10" y="24" width="4" height="6" rx="1" fill="#22c55e" opacity="0.4"/>
+                    <rect x="16" y="18" width="4" height="12" rx="1" fill="#22c55e" opacity="0.6"/>
+                    <rect x="22" y="14" width="4" height="16" rx="1" fill="#22c55e" opacity="0.8"/>
+                    <rect x="28" y="10" width="4" height="20" rx="1" fill="#22c55e"/>
+                </svg>
+            ), color: '#22c55e'
+        },
+        {
+            title: 'Practice Streaks', desc: 'Build daily practice habits',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#fef3c7"/>
+                    <path d="M20 8c0 4-4 6-4 10a6 6 0 0012 0c0-4-4-6-4-10" fill="#f59e0b" fillOpacity="0.15" stroke="#f59e0b" strokeWidth="1.5"/>
+                    <path d="M20 15c0 2-2 3-2 5a3 3 0 006 0c0-2-2-3-2-5" fill="#f59e0b" opacity="0.4"/>
+                </svg>
+            ), color: '#f59e0b'
+        },
+        {
+            title: 'Quiz Battle', desc: 'Challenge classmates in real-time',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#faf5ff"/>
+                    <rect x="12" y="14" width="16" height="12" rx="3" stroke="#8b5cf6" strokeWidth="1.5" fill="#8b5cf6" fillOpacity="0.06"/>
+                    <circle cx="17" cy="20" r="1.5" fill="#8b5cf6" opacity="0.5"/>
+                    <circle cx="23" cy="20" r="1.5" fill="#8b5cf6" opacity="0.5"/>
+                    <path d="M14 28l-2-2M26 28l2-2" stroke="#8b5cf6" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+            ), color: '#8b5cf6'
+        },
+        {
+            title: 'Spaced Repetition', desc: 'Smart scheduling for long-term memory',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#fef2f2"/>
+                    <circle cx="20" cy="20" r="10" stroke="#ef4444" strokeWidth="1.5" fill="#ef4444" fillOpacity="0.06"/>
+                    <circle cx="20" cy="20" r="5" stroke="#ef4444" strokeWidth="1" opacity="0.4"/>
+                    <circle cx="20" cy="20" r="2" fill="#ef4444" opacity="0.5"/>
+                    <path d="M20 10v3M20 27v3M10 20h3M27 20h3" stroke="#ef4444" strokeWidth="1" strokeLinecap="round" opacity="0.3"/>
+                </svg>
+            ), color: '#ef4444'
+        },
+        {
+            title: 'Custom Practice Sets', desc: 'Create your own practice quizzes',
+            icon: (
+                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
+                    <rect width="40" height="40" rx="12" fill="#ecfdf5"/>
+                    <rect x="11" y="10" width="18" height="20" rx="3" stroke="#10b981" strokeWidth="1.5" fill="#10b981" fillOpacity="0.06"/>
+                    <path d="M15 16h10M15 20h6M15 24h8" stroke="#10b981" strokeWidth="1.2" strokeLinecap="round"/>
+                    <path d="M26 13l3-3 3 3-3 3-3-3z" fill="#10b981" opacity="0.3" stroke="#10b981" strokeWidth="0.8"/>
+                </svg>
+            ), color: '#10b981'
+        },
+    ];
+
     // Main Practice Mode view
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
             {/* Header */}
-            <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    🎯 Practice Mode
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Review your mistakes and master every question
-                </p>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0">
+                    <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                        <rect x="4" y="4" width="40" height="40" rx="12" fill="#fef2f2"/>
+                        <rect x="8" y="8" width="32" height="32" rx="8" fill="#fee2e2"/>
+                        <circle cx="24" cy="24" r="8" stroke="#ef4444" strokeWidth="2" fill="#ef4444" fillOpacity="0.1"/>
+                        <circle cx="24" cy="24" r="3" fill="#ef4444" opacity="0.4"/>
+                        <circle cx="24" cy="24" r="1" fill="#ef4444"/>
+                        <path d="M24 12v4M24 32v4M12 24h4M32 24h4" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" opacity="0.3"/>
+                    </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                            Practice Mode
+                        </h2>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-[11px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                            Level up your skills
+                        </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                        Review your mistakes and master every question
+                    </p>
+                </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-                            <XCircle className="w-5 h-5 text-red-500" />
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+                {/* Pending */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 sm:p-4 shadow-sm">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
+                                    <circle cx="10" cy="10" r="8" stroke="#ef4444" strokeWidth="1.5" fill="#ef4444" fillOpacity="0.1"/>
+                                    <path d="M7 7l6 6M13 7l-6 6" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-none">{mistakeItems.length}</p>
+                                <p className="text-[11px] text-gray-400 mt-1">Pending</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{mistakeItems.length}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
-                        </div>
+                        {/* Sparkline */}
+                        <svg className="w-16 h-8 hidden sm:block" viewBox="0 0 64 32" fill="none">
+                            <path d="M2 24C8 20 14 28 20 18C26 8 32 22 38 16C44 10 50 20 56 14L62 10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4"/>
+                            <path d="M2 24C8 20 14 28 20 18C26 8 32 22 38 16C44 10 50 20 56 14L62 10L62 32L2 32Z" fill="#ef4444" opacity="0.06"/>
+                        </svg>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-green-500" />
+                {/* Mastered */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 sm:p-4 shadow-sm">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
+                                    <circle cx="10" cy="10" r="8" stroke="#10b981" strokeWidth="1.5" fill="#10b981" fillOpacity="0.1"/>
+                                    <path d="M6.5 10l2.5 2.5 5-5" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-none">{masteredCount}</p>
+                                <p className="text-[11px] text-gray-400 mt-1">Mastered</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{masteredCount}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Mastered</p>
-                        </div>
+                        <svg className="w-16 h-8 hidden sm:block" viewBox="0 0 64 32" fill="none">
+                            <path d="M2 28C10 22 18 16 26 18C34 20 42 10 50 8L62 4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4"/>
+                            <path d="M2 28C10 22 18 16 26 18C34 20 42 10 50 8L62 4L62 32L2 32Z" fill="#10b981" opacity="0.06"/>
+                        </svg>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                            <Target className="w-5 h-5 text-blue-500" />
+                {/* Total */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 sm:p-4 shadow-sm">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
+                                    <circle cx="10" cy="10" r="8" stroke="#3b82f6" strokeWidth="1.5" fill="#3b82f6" fillOpacity="0.1"/>
+                                    <circle cx="10" cy="10" r="4" stroke="#3b82f6" strokeWidth="1" fill="none" opacity="0.4"/>
+                                    <circle cx="10" cy="10" r="1.5" fill="#3b82f6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-none">{mistakeItems.length + masteredCount}</p>
+                                <p className="text-[11px] text-gray-400 mt-1">Total</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{mistakeItems.length + masteredCount}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
-                        </div>
+                        <svg className="w-16 h-8 hidden sm:block" viewBox="0 0 64 32" fill="none">
+                            <path d="M2 20C10 16 18 24 26 14C34 4 42 18 50 12L62 8" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4"/>
+                            <path d="M2 20C10 16 18 24 26 14C34 4 42 18 50 12L62 8L62 32L2 32Z" fill="#3b82f6" opacity="0.06"/>
+                        </svg>
                     </div>
                 </div>
             </div>
 
             {/* Mistake Bucket CTA */}
             {mistakeItems.length > 0 ? (
-                <div className="space-y-4 mb-8">
+                <div className="space-y-4 mb-6">
                     {/* Yesterday's mistakes prompt */}
                     {yesterdayMistakes.length > 0 && (
                         <motion.div
@@ -3052,46 +3230,94 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                         </motion.div>
                     )}
 
-                    {/* Review all mistakes */}
+                    {/* Review all mistakes — gradient CTA card */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="bg-gradient-to-r from-[#1650EB] to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-[#1650EB]/20 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                        className="relative overflow-hidden bg-gradient-to-r from-[#1650EB] via-[#4f5bd5] to-[#7c3aed] rounded-[28px] p-5 sm:p-6 text-white shadow-xl shadow-[#1650EB]/20 cursor-pointer hover:shadow-2xl hover:scale-[1.005] transition-all"
                         onClick={() => startReview(mistakeItems)}
                     >
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h4 className="font-bold text-lg">Review All Mistakes 📚</h4>
-                                <p className="text-blue-200 text-sm mt-1">
-                                    {mistakeItems.length} question{mistakeItems.length > 1 ? 's' : ''} in your bucket — get each right once to clear it!
-                                </p>
+                        {/* Wave pattern overlay */}
+                        <div className="absolute inset-0 opacity-10">
+                            <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
+                                <path d="M0 100C100 50 200 150 300 100S500 50 600 100S800 150 800 100V200H0Z" fill="white"/>
+                                <path d="M0 120C100 80 200 160 300 120S500 80 600 120S800 160 800 120V200H0Z" fill="white" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <div className="relative flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0 border border-white/10">
+                                    <svg viewBox="0 0 32 32" fill="none" className="w-7 h-7">
+                                        <rect x="4" y="4" width="24" height="18" rx="3" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.3"/>
+                                        <rect x="6" y="6" width="14" height="10" rx="2" fill="white" fillOpacity="0.15"/>
+                                        <path d="M10 20h12M12 24h8" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-lg sm:text-xl flex items-center gap-1.5">
+                                        Review All Mistakes
+                                        <Sparkles className="w-4 h-4 text-yellow-300" />
+                                    </h4>
+                                    <p className="text-blue-200 text-sm mt-0.5">
+                                        {mistakeItems.length} question{mistakeItems.length > 1 ? 's' : ''} in your bucket — get each right once to clear it!
+                                    </p>
+                                </div>
                             </div>
-                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div className="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/10 hover:bg-white/25 transition-colors">
                                 <RefreshCw className="w-6 h-6" />
                             </div>
                         </div>
                     </motion.div>
 
-                    {/* Subject breakdown */}
-                    {Object.keys(subjectGroups).length > 1 && (
+                    {/* Subject breakdown cards */}
+                    {Object.keys(subjectGroups).length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {Object.entries(subjectGroups).map(([subject, count]) => (
-                                <button
-                                    key={subject}
-                                    onClick={() => startReview(mistakeItems.filter(item => item.subject === subject))}
-                                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 hover:border-[#1650EB] dark:hover:border-[#1650EB] transition-all text-left group"
-                                >
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors">{subject}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{count} mistake{count > 1 ? 's' : ''}</p>
-                                </button>
-                            ))}
+                            {Object.entries(subjectGroups).map(([subject, count], idx) => {
+                                const cfg = getSubjectIcon(subject);
+                                const total = mistakeItems.length + masteredCount;
+                                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                                return (
+                                    <motion.button
+                                        key={subject}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.05 * idx }}
+                                        onClick={() => startReview(mistakeItems.filter(item => item.subject === subject))}
+                                        className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 hover:border-[#1650EB]/30 dark:hover:border-[#1650EB]/30 transition-all text-left group shadow-sm hover:shadow-md relative overflow-hidden"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-9 h-9 flex-shrink-0 relative">
+                                                    {/* Badge count */}
+                                                    <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
+                                                        {count}
+                                                    </div>
+                                                    {cfg.icon}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#1650EB] transition-colors">{subject}</p>
+                                                    <p className="text-[11px] text-gray-400 mt-0.5">{count} mistake{count > 1 ? 's' : ''}</p>
+                                                </div>
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 -rotate-90 group-hover:text-[#1650EB] transition-colors flex-shrink-0" />
+                                        </div>
+                                        {/* Progress bar */}
+                                        <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all duration-500"
+                                                style={{ width: `${pct}%`, backgroundColor: cfg.color }}
+                                            />
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center mb-8">
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center mb-6 shadow-sm">
+                    <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <CheckCircle className="w-8 h-8 text-green-500" />
                     </div>
                     <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Bucket is empty! 🎉</h4>
@@ -3105,26 +3331,26 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
 
             {/* Coming Soon Features */}
             <div className="mb-2">
-                <h4 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Coming Soon</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[
-                        { emoji: '⏱️', title: 'Timed Challenges', desc: 'Beat the clock on practice questions' },
-                        { emoji: '📊', title: 'Weak Topic Analysis', desc: 'AI identifies your weakest subjects' },
-                        { emoji: '🏆', title: 'Practice Streaks', desc: 'Build daily practice habits' },
-                        { emoji: '🎮', title: 'Quiz Battle', desc: 'Challenge classmates in real-time' },
-                        { emoji: '🧠', title: 'Spaced Repetition', desc: 'Smart scheduling for long-term memory' },
-                        { emoji: '📝', title: 'Custom Practice Sets', desc: 'Create your own practice quizzes' },
-                    ].map((feature) => (
+                <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em] mb-4 flex items-center gap-1.5">
+                    COMING SOON <Sparkles className="w-3 h-3 text-gray-300" />
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {comingSoonFeatures.map((feature) => (
                         <div
                             key={feature.title}
-                            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 opacity-70 hover:opacity-100 transition-opacity"
+                            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all group"
                         >
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl">{feature.emoji}</span>
-                                <div>
-                                    <h5 className="text-sm font-semibold text-gray-900 dark:text-white">{feature.title}</h5>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{feature.desc}</p>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 flex-shrink-0">
+                                        {feature.icon}
+                                    </div>
+                                    <div>
+                                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white">{feature.title}</h5>
+                                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">{feature.desc}</p>
+                                    </div>
                                 </div>
+                                <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 -rotate-90 flex-shrink-0 group-hover:text-gray-500 transition-colors" />
                             </div>
                         </div>
                     ))}
