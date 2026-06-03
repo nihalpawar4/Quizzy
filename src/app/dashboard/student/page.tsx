@@ -971,9 +971,9 @@ export default function StudentDashboard() {
                             ? 'linear-gradient(135deg, #1e1b4b 0%, #312e81 30%, #5b21b6 60%, #7c3aed 100%)'
                             : 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 30%, #1e293b 60%, #0f172a 100%)';
                         const nameGradient = isMorning
-                            ? 'linear-gradient(135deg, #ffffff, #e0f2fe, #bae6fd)'
+                            ? 'linear-gradient(135deg, #ffffff, #fef3c7, #ffffff)'
                             : isAfternoon
-                            ? 'linear-gradient(135deg, #1e3a5f, #ffffff, #1e3a5f)'
+                            ? 'linear-gradient(135deg, #ffffff, #e0f2fe, #ffffff)'
                             : isEvening
                             ? 'linear-gradient(135deg, #67e8f9, #a5f3fc, #ffffff)'
                             : 'linear-gradient(135deg, #34d399, #6ee7b7, #a7f3d0)';
@@ -1159,9 +1159,26 @@ export default function StudentDashboard() {
                 {/* Available Tests Tab */}
                 {activeTab === 'tests' && (
                     <div className="mb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            📚 Available Tests
-                        </h3>
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0">
+                                <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                                    <rect x="4" y="4" width="40" height="40" rx="12" fill="#eff6ff"/>
+                                    <rect x="8" y="8" width="32" height="32" rx="8" fill="#dbeafe"/>
+                                    <rect x="14" y="12" width="20" height="24" rx="3" fill="#fff" stroke="#3b82f6" strokeWidth="1.2"/>
+                                    <path d="M18 18h12M18 22h8M18 26h10" stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round" opacity="0.5"/>
+                                    <circle cx="33" cy="16" r="5" fill="#3b82f6" opacity="0.15" stroke="#3b82f6" strokeWidth="1"/>
+                                    <path d="M31 16l1.5 1.5 3-3" stroke="#3b82f6" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                    Available Tests
+                                </h2>
+                                <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                                    Choose a test and challenge yourself
+                                </p>
+                            </div>
+                        </div>
 
                         <div className="mb-5 relative">
                             {/* Button Row: Filters + Daily Challenge side by side */}
@@ -1172,10 +1189,10 @@ export default function StudentDashboard() {
                                         setShowDailyHistory(false);
                                         if (!showFilters) setFilterTouched(new Set());
                                     }}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all border ${
                                         showFilters || filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All'
-                                            ? 'bg-[#1650EB] text-white shadow-md'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            ? 'bg-[#1650EB] text-white shadow-lg shadow-[#1650EB]/20 border-[#1650EB]'
+                                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700 border-gray-200 dark:border-gray-800 shadow-sm'
                                     }`}
                                 >
                                     <SlidersHorizontal className="w-4 h-4" />
@@ -1198,15 +1215,15 @@ export default function StudentDashboard() {
                                             setDailyHistoryLoading(false);
                                         }
                                     }}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all border ${
                                         showDailyHistory
-                                            ? 'bg-amber-500 text-white shadow-md'
-                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 border-amber-500'
+                                            : 'bg-white dark:bg-gray-900 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-700 shadow-sm'
                                     }`}
                                 >
                                     🔥 Daily Challenge
                                     {dailyHistory.length > 0 && (
-                                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}`}>
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-200'}`}>
                                             {dailyHistory.length}
                                         </span>
                                     )}
@@ -1223,7 +1240,7 @@ export default function StudentDashboard() {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -8, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-4 shadow-xl"
+                                            className="absolute left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[28px] border border-gray-200/80 dark:border-gray-800/80 p-5 space-y-4 shadow-2xl shadow-black/5"
                                         >
                                             {/* Subject Filter */}
                                             <div>
@@ -1473,38 +1490,51 @@ export default function StudentDashboard() {
 
                                     // Subject icon config
                                     const subjectName = test.isCombinedSubject ? 'Combined' : (test.subject || 'General');
-                                    const subjectIcons: Record<string, { emoji: string; bg: string; text: string }> = {
-                                        'Mathematics': { emoji: '📐', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600' },
-                                        'Science': { emoji: '🔬', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-600' },
-                                        'Hindi': { emoji: 'अ', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600' },
-                                        'English': { emoji: 'A', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-600' },
-                                        'Social Science': { emoji: '🌍', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600' },
-                                        'Combined': { emoji: '📚', bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-600' },
+                                    const subjectIconSvgs: Record<string, { svg: React.ReactNode; border: string }> = {
+                                        'Mathematics': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#eff6ff"/><rect x="10" y="10" width="24" height="24" rx="6" fill="#fff" stroke="#3b82f6" strokeWidth="1.3"/><text x="17" y="23" fill="#3b82f6" fontSize="8" fontWeight="bold">÷</text><text x="25" y="23" fill="#3b82f6" fontSize="8" fontWeight="bold">×</text><text x="17" y="33" fill="#3b82f6" fontSize="8" fontWeight="bold">+</text><text x="25" y="33" fill="#3b82f6" fontSize="8" fontWeight="bold">−</text></svg>
+                                        ), border: 'border-blue-100 dark:border-blue-900/40' },
+                                        'Science': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#ecfdf5"/><path d="M17 8v12l-5 10a2.5 2.5 0 002.2 3.5h15.6a2.5 2.5 0 002.2-3.5l-5-10V8" stroke="#10b981" strokeWidth="1.3" fill="none"/><line x1="16" y1="8" x2="28" y2="8" stroke="#10b981" strokeWidth="1.3" strokeLinecap="round"/><circle cx="20" cy="28" r="1.5" fill="#10b981" opacity="0.4"/><circle cx="25" cy="26" r="1" fill="#10b981" opacity="0.3"/></svg>
+                                        ), border: 'border-emerald-100 dark:border-emerald-900/40' },
+                                        'Hindi': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#fef2f2"/><rect x="10" y="10" width="24" height="24" rx="6" fill="#fff" stroke="#ef4444" strokeWidth="1.3"/><text x="22" y="29" textAnchor="middle" fill="#ef4444" fontSize="15" fontWeight="bold" fontFamily="serif">अ</text></svg>
+                                        ), border: 'border-red-100 dark:border-red-900/40' },
+                                        'English': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#faf5ff"/><rect x="10" y="10" width="24" height="24" rx="6" fill="#fff" stroke="#8b5cf6" strokeWidth="1.3"/><text x="22" y="29" textAnchor="middle" fill="#8b5cf6" fontSize="15" fontWeight="bold">A</text></svg>
+                                        ), border: 'border-purple-100 dark:border-purple-900/40' },
+                                        'Social Science': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#f0fdf4"/><circle cx="22" cy="22" r="10" stroke="#22c55e" strokeWidth="1.3" fill="none"/><ellipse cx="22" cy="22" rx="10" ry="4" stroke="#22c55e" strokeWidth="0.8" opacity="0.5"/><line x1="22" y1="12" x2="22" y2="32" stroke="#22c55e" strokeWidth="0.8" opacity="0.5"/></svg>
+                                        ), border: 'border-green-100 dark:border-green-900/40' },
+                                        'Combined': { svg: (
+                                            <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#f3e8ff"/><rect x="10" y="9" width="14" height="18" rx="3" fill="#fff" stroke="#a855f7" strokeWidth="1.3"/><rect x="20" y="16" width="14" height="18" rx="3" fill="#fff" stroke="#a855f7" strokeWidth="1.3"/><path d="M13 15h8M13 19h5" stroke="#a855f7" strokeWidth="1" strokeLinecap="round" opacity="0.5"/><path d="M23 22h8M23 26h5" stroke="#a855f7" strokeWidth="1" strokeLinecap="round" opacity="0.5"/></svg>
+                                        ), border: 'border-purple-100 dark:border-purple-900/40' },
                                     };
-                                    const iconConfig = subjectIcons[subjectName] || { emoji: '❓', bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600' };
+                                    const pdfIconSvg = (
+                                        <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#f8fafc"/><rect x="12" y="8" width="20" height="28" rx="3" fill="#fff" stroke="#94a3b8" strokeWidth="1.3"/><path d="M16 14h12M16 19h8M16 24h10M16 29h6" stroke="#94a3b8" strokeWidth="1" strokeLinecap="round" opacity="0.4"/><path d="M26 8v6h6" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+                                    );
+                                    const iconSvgConfig = subjectIconSvgs[subjectName] || { svg: (
+                                        <svg viewBox="0 0 44 44" fill="none" className="w-full h-full"><rect width="44" height="44" rx="14" fill="#f9fafb"/><circle cx="22" cy="18" r="6" stroke="#6b7280" strokeWidth="1.3" fill="none"/><text x="22" y="21" textAnchor="middle" fill="#6b7280" fontSize="10" fontWeight="bold">?</text><circle cx="22" cy="32" r="1.5" fill="#6b7280" opacity="0.4"/></svg>
+                                    ), border: 'border-gray-100 dark:border-gray-800' };
 
                                     // Total marks
                                     const totalMarks = test.marksPerQuestion && test.questionCount ? test.marksPerQuestion * test.questionCount : null;
 
                                     return (
-                                        <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden ${isExpired ? 'opacity-60' : ''} hover:shadow-md transition-shadow`}>
+                                        <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-[24px] border ${isExpanded ? 'border-[#1650EB]/20 ring-1 ring-[#1650EB]/5 shadow-lg shadow-[#1650EB]/5' : `${iconSvgConfig.border} hover:shadow-md`} overflow-hidden ${isExpired ? 'opacity-55' : ''} transition-all duration-200`}>
                                             {/* Main Row */}
                                             <div
-                                                className="flex items-center gap-3 px-4 py-4 cursor-pointer"
+                                                className="flex items-center gap-3.5 px-4 py-4 cursor-pointer"
                                                 onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
                                             >
-                                                {/* Subject Icon Circle */}
-                                                <div className={`w-11 h-11 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0`}>
-                                                    {isPdf ? (
-                                                        <span className="text-lg">📄</span>
-                                                    ) : (
-                                                        <span className={`text-lg font-bold ${iconConfig.text}`}>{iconConfig.emoji}</span>
-                                                    )}
+                                                {/* Subject Icon — SVG Illustration */}
+                                                <div className="w-[52px] h-[52px] shrink-0">
+                                                    {isPdf ? pdfIconSvg : iconSvgConfig.svg}
                                                 </div>
 
                                                 {/* Center: Title + Meta + Status */}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2">
+                                                    <p className="font-bold text-[15px] text-gray-900 dark:text-white line-clamp-2 tracking-tight">
                                                         {test.title}
                                                     </p>
                                                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -1516,21 +1546,21 @@ export default function StudentDashboard() {
                                                         <p className="text-xs text-gray-400 dark:text-gray-500">{totalMarks} marks</p>
                                                     )}
                                                     {/* Status badge */}
-                                                    <div className="mt-1">
+                                                    <div className="mt-1.5">
                                                         {hasTaken ? (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Completed
                                                             </span>
                                                         ) : isExpired ? (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+                                                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Expired
                                                             </span>
                                                         ) : isScheduled ? (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-500">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Scheduled
+                                                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Upcoming
                                                             </span>
                                                         ) : (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-500">
+                                                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
                                                             </span>
                                                         )}
@@ -1561,22 +1591,22 @@ export default function StudentDashboard() {
                                                     {hasTaken ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setExpandedTestId(expandedTestId === test.id ? null : test.id); }}
-                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
                                                         >
                                                             View Result <ArrowRight className="w-3 h-3" />
                                                         </button>
                                                     ) : isExpired ? (
-                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400">
+                                                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-400 dark:text-red-500 border border-red-100 dark:border-red-900/40">
                                                             Missed
                                                         </span>
                                                     ) : isScheduled ? (
-                                                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">
                                                             Upcoming
                                                         </span>
                                                     ) : isPdf ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setSelectedPdfTest(test); }}
-                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
                                                         >
                                                             Start <ArrowRight className="w-3 h-3" />
                                                         </button>
@@ -1584,7 +1614,7 @@ export default function StudentDashboard() {
                                                         <Link
                                                             href={`/test/${test.id}`}
                                                             onClick={(e) => e.stopPropagation()}
-                                                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1650EB] text-white hover:bg-[#1243c7] transition-colors"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
                                                         >
                                                             Start <ArrowRight className="w-3 h-3" />
                                                         </Link>
@@ -1592,7 +1622,7 @@ export default function StudentDashboard() {
                                                 </div>
 
                                                 {/* Expand Chevron */}
-                                                <ChevronDown className={`w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                <ChevronDown className={`w-5 h-5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                                             </div>
 
                                             {/* Expanded Dropdown Details */}
@@ -1605,7 +1635,7 @@ export default function StudentDashboard() {
                                                         transition={{ duration: 0.2 }}
                                                         className="overflow-hidden"
                                                     >
-                                                        <div className="px-4 pb-4 pt-1 bg-gray-50/70 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800">
+                                                        <div className="px-4 pb-4 pt-2 bg-gray-50/50 dark:bg-gray-800/20 border-t border-gray-100/60 dark:border-gray-800/60">
                                                             {hasTaken && result ? (
                                                                 /* ── Result View (like My Reports) ── */
                                                                 <div>
