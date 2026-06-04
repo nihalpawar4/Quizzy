@@ -394,6 +394,17 @@ function LoginForm() {
                                 </div>
                             </div>
 
+                            {/* Forgot Password */}
+                            <div className="flex justify-end -mt-1">
+                                <Link
+                                    href="/auth/forgot-password"
+                                    className="text-sm text-[#1650EB] dark:text-[#6095DB] hover:text-[#1243c7] dark:hover:text-[#a0c4ff] transition-colors"
+                                    style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+                                >
+                                    Forgot Password?
+                                </Link>
+                            </div>
+
                             {/* Submit Button */}
                             <motion.button
                                 type="submit"

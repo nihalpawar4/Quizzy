@@ -552,6 +552,49 @@ body {
   background: rgba(17, 24, 39, 0.7);
 }
 
+/* Blue Neon Glow Button — Forgot Password */
+.forgot-password-btn {
+  position: relative;
+  background: linear-gradient(135deg, #1650EB 0%, #1243c7 100%);
+  box-shadow:
+    0 4px 15px rgba(22, 80, 235, 0.3),
+    0 0 0 0 rgba(22, 80, 235, 0);
+  transition: all 0.3s ease;
+}
+
+.forgot-password-btn:hover:not(:disabled) {
+  box-shadow:
+    0 4px 20px rgba(22, 80, 235, 0.45),
+    0 0 30px rgba(22, 80, 235, 0.25),
+    0 0 60px rgba(22, 80, 235, 0.1);
+}
+
+.forgot-password-btn:active:not(:disabled) {
+  box-shadow:
+    0 2px 10px rgba(22, 80, 235, 0.4),
+    0 0 20px rgba(22, 80, 235, 0.2);
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow:
+      0 4px 15px rgba(22, 80, 235, 0.3),
+      0 0 20px rgba(22, 80, 235, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 4px 20px rgba(22, 80, 235, 0.5),
+      0 0 40px rgba(22, 80, 235, 0.2),
+      0 0 60px rgba(22, 80, 235, 0.1);
+  }
+}
+
+.forgot-password-btn:focus-visible {
+  animation: neon-pulse 2s ease-in-out infinite;
+  outline: 2px solid rgba(22, 80, 235, 0.5);
+  outline-offset: 3px;
+}
+
 /* Zen Focus Mode - for test taking */
 .zen-mode .zen-hide {
   opacity: 0.1;
