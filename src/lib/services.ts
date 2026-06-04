@@ -315,6 +315,15 @@ export async function deleteTest(testId: string) {
         batch.delete(doc.ref);
     });
 
+    // Get and delete all results/submissions for this test
+    const resultsRef = collection(db, COLLECTIONS.RESULTS);
+    const rq = query(resultsRef, where('testId', '==', testId));
+    const resultsSnapshot = await getDocs(rq);
+
+    resultsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
     await batch.commit();
 }
 

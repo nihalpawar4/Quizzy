@@ -52,6 +52,10 @@ import {
     ToggleLeft,
     ToggleRight,
     ClipboardCheck,
+    MoreVertical,
+    Sparkles,
+    ChevronRight,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -94,6 +98,7 @@ import { getPendingQuestions, approveQuestion, rejectQuestion, type PendingQuest
 import { validatePDF, convertPDFToBase64, getMaxPDFSizeKB } from '@/lib/pdfUploadService';
 import { saveLastRoute } from '@/lib/routePersistence';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import TeacherSidebar from '@/components/ui/TeacherSidebar';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed' | 'pdf_upload';
 type EvalModeType = 'auto' | 'manual' | 'hybrid';
@@ -150,8 +155,6 @@ export default function TeacherDashboard() {
     const [feeLoading, setFeeLoading] = useState(false);
     const [feeActionLoading, setFeeActionLoading] = useState<string | null>(null);
 
-    // Profile dropdown state
-    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
     // PDF evaluation modal state
     const [showPdfEvalModal, setShowPdfEvalModal] = useState(false);
@@ -161,15 +164,6 @@ export default function TeacherDashboard() {
     const [evalRemarks, setEvalRemarks] = useState('');
     const [isEvaluating, setIsEvaluating] = useState(false);
 
-    // Auto-close profile dropdown after 3 seconds
-    useEffect(() => {
-        if (showProfileDropdown) {
-            const timer = setTimeout(() => {
-                setShowProfileDropdown(false);
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [showProfileDropdown]);
 
     // Create test states
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -335,6 +329,12 @@ export default function TeacherDashboard() {
     // Class change request states
     const [classChangeRequests, setClassChangeRequests] = useState<ClassChangeRequest[]>([]);
     const [processingClassChange, setProcessingClassChange] = useState<string | null>(null);
+
+    // Tests tab local filter/search states
+    const [testTabFilter, setTestTabFilter] = useState<'all' | 'active' | 'scheduled' | 'completed' | 'drafts'>('all');
+    const [testSearchQuery, setTestSearchQuery] = useState('');
+    const [activeTestMenu, setActiveTestMenu] = useState<string | null>(null);
+    const [showAllTests, setShowAllTests] = useState(false);
 
     // Lock body scroll when any modal is open
     const isAnyModalOpen = showCreateModal || showEditModal || showNotesModal || showDetailedAnalytics || showTestsModal || showStudentsModal || showSubmissionsModal || showScoreModal || !!selectedProctoringResult || showAnnouncementModal || showManageAnnouncementsModal;
@@ -1208,6 +1208,88 @@ export default function TeacherDashboard() {
 
     const filteredResults = getFilteredResults();
 
+    // ─── Tests Tab: All computed values from real Firestore data ───
+    const pendingEvaluations = results.filter(r =>
+        !r.isPdfTest &&
+        (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') &&
+        (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review')
+    ).length;
+
+    const evalCategoryData = (() => {
+        const cats = { shortAnswer: 0, longAnswer: 0, essays: 0 };
+        results.filter(r =>
+            !r.isPdfTest &&
+            (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') &&
+            (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review')
+        ).forEach(r => {
+            if (r.evaluationMode === 'hybrid') cats.shortAnswer++;
+            else cats.longAnswer++;
+        });
+        return cats;
+    })();
+
+    const testsWithNoSubmissions = tests.filter(t => t.isActive && !results.some(r => r.testId === t.id)).length;
+
+    const todayCompletions = results.filter(r => {
+        try {
+            const ts = (r as any).createdAt;
+            if (!ts) return false;
+            const d = ts.toDate ? ts.toDate() : new Date(ts);
+            return d.toDateString() === new Date().toDateString();
+        } catch { return false; }
+    }).length;
+
+    const insights: Array<{ icon: string; text: string; bgColor: string }> = [];
+    if (testsWithNoSubmissions > 0) insights.push({ icon: '⚠️', text: `${testsWithNoSubmissions} test${testsWithNoSubmissions > 1 ? 's' : ''} have no submissions yet`, bgColor: 'bg-amber-50 dark:bg-amber-900/20' });
+    if (pendingEvaluations > 0) insights.push({ icon: '📝', text: `${pendingEvaluations} answer${pendingEvaluations > 1 ? 's' : ''} need your manual evaluation`, bgColor: 'bg-blue-50 dark:bg-blue-900/20' });
+    if (averageScore > 0) insights.push({ icon: averageScore >= 70 ? '📈' : '📊', text: `Overall performance ${averageScore >= 70 ? 'looks great' : 'needs attention'} at ${averageScore}%`, bgColor: averageScore >= 70 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-orange-50 dark:bg-orange-900/20' });
+    if (todayCompletions > 0) insights.push({ icon: '🔥', text: `${todayCompletions} student${todayCompletions > 1 ? 's' : ''} completed tests today`, bgColor: 'bg-purple-50 dark:bg-purple-900/20' });
+    if (insights.length === 0) insights.push({ icon: '✨', text: 'All caught up! Your dashboard looks great.', bgColor: 'bg-green-50 dark:bg-green-900/20' });
+
+    const getSubjectIcon = (subject: string) => {
+        const m: Record<string, { bg: string; emoji: string }> = {
+            'Mathematics': { bg: 'bg-blue-100 dark:bg-blue-900/30', emoji: '🔢' },
+            'Science': { bg: 'bg-green-100 dark:bg-green-900/30', emoji: '🔬' },
+            'English': { bg: 'bg-purple-100 dark:bg-purple-900/30', emoji: '📖' },
+            'Hindi': { bg: 'bg-orange-100 dark:bg-orange-900/30', emoji: '🏮' },
+            'Social Studies': { bg: 'bg-amber-100 dark:bg-amber-900/30', emoji: '🌍' },
+            'Computer Science': { bg: 'bg-cyan-100 dark:bg-cyan-900/30', emoji: '💻' },
+            'General Knowledge': { bg: 'bg-pink-100 dark:bg-pink-900/30', emoji: '🧠' },
+            'Combined': { bg: 'bg-indigo-100 dark:bg-indigo-900/30', emoji: '📚' },
+        };
+        return m[subject] || { bg: 'bg-gray-100 dark:bg-gray-900/30', emoji: '📝' };
+    };
+
+    const getTestStatus = (test: Test): { label: string; className: string } => {
+        const now = new Date();
+        const isSch = test.scheduledStartTime && new Date(test.scheduledStartTime) > now;
+        const isExp = test.expiresAt && new Date(test.expiresAt) < now;
+        const tRes = results.filter(r => r.testId === test.id);
+        const needsEval = test.isPdfTest && tRes.some(r => r.isPdfTest && !r.pdfEvaluated);
+        if (isSch) return { label: 'Scheduled', className: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' };
+        if (needsEval) return { label: 'Needs Evaluation', className: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' };
+        if (isExp) return { label: 'Completed', className: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' };
+        if (test.isActive) return { label: 'Active', className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' };
+        return { label: 'Draft', className: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500' };
+    };
+
+    const filteredTestList = tests.filter(test => {
+        if (testSearchQuery) {
+            const q = testSearchQuery.toLowerCase();
+            if (!test.title.toLowerCase().includes(q) && !test.subject.toLowerCase().includes(q)) return false;
+        }
+        const now = new Date();
+        const isSch = test.scheduledStartTime && new Date(test.scheduledStartTime) > now;
+        const isExp = test.expiresAt && new Date(test.expiresAt) < now;
+        switch (testTabFilter) {
+            case 'active': return test.isActive && !isSch && !isExp;
+            case 'scheduled': return !!isSch;
+            case 'completed': return !!isExp;
+            case 'drafts': return !test.isActive && !isSch;
+            default: return true;
+        }
+    });
+
     // Sample JSON for copying - dynamic based on question type
     const getSampleJSON = () => {
         switch (newTest.questionType) {
@@ -1277,527 +1359,455 @@ export default function TeacherDashboard() {
     const sampleJSON = getSampleJSON();
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-            {/* Header */}
-            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-xl flex items-center justify-center">
-                            <GraduationCap className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-gray-900 dark:text-white">Quizy</h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Teacher Dashboard</p>
-                        </div>
-                    </div>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 relative flex">
+            {/* Left Sidebar Navigation */}
+            <TeacherSidebar
+                activeTab={activeTab}
+                onTabChange={(tab) => setActiveTab(tab)}
+                userName={user.name}
+                userPhotoURL={user.photoURL}
+                totalUnreadChat={totalUnreadCount}
+                pendingQACount={pendingQuestions.length}
+                notesCount={notes.length}
+                onSignOut={handleSignOut}
+                onCreateTest={() => setShowCreateModal(true)}
+                onAnnounce={() => setShowAnnouncementModal(true)}
+            />
 
-                    <div className="flex items-center gap-2 sm:gap-3">
+            {/* Main Content Area */}
+            <div className="flex-1 min-h-screen relative overflow-hidden">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-20 lg:pt-24 pb-24 lg:pb-8">
 
-                        <Link
-                            href="/"
-                            className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Go to Home"
-                        >
-                            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                            <span className="hidden md:inline text-sm font-medium">Home</span>
-                        </Link>
-
-                        <Link
-                            href="/chat"
-                            className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#1650EB]/10 to-[#6095DB]/10 hover:from-[#1650EB]/20 hover:to-[#6095DB]/20 transition-colors group"
-                            title="Chat with Students"
-                        >
-                            <div className="relative">
-                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                {totalUnreadCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
-                                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="hidden md:inline text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">Chat</span>
-                        </Link>
-
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                title="Profile Menu"
-                            >
-                                <div className="text-right hidden lg:block">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Teacher</p>
-                                </div>
-                                {user.photoURL ? (
-                                    <img
-                                        src={user.photoURL}
-                                        alt={user.name}
-                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover group-hover:ring-2 group-hover:ring-[#1650EB] transition-all"
-                                    />
-                                ) : (
-                                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-full flex items-center justify-center group-hover:ring-2 group-hover:ring-[#1650EB] transition-all">
-                                        <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#1650EB] dark:text-[#6095DB]" />
-                                    </div>
-                                )
-                                }
-                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 hidden lg:block" />
-                            </button>
-
-                            {/* Profile Dropdown */}
-                            <AnimatePresence>
-                                {showProfileDropdown && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto top-20 sm:top-full sm:mt-2 sm:w-56 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
-                                    >
-                                        <div className="p-2">
-                                            <Link
-                                                href="/profile"
-                                                onClick={() => setShowProfileDropdown(false)}
-                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                            >
-                                                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">Profile Settings</span>
-                                            </Link>
-                                            <Link
-                                                href="/teacher/weekly-reports"
-                                                onClick={() => setShowProfileDropdown(false)}
-                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                            >
-                                                <CalendarDays className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-[#1650EB]" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">Weekly Reports</span>
-                                            </Link>
-                                            <button
-                                                onClick={() => {
-                                                    setShowProfileDropdown(false);
-                                                    handleSignOut();
-                                                }}
-                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
-                                            >
-                                                <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-red-600" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-red-600">Logout</span>
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                </div>
-            </header >
-
-            <main className="max-w-7xl mx-auto px-6 py-8">
-                {/* Welcome Section */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-2xl">
-                            {new Date().getHours() < 12 ? '🌅' : new Date().getHours() < 17 ? '☀️' : '🌙'}
-                        </span>
-                        <p className="text-sm font-medium text-[#1650EB] dark:text-[#6095DB]">
-                            {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
-                        </p>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        Welcome, {user.name}! 👋
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Manage your tests, view student performance, and create engaging assessments.
-                    </p>
-                </motion.div>
-
-                {/* Tabs - Moved below greeting */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-6">
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl">
-                        {[
-                            { id: 'tests', label: 'My Tests', icon: BookOpen },
-                            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                            { id: 'notes', label: 'Subject Notes', icon: BookMarked },
-                            { id: 'qa', label: 'Q&A', icon: HelpCircle },
-                            { id: 'fees', label: 'Fee Requests', icon: DollarSign },
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-white dark:bg-gray-900 text-[#1650EB] dark:text-[#6095DB] shadow-sm'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
-                                {tab.id === 'notes' && notes.length > 0 && (
-                                    <span className="bg-[#1650EB]/20 text-[#1650EB] dark:bg-[#6095DB]/20 dark:text-[#6095DB] text-xs px-1.5 py-0.5 rounded-full">
-                                        {notes.length}
-                                    </span>
-                                )}
-                                {tab.id === 'qa' && pendingQuestions.length > 0 && (
-                                    <span className="bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs px-1.5 py-0.5 rounded-full">
-                                        {pendingQuestions.length}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </motion.div>
-
-                {/* Evaluation Center Quick Access */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="mb-6">
+                {/* ===== Compact Stats Banners — Analytics tab only ===== */}
+                {activeTab === 'analytics' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                     <button
-                        onClick={() => router.push('/dashboard/teacher/evaluation')}
-                        className="w-full sm:w-auto flex items-center gap-3 px-5 py-3 eval-card hover:shadow-lg transition-all group"
+                        onClick={() => { setShowTestsModal(true); }}
+                        className="relative overflow-hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl px-4 py-3 border border-gray-200/60 dark:border-gray-800/60 hover:shadow-lg hover:scale-[1.02] transition-all text-left group"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <ClipboardCheck className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Evaluation Center</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Review & publish manual evaluations</p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 ml-auto group-hover:translate-x-1 transition-transform" />
-                    </button>
-                </motion.div>
-
-                {/* Stats Cards - Clickable */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <button
-                        onClick={() => { setActiveTab('tests'); setShowTestsModal(true); }}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'tests' ? 'border-[#1650EB] dark:border-[#6095DB] ring-2 ring-[#1650EB]/20' : 'border-gray-200 dark:border-gray-800'}`}
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-[#1650EB]/10 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <BookOpen className="w-6 h-6 text-[#1650EB] dark:text-[#6095DB]" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#1650EB]/5 to-transparent dark:from-[#1650EB]/10 pointer-events-none rounded-2xl" />
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-9 h-9 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <BookOpen className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalTests}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Tests</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">{totalTests}</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Tests</p>
                             </div>
                         </div>
-                        <p className="text-xs text-[#1650EB] dark:text-[#6095DB] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all tests →</p>
                     </button>
                     <button
                         onClick={() => { setShowStudentsModal(true); }}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${classChangeRequests.length > 0 ? 'border-amber-300 dark:border-amber-700 ring-2 ring-amber-300/30' : 'border-gray-200 dark:border-gray-800'}`}
+                        className="relative overflow-hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl px-4 py-3 border border-gray-200/60 dark:border-gray-800/60 hover:shadow-lg hover:scale-[1.02] transition-all text-left group"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent dark:from-green-500/10 pointer-events-none rounded-2xl" />
+                        <div className="relative flex items-center gap-3">
+                            <div className="relative w-9 h-9 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
                                 {classChangeRequests.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">
                                         {classChangeRequests.length}
                                     </span>
                                 )}
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{students.length}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Students</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">{students.length}</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Students</p>
                             </div>
                         </div>
-                        <p className={`text-xs mt-3 ${classChangeRequests.length > 0 ? 'text-amber-600 dark:text-amber-400 font-medium opacity-100' : 'text-green-600 dark:text-green-400 opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                            {classChangeRequests.length > 0 ? `${classChangeRequests.length} class change request${classChangeRequests.length > 1 ? 's' : ''} pending →` : 'Click to view all students →'}
-                        </p>
                     </button>
                     <button
-                        onClick={() => { setActiveTab('analytics'); setShowSubmissionsModal(true); }}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group ${activeTab === 'analytics' ? 'border-purple-500 dark:border-purple-400 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-800'}`}
+                        onClick={() => { setShowSubmissionsModal(true); }}
+                        className="relative overflow-hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl px-4 py-3 border border-gray-200/60 dark:border-gray-800/60 hover:shadow-lg hover:scale-[1.02] transition-all text-left group"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Trophy className="w-6 h-6 text-[#1650EB] dark:text-purple-400" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent dark:from-purple-500/10 pointer-events-none rounded-2xl" />
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Trophy className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{results.length}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Submissions</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">{results.length}</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Submissions</p>
                             </div>
                         </div>
-                        <p className="text-xs text-[#1650EB] dark:text-purple-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view all submissions →</p>
                     </button>
                     <button
-                        onClick={() => { setActiveTab('analytics'); setShowScoreModal(true); }}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border transition-all hover:shadow-lg hover:scale-[1.02] text-left group border-gray-200 dark:border-gray-800`}
+                        onClick={() => { setShowScoreModal(true); }}
+                        className="relative overflow-hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl px-4 py-3 border border-gray-200/60 dark:border-gray-800/60 hover:shadow-lg hover:scale-[1.02] transition-all text-left group"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Target className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent dark:from-orange-500/10 pointer-events-none rounded-2xl" />
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Target className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{averageScore}%</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Score</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">{averageScore}%</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Avg Score</p>
                             </div>
                         </div>
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Click to view breakdown →</p>
                     </button>
                 </motion.div>
+                )}
 
-                {/* Tests Tab */}
+
+                {/* ===== Tests Tab — Premium SaaS Redesign ===== */}
                 {activeTab === 'tests' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        {/* Create Test Button */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Tests</h3>
-                            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-                                {announcements.length > 0 && (
-                                    <button
-                                        onClick={() => setShowManageAnnouncementsModal(true)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                    >
-                                        <Megaphone className="w-4 h-4" />
-                                        <span className="hidden xs:inline">Manage</span>
-                                        <span className="px-1.5 py-0.5 bg-amber-500 text-white text-xs rounded-full">
-                                            {announcements.length}
-                                        </span>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+
+                        {/* ── HERO SECTION ── */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="relative overflow-hidden rounded-3xl border border-gray-200/60 dark:border-gray-800/60"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#f0f4ff] via-[#e8eeff] to-[#f5f0ff] dark:from-gray-900 dark:via-gray-900/95 dark:to-gray-900" />
+                            <div className="absolute top-0 right-0 w-72 h-72 bg-[#1650EB]/[0.06] rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-purple-500/[0.04] rounded-full blur-3xl pointer-events-none" />
+
+                            <div className="relative p-6 sm:p-8">
+                                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xl">{new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}</span>
+                                            <span className="text-sm font-semibold text-[#1650EB] dark:text-[#6095DB]">
+                                                {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+                                            Welcome back, <span className="text-[#1650EB] dark:text-[#6095DB]">{user.name}</span>! 👋
+                                        </h2>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                                            {"Here's what's happening with your classes today."}
+                                        </p>
+                                    </div>
+                                    <div className="hidden lg:flex items-center justify-center">
+                                        <div className="relative">
+                                            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-[#1650EB]/10 to-purple-500/10 dark:from-[#1650EB]/20 dark:to-purple-500/20 flex items-center justify-center shadow-lg shadow-[#1650EB]/5">
+                                                <GraduationCap className="w-14 h-14 text-[#1650EB]/50 dark:text-[#6095DB]/50" />
+                                            </div>
+                                            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-xl bg-amber-100/80 dark:bg-amber-900/30 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50">
+                                                <Sparkles className="w-5 h-5 text-amber-500" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* KPI Cards */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+                                    <button onClick={() => setShowTestsModal(true)} className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-white/60 dark:border-gray-700/40 hover:shadow-lg hover:scale-[1.02] transition-all text-left group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <BookOpen className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{totalTests}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tests</p>
+                                            </div>
+                                        </div>
                                     </button>
+                                    <button onClick={() => setShowStudentsModal(true)} className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-white/60 dark:border-gray-700/40 hover:shadow-lg hover:scale-[1.02] transition-all text-left group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-green-100/80 dark:bg-green-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{students.length}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Students</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => setShowScoreModal(true)} className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-white/60 dark:border-gray-700/40 hover:shadow-lg hover:scale-[1.02] transition-all text-left group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-orange-100/80 dark:bg-orange-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <Target className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{averageScore}%</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Average Score</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <Link href="/dashboard/teacher/evaluation" className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-white/60 dark:border-gray-700/40 hover:shadow-lg hover:scale-[1.02] transition-all text-left group block">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-purple-100/80 dark:bg-purple-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <ClipboardCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{pendingEvaluations}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Pending Eval</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* ── QUICK ACTIONS ── */}
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">Quick Actions</span>
+                            <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-[#1650EB] text-white rounded-full text-sm font-semibold hover:bg-[#1243c7] hover:shadow-lg hover:shadow-[#1650EB]/25 transition-all flex-shrink-0">
+                                <Plus className="w-4 h-4" />
+                                Create Test
+                            </button>
+                            <button onClick={() => setShowAnnouncementModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex-shrink-0">
+                                <Megaphone className="w-4 h-4" />
+                                Announcement
+                            </button>
+                            {announcements.length > 0 && (
+                                <button onClick={() => setShowManageAnnouncementsModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex-shrink-0">
+                                    <span className="text-xs">•••</span>
+                                    <span className="text-[10px] font-bold bg-amber-500 text-white rounded-full px-1.5 py-0.5 leading-none">{announcements.length}</span>
+                                </button>
+                            )}
+                        </motion.div>
+
+                        {/* ── AI INSIGHTS + EVALUATION CENTER ── */}
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* AI Teacher Insights */}
+                            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 dark:border-gray-800/60 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Sparkles className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
+                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">AI Teacher Insights</h3>
+                                </div>
+                                <div className="space-y-1">
+                                    {insights.map((insight, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-default group">
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${insight.bgColor}`}>
+                                                {insight.icon}
+                                            </div>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 flex-1 leading-snug">{insight.text}</p>
+                                            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Evaluation Center */}
+                            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 dark:border-gray-800/60 p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Evaluation Center</h3>
+                                    {pendingEvaluations > 0 && (
+                                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-full">
+                                            {pendingEvaluations} Pending
+                                        </span>
+                                    )}
+                                </div>
+                                {pendingEvaluations > 0 ? (
+                                    <div className="flex items-center gap-6">
+                                        <div className="relative w-28 h-28 flex-shrink-0">
+                                            <div className="w-28 h-28 rounded-full" style={{
+                                                background: `conic-gradient(#f97316 0% ${(evalCategoryData.shortAnswer / pendingEvaluations) * 100}%, #8b5cf6 ${(evalCategoryData.shortAnswer / pendingEvaluations) * 100}% ${((evalCategoryData.shortAnswer + evalCategoryData.longAnswer) / pendingEvaluations) * 100}%, #22c55e ${((evalCategoryData.shortAnswer + evalCategoryData.longAnswer) / pendingEvaluations) * 100}% 100%)`
+                                            }} />
+                                            <div className="absolute inset-3 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center flex-col shadow-inner">
+                                                <span className="text-xl font-bold text-gray-900 dark:text-white">{pendingEvaluations}</span>
+                                                <span className="text-[10px] text-gray-400">Total</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3 flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-sm bg-orange-500" />
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Short</span>
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white">{evalCategoryData.shortAnswer}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-sm bg-purple-500" />
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Long</span>
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white">{evalCategoryData.longAnswer}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-sm bg-green-500" />
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Essays</span>
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white">{evalCategoryData.essays}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-6">
+                                        <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">All caught up! No pending evaluations.</p>
+                                    </div>
                                 )}
-                                <button
-                                    onClick={() => setShowAnnouncementModal(true)}
-                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
-                                >
-                                    <Megaphone className="w-4 h-4" />
-                                    <span>Announce</span>
-                                </button>
-                                <Link
-                                    href="/dashboard/teacher/homework"
-                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                                >
-                                    <BookOpen className="w-4 h-4" />
-                                    <span>Homework</span>
+                                <Link href="/dashboard/teacher/evaluation" className="flex items-center justify-center gap-2 mt-4 w-full py-2.5 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 text-[#1650EB] dark:text-[#6095DB] rounded-2xl text-sm font-semibold hover:bg-[#1650EB]/15 dark:hover:bg-[#1650EB]/25 transition-colors">
+                                    Review Pending Evaluations
+                                    <ArrowRight className="w-4 h-4" />
                                 </Link>
-                                <button
-                                    onClick={() => setShowCreateModal(true)}
-                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm font-medium hover:bg-[#1243c7] transition-colors"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    <span>Create Test</span>
-                                </button>
                             </div>
-                        </div>
+                        </motion.div>
 
-                        {loading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
-                            </div>
-                        ) : tests.length === 0 ? (
-                            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-                                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600 dark:text-gray-400 mb-4">No tests created yet.</p>
-                                <button
-                                    onClick={() => setShowCreateModal(true)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
-                                >
-                                    <Plus className="w-5 h-5" />
-                                    Create Your First Test
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {tests.map((test) => {
-                                    const testResults = results.filter(r => r.testId === test.id);
-                                    const nonPdfResults = testResults.filter(r => !r.isPdfTest && r.totalQuestions > 0);
-                                    const avgTestScore = nonPdfResults.length > 0
-                                        ? Math.round(nonPdfResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / nonPdfResults.length)
-                                        : null;
-                                    const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
-                                    const isExpired = test.expiresAt && new Date(test.expiresAt) < new Date();
-
-                                    return (
-                                        <motion.div
-                                            key={test.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className={`bg-white dark:bg-gray-900 rounded-2xl p-6 border ${isExpired ? 'border-red-200 dark:border-red-800' : isScheduled ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}
+                        {/* ── MY TESTS — Linear-style List ── */}
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 dark:border-gray-800/60 overflow-hidden">
+                            <div className="p-5 pb-0">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">My Tests</h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1 sm:flex-none">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search tests..."
+                                                value={testSearchQuery}
+                                                onChange={(e) => setTestSearchQuery(e.target.value)}
+                                                className="pl-9 pr-4 py-2 w-full sm:w-52 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB]/20 focus:border-[#1650EB] outline-none transition-all"
+                                            />
+                                        </div>
+                                        <button className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
+                                            <SlidersHorizontal className="w-4 h-4 text-gray-500" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-0.5 border-b border-gray-200/80 dark:border-gray-800 -mx-5 px-5 overflow-x-auto scrollbar-hide">
+                                    {(['all', 'active', 'scheduled', 'completed', 'drafts'] as const).map(tab => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => { setTestTabFilter(tab); setShowAllTests(false); }}
+                                            className={`px-3 sm:px-4 py-2.5 text-sm font-medium capitalize transition-colors relative whitespace-nowrap ${
+                                                testTabFilter === tab
+                                                    ? 'text-[#1650EB] dark:text-[#6095DB]'
+                                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                            }`}
                                         >
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs font-medium rounded-full">
-                                                            {test.isCombinedSubject ? '📚 Combined' : test.subject}
-                                                        </span>
-                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
-                                                            Class {test.targetClass}
-                                                        </span>
-                                                        {test.difficultyLevel && (() => {
-                                                            const diffColors: Record<string, string> = {
-                                                                'Easy': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-                                                                'Moderate': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-                                                                'Difficult': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
-                                                                'HOTS': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
-                                                                'Mixed': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-                                                            };
-                                                            return (
-                                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${diffColors[test.difficultyLevel] || 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>
-                                                                    {test.difficultyLevel}
-                                                                </span>
-                                                            );
-                                                        })()}
-                                                        {isScheduled && (
-                                                            <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium rounded-full flex items-center gap-1">
-                                                                <Timer className="w-3 h-3" />
-                                                                Scheduled
-                                                            </span>
-                                                        )}
-                                                        {test.isPdfTest && (
-                                                            <span className="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-medium rounded-full flex items-center gap-1">
-                                                                📋 PDF Paper
-                                                            </span>
-                                                        )}
-                                                        {isExpired && (
-                                                            <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium rounded-full flex items-center gap-1">
-                                                                <Hourglass className="w-3 h-3" />
-                                                                Expired
-                                                            </span>
-                                                        )}
-                                                        {test.expiresAt && !isExpired && (
-                                                            <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full flex items-center gap-1">
-                                                                <Hourglass className="w-3 h-3" />
-                                                                Expires {new Date(test.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
-                                                    {test.isCombinedSubject && test.combinedSubjects && test.combinedSubjects.length > 0 && (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                            {test.combinedSubjects.join(' • ')}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <button
-                                                    onClick={() => handleToggleStatus(test.id, test.isActive)}
-                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${test.isActive
-                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                                                        }`}
-                                                >
-                                                    {test.isActive ? 'Active' : 'Inactive'}
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                                {test.isPdfTest ? (
-                                                    <span className="flex items-center gap-1">📄 {test.pdfFileName || 'PDF Paper'}</span>
-                                                ) : (
-                                                    <>
-                                                        <span>{test.questionCount || 0} Questions</span>
-                                                        {test.duration && <span>{test.duration} min</span>}
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            {/* Scheduled Start Time Info */}
-                                            {isScheduled && (
-                                                <div className="mb-4 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                                                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 text-xs">
-                                                        <CalendarClock className="w-3.5 h-3.5" />
-                                                        <span>Starts: {new Date(test.scheduledStartTime!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                </div>
+                                            {tab}
+                                            {testTabFilter === tab && (
+                                                <motion.div layoutId="testTabUnderline" className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1650EB] dark:bg-[#6095DB] rounded-full" />
                                             )}
-
-                                            <div className="flex items-center justify-between text-sm mb-4">
-                                                <span className="text-gray-500 dark:text-gray-400">
-                                                    {testResults.length} submissions
-                                                </span>
-                                                {test.isPdfTest ? (() => {
-                                                    const unevaluated = testResults.filter(r => r.isPdfTest && !r.pdfEvaluated).length;
-                                                    return unevaluated > 0 ? (
-                                                        <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-full">
-                                                            {unevaluated} to grade
-                                                        </span>
-                                                    ) : testResults.length > 0 ? (
-                                                        <span className="text-green-600 dark:text-green-400 font-medium text-xs">All graded ✓</span>
-                                                    ) : null;
-                                                })() : avgTestScore !== null && (
-                                                    <span className="font-medium text-gray-900 dark:text-white">
-                                                        Avg: {avgTestScore}%
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* PDF Viewed By Tracking */}
-                                            {test.isPdfTest && test.pdfViewedBy && Object.keys(test.pdfViewedBy).length > 0 && (
-                                                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <Eye className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
-                                                            {Object.keys(test.pdfViewedBy).length} student{Object.keys(test.pdfViewedBy).length > 1 ? 's' : ''} viewed
-                                                        </span>
-                                                    </div>
-                                                    <div className="space-y-1 max-h-24 overflow-y-auto">
-                                                        {Object.entries(test.pdfViewedBy).map(([studentId, info]) => (
-                                                            <div key={studentId} className="flex items-center justify-between text-xs">
-                                                                <span className="text-blue-800 dark:text-blue-300 truncate">{(info as { name: string; viewedAt: { toDate?: () => Date } }).name}</span>
-                                                                <span className="text-blue-500 dark:text-blue-400 flex-shrink-0 ml-2">
-                                                                    {(() => {
-                                                                        const viewedAt = (info as { name: string; viewedAt: { toDate?: () => Date } }).viewedAt;
-                                                                        const date = viewedAt?.toDate ? viewedAt.toDate() : (viewedAt instanceof Date ? viewedAt : new Date(viewedAt as unknown as string));
-                                                                        return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-                                                                    })()}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* PDF Submissions List for grading */}
-                                            {test.isPdfTest && testResults.length > 0 && (
-                                                <div className="mb-4 max-h-40 overflow-y-auto space-y-1.5">
-                                                    {testResults.filter(r => r.isPdfTest).map(r => (
-                                                        <div key={r.id} className={`flex items-center justify-between p-2 rounded-lg text-xs ${r.pdfEvaluated ? 'bg-green-50 dark:bg-green-900/10' : 'bg-amber-50 dark:bg-amber-900/10'}`}>
-                                                            <div className="flex-1 min-w-0">
-                                                                <span className="font-medium text-gray-900 dark:text-white truncate block">{r.studentName}</span>
-                                                                {r.pdfEvaluated ? (
-                                                                    <span className="text-green-600 dark:text-green-400">{r.pdfMarksAwarded}/{r.pdfMaxMarks} marks</span>
-                                                                ) : (
-                                                                    <span className="text-amber-600 dark:text-amber-400">Not graded</span>
-                                                                )}
-                                                            </div>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEvalResult(r);
-                                                                    setEvalMarks(r.pdfEvaluated ? String(r.pdfMarksAwarded || '') : '');
-                                                                    setEvalMaxMarks(r.pdfEvaluated ? String(r.pdfMaxMarks || '') : '');
-                                                                    setEvalRemarks(r.pdfTeacherRemarks || '');
-                                                                    setShowPdfEvalModal(true);
-                                                                }}
-                                                                className={`ml-2 px-3 py-1 rounded-lg font-medium transition-colors ${r.pdfEvaluated ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200'}`}
-                                                            >
-                                                                {r.pdfEvaluated ? 'Edit' : 'Grade'}
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => viewDetailedAnalytics(test)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-[#6095DB]/30 dark:border-indigo-800 text-[#1650EB] dark:text-[#6095DB] rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                    Analytics
-                                                </button>
-                                                <button
-                                                    onClick={() => openEditModal(test)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteTest(test.id)}
-                                                    className="flex items-center justify-center gap-2 py-2 px-3 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        )}
+
+                            <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-16">
+                                        <Loader2 className="w-6 h-6 text-[#1650EB] animate-spin" />
+                                    </div>
+                                ) : filteredTestList.length === 0 ? (
+                                    <div className="text-center py-16">
+                                        <BookOpen className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                            {testSearchQuery || testTabFilter !== 'all' ? 'No tests match your filters.' : 'No tests created yet.'}
+                                        </p>
+                                        {!testSearchQuery && testTabFilter === 'all' && (
+                                            <button onClick={() => setShowCreateModal(true)} className="text-sm text-[#1650EB] dark:text-[#6095DB] font-semibold hover:underline">
+                                                {"Create your first test →"}
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        {(showAllTests ? filteredTestList : filteredTestList.slice(0, 6)).map((test, idx) => {
+                                            const testResults = results.filter(r => r.testId === test.id);
+                                            const nonPdfResults = testResults.filter(r => !r.isPdfTest && r.totalQuestions > 0);
+                                            const avgTestScore = nonPdfResults.length > 0
+                                                ? Math.round(nonPdfResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / nonPdfResults.length)
+                                                : null;
+                                            const status = getTestStatus(test);
+                                            const subjIcon = getSubjectIcon(test.isCombinedSubject ? 'Combined' : test.subject);
+
+                                            return (
+                                                <motion.div
+                                                    key={test.id}
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: idx * 0.03 }}
+                                                    className="flex items-center gap-3 sm:gap-4 px-5 py-3.5 hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-colors group"
+                                                >
+                                                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-base sm:text-lg flex-shrink-0 ${subjIcon.bg}`}>
+                                                        {subjIcon.emoji}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{test.title}</h4>
+                                                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                                            <span>{test.isCombinedSubject ? 'Combined' : test.subject}</span>
+                                                            <span className="text-gray-300 dark:text-gray-600">|</span>
+                                                            <span>Class {test.targetClass}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                                            {test.isPdfTest ? '1 File' : `${test.questionCount || 0} Questions`} • {test.duration || 30} min
+                                                            {test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date() && (
+                                                                <span> • 📅 {new Date(test.scheduledStartTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+
+                                                    <span className={`inline-flex px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold rounded-full flex-shrink-0 ${status.className}`}>
+                                                        {status.label}
+                                                    </span>
+
+                                                    <div className="hidden md:block text-center min-w-[55px]">
+                                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                            {test.isPdfTest ? `${testResults.filter(r => r.pdfEvaluated).length}/${testResults.length}` : testResults.length}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400">Submitted</p>
+                                                    </div>
+
+                                                    <div className="hidden md:block text-center min-w-[55px]">
+                                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{avgTestScore !== null ? `${avgTestScore}%` : '–'}</p>
+                                                        <p className="text-[10px] text-gray-400">Avg. Score</p>
+                                                    </div>
+
+                                                    <div className="relative flex-shrink-0">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setActiveTestMenu(activeTestMenu === test.id ? null : test.id); }}
+                                                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                                                        >
+                                                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                                                        </button>
+                                                        <AnimatePresence>
+                                                            {activeTestMenu === test.id && (
+                                                                <>
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setActiveTestMenu(null)} />
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                                                                        transition={{ duration: 0.15 }}
+                                                                        className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-700 py-1.5 z-50 overflow-hidden"
+                                                                    >
+                                                                        <button onClick={() => { viewDetailedAnalytics(test); setActiveTestMenu(null); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                                                            <Eye className="w-4 h-4 text-gray-400" /> View Analytics
+                                                                        </button>
+                                                                        <button onClick={() => { openEditModal(test); setActiveTestMenu(null); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                                                            <Edit className="w-4 h-4 text-gray-400" /> Edit Test
+                                                                        </button>
+                                                                        <button onClick={() => { handleToggleStatus(test.id, test.isActive); setActiveTestMenu(null); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                                                            {test.isActive ? <ToggleRight className="w-4 h-4 text-gray-400" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+                                                                            {test.isActive ? 'Deactivate' : 'Activate'}
+                                                                        </button>
+                                                                        <div className="my-1 border-t border-gray-100 dark:border-gray-700/50" />
+                                                                        <button onClick={() => { handleDeleteTest(test.id); setActiveTestMenu(null); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                                                            <Trash2 className="w-4 h-4" /> Delete Test
+                                                                        </button>
+                                                                    </motion.div>
+                                                                </>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </>
+                                )}
+                            </div>
+
+                            {filteredTestList.length > 6 && !showAllTests && (
+                                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800/50 text-center">
+                                    <button onClick={() => setShowAllTests(true)} className="text-sm text-[#1650EB] dark:text-[#6095DB] font-semibold hover:underline">
+                                        {"View all tests →"}
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+
                     </motion.div>
                 )}
+
 
                 {/* Analytics Tab */}
                 {activeTab === 'analytics' && (
@@ -2199,6 +2209,7 @@ export default function TeacherDashboard() {
                 )}
 
             </main>
+            </div>
 
             {/* Create Test Modal */}
             <AnimatePresence>

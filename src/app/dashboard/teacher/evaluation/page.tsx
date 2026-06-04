@@ -21,6 +21,7 @@ import {
     AlertCircle,
     Hourglass,
     ClipboardCheck,
+    Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -28,7 +29,7 @@ import {
     getEvaluationStats,
     publishResultsBulk,
 } from '@/services/evaluationService';
-import { createResultNotification } from '@/lib/services';
+import { createResultNotification, deleteResult } from '@/lib/services';
 import { EVALUATION_STATUS_CONFIG } from '@/lib/constants';
 import type { TestResult, EvaluationStatus } from '@/types';
 
@@ -53,6 +54,7 @@ export default function EvaluationDashboard() {
     const [classFilter, setClassFilter] = useState<number | 'all'>('all');
     const [subjectFilter, setSubjectFilter] = useState<string>('all');
     const [showFilters, setShowFilters] = useState(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     // Selection for bulk actions
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -175,6 +177,27 @@ export default function EvaluationDashboard() {
             console.error('Bulk publish error:', err);
         } finally {
             setPublishing(false);
+        }
+    };
+
+    // Delete a single submission
+    const handleDeleteSubmission = async (submissionId: string) => {
+        if (!confirm('Are you sure you want to delete this submission? This cannot be undone.')) return;
+        setDeletingId(submissionId);
+        try {
+            await deleteResult(submissionId);
+            // Remove from selection if selected
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                next.delete(submissionId);
+                return next;
+            });
+            // Refresh stats
+            getEvaluationStats().then(setStats);
+        } catch (err) {
+            console.error('Delete submission error:', err);
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -480,7 +503,7 @@ export default function EvaluationDashboard() {
                             </div>
 
                             {/* Action */}
-                            <div>
+                            <div className="flex items-center gap-1.5">
                                 <button
                                     onClick={() => router.push(`/dashboard/teacher/evaluation/${sub.id}`)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
@@ -493,6 +516,18 @@ export default function EvaluationDashboard() {
                                         <><Eye className="w-3 h-3" /> Evaluate</>
                                     ) : (
                                         <><Eye className="w-3 h-3" /> View</>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteSubmission(sub.id)}
+                                    disabled={deletingId === sub.id}
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                                    title="Delete submission"
+                                >
+                                    {deletingId === sub.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     )}
                                 </button>
                             </div>

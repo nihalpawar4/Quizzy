@@ -126,27 +126,7 @@ export default function ChatPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#0c1025]">
-            {/* Header with Back Button - Mobile */}
-            <div className="lg:hidden border-b border-gray-200/60 dark:border-white/5 bg-white/80 dark:bg-[#0f1629]/80 backdrop-blur-xl">
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <Link
-                        href="/dashboard"
-                        className="p-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all duration-200"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center shadow-md shadow-[#1650EB]/20">
-                            <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="none">
-                                <path d="M4 4h12a2 2 0 012 2v7a2 2 0 01-2 2H8l-4 3V6a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity="0.15" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-white">Messages</h1>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex h-[calc(100vh-57px)] lg:h-screen">
+            <div className="flex h-screen">
                 {/* Chat List - Sidebar */}
                 <div className={`
                     ${isMobileView ? 'w-full' : 'w-80 lg:w-96'}

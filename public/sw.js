@@ -96,36 +96,8 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Handle push notifications (for future use)
-self.addEventListener('push', (event) => {
-    const options = {
-        body: event.data ? event.data.text() : 'New notification from Quizy',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
-        vibrate: [100, 50, 100],
-        data: {
-            dateOfArrival: Date.now(),
-            primaryKey: 1,
-        },
-        actions: [
-            { action: 'open', title: 'Open Quizy' },
-            { action: 'close', title: 'Close' },
-        ],
-    };
-
-    event.waitUntil(
-        self.registration.showNotification('Quizy - By Nihal Pawar', options)
-    );
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-
-    if (event.action === 'open' || !event.action) {
-        event.waitUntil(clients.openWindow('/dashboard'));
-    }
-});
+// Push notifications are handled by firebase-messaging-sw.js
+// Do NOT add push/notificationclick listeners here to avoid conflicts
 
 // Listen for SKIP_WAITING message from the client (sent when user taps "Update Now")
 self.addEventListener('message', (event) => {

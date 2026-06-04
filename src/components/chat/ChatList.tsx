@@ -7,7 +7,8 @@
  */
 
 import React from 'react';
-import { Search, Plus, Trash2, Pin, PinOff, Check, CheckCheck, SlidersHorizontal } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Plus, Trash2, Pin, PinOff, Check, CheckCheck, SlidersHorizontal, ArrowLeft } from 'lucide-react';
 import type { Chat, UserPresence } from '@/types';
 import { formatChatListTime } from '@/lib/chatServices';
 import OnlineStatus from './OnlineStatus';
@@ -155,8 +156,15 @@ export default function ChatList({
             {/* Header */}
             <div className="px-5 pt-5 pb-3">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                        {/* Animated chat bubble icon */}
+                    <div className="flex items-center gap-2">
+                        {/* Back button — mobile only */}
+                        <Link
+                            href="/dashboard"
+                            className="lg:hidden p-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        {/* Chat icon */}
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1650EB] to-[#6095DB] flex items-center justify-center shadow-lg shadow-[#1650EB]/20">
                             <svg className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="none">
                                 <path d="M4 4h12a2 2 0 012 2v7a2 2 0 01-2 2H8l-4 3V6a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity="0.15" strokeLinejoin="round"/>
