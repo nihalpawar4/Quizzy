@@ -41,6 +41,20 @@ export interface ClassChangeRequest {
     resolvedByName?: string;
 }
 
+// Evaluation Types
+export type EvaluationMode = 'auto' | 'manual' | 'hybrid';
+export type EvaluationStatus = 'pending' | 'under_review' | 'evaluated' | 'published';
+export type ResultReleaseType = 'immediate' | 'scheduled';
+
+export interface QuestionEvaluation {
+    questionId: string;
+    questionText?: string;
+    obtainedMarks: number;
+    maxMarks: number;
+    feedback?: string;
+    status: 'correct' | 'partially_correct' | 'incorrect' | 'not_evaluated';
+}
+
 // Test Types
 export interface Test {
     id: string;
@@ -75,6 +89,11 @@ export interface Test {
     pdfFileName?: string; // Original filename of the uploaded PDF
     // PDF view tracking: map of studentId -> { name, viewedAt }
     pdfViewedBy?: { [studentId: string]: { name: string; viewedAt: Date } };
+    // Evaluation mode
+    evaluationMode?: EvaluationMode; // auto, manual, or hybrid
+    resultReleaseType?: ResultReleaseType; // immediate or scheduled
+    resultReleaseDate?: Date; // Scheduled date/time for result release
+    expectedResultDays?: number; // Days after submission for expected result (default 5)
 }
 
 // Question Types - supports multiple formats
@@ -140,6 +159,19 @@ export interface TestResult {
     // Daily Challenge data
     isDailyChallenge?: boolean; // Whether this is a daily challenge result
     dailyChallengeDate?: string; // YYYY-MM-DD date of the daily challenge
+    // Manual Evaluation data
+    evaluationStatus?: EvaluationStatus; // pending, under_review, evaluated, published
+    evaluationMode?: EvaluationMode; // auto, manual, hybrid (copied from test)
+    teacherFeedback?: string; // Overall teacher feedback
+    reviewedAt?: Date; // When teacher completed evaluation
+    publishedAt?: Date; // When result was published to student
+    evaluatorId?: string; // Teacher who evaluated
+    evaluatorName?: string; // Teacher name who evaluated
+    scheduledReleaseDate?: Date; // Scheduled result release date
+    questionEvaluations?: QuestionEvaluation[]; // Per-question evaluation data
+    strengthAreas?: string[]; // Topics where student performed well
+    improvementAreas?: string[]; // Topics needing improvement
+    rankInTest?: number; // Rank among students who took this test
 }
 
 // Mistake Bucket item for Practice Mode
@@ -252,7 +284,7 @@ export interface SubjectNote {
 }
 
 // Notification for real-time updates
-export type NotificationType = 'test' | 'note' | 'announcement';
+export type NotificationType = 'test' | 'note' | 'announcement' | 'result';
 
 export interface Notification {
     id: string;

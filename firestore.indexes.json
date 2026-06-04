@@ -251,6 +251,52 @@
                     "order": "ASCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "results",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "evaluationStatus",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "results",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "testId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "evaluationStatus",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "results",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "evaluationStatus",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "scheduledReleaseDate",
+                    "order": "ASCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []

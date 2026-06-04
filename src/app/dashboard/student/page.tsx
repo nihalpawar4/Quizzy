@@ -249,6 +249,59 @@ export default function StudentDashboard() {
         return () => clearInterval(interval);
     }, [tests]);
 
+    // ──────────── Score Helpers ────────────
+    // When teacher evaluates (manual/hybrid), use marksObtained/totalMarks.
+    // For auto-evaluated tests, use score/totalQuestions.
+    const getResultScorePercent = (r: TestResult): number | null => {
+        if (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review') return null;
+        if (r.evaluationStatus === 'evaluated') return null; // Not published yet
+        if (r.isPdfTest) {
+            return r.pdfEvaluated && r.pdfMaxMarks ? Math.round(((r.pdfMarksAwarded || 0) / r.pdfMaxMarks) * 100) : null;
+        }
+        // Published manual/hybrid evaluation — use teacher marks
+        if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.totalMarks > 0 && r.marksObtained !== undefined) {
+            return Math.round((r.marksObtained / r.totalMarks) * 100);
+        }
+        // Auto-evaluated or legacy
+        return r.totalQuestions > 0 ? Math.round((r.score / r.totalQuestions) * 100) : 0;
+    };
+
+    const getResultScoreLabel = (r: TestResult): string => {
+        if (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review') return 'Awaiting Teacher Review';
+        if (r.evaluationStatus === 'evaluated') return 'Evaluated — Results coming soon';
+        if (r.isPdfTest) {
+            return r.pdfEvaluated ? `Score: ${r.pdfMarksAwarded}/${r.pdfMaxMarks}` : 'Awaiting evaluation';
+        }
+        // Published manual/hybrid — show marks
+        if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.marksObtained !== undefined) {
+            return `Marks: ${r.marksObtained}/${r.totalMarks}`;
+        }
+        return `Score: ${r.score}/${r.totalQuestions}`;
+    };
+
+    const getResultScoreFraction = (r: TestResult): string => {
+        // Published manual/hybrid — use marks
+        if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.marksObtained !== undefined) {
+            return `${r.marksObtained}/${r.totalMarks}`;
+        }
+        if (r.isPdfTest && r.pdfEvaluated) {
+            return `${r.pdfMarksAwarded}/${r.pdfMaxMarks}`;
+        }
+        return `${r.score}/${r.totalQuestions}`;
+    };
+
+    // Compute average score that respects teacher evaluations
+    const getResultScoreForAverage = (r: TestResult): number | null => {
+        if (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review' || r.evaluationStatus === 'evaluated') return null;
+        if (r.isPdfTest) {
+            return r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0 ? ((r.pdfMarksAwarded || 0) / r.pdfMaxMarks) * 100 : null;
+        }
+        if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.totalMarks > 0 && r.marksObtained !== undefined) {
+            return (r.marksObtained / r.totalMarks) * 100;
+        }
+        return r.totalQuestions > 0 ? (r.score / r.totalQuestions) * 100 : null;
+    };
+
     // Check if report is available (instantly available up to 24 hours after submission)
     const isReportAvailable = (result: TestResult): boolean => {
         if (!currentTime) return true;
@@ -752,17 +805,10 @@ export default function StudentDashboard() {
         );
     }
 
-    // Compute average score for stats
-    const scorableResults = results.filter(r => !r.isPdfTest && r.totalQuestions > 0);
-    const pdfEvaluatedResults = results.filter(r => r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0);
-    const totalScorable = scorableResults.length + pdfEvaluatedResults.length;
-    const averageScore = totalScorable > 0
-        ? Math.round(
-            (
-                scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) +
-                pdfEvaluatedResults.reduce((acc, r) => acc + ((r.pdfMarksAwarded || 0) / (r.pdfMaxMarks || 1)) * 100, 0)
-            ) / totalScorable
-        )
+    // Compute average score for stats (uses helpers that respect teacher evaluations)
+    const scorableForAvg = results.map(r => getResultScoreForAverage(r)).filter((v): v is number => v !== null);
+    const averageScore = scorableForAvg.length > 0
+        ? Math.round(scorableForAvg.reduce((a, b) => a + b, 0) / scorableForAvg.length)
         : 0;
 
 
@@ -1483,9 +1529,7 @@ export default function StudentDashboard() {
                                     const isPdf = test.isPdfTest;
                                     const pdfResult = isPdf ? results.find(r => r.testId === test.id && r.isPdfTest) : null;
                                     const scorePercent = hasTaken && result
-                                        ? (result.isPdfTest
-                                            ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : null)
-                                            : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : null))
+                                        ? getResultScorePercent(result)
                                         : null;
 
                                     // Subject icon config
@@ -1575,7 +1619,7 @@ export default function StudentDashboard() {
                                                             scorePercent !== null && scorePercent >= 40 ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' :
                                                             'bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400'
                                                         }`}>
-                                                            {result.score}/{result.totalQuestions}
+                                                            {scorePercent !== null ? getResultScoreFraction(result) : '—'}
                                                         </span>
                                                     ) : hasTaken && isPdf && pdfResult ? (
                                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -1650,10 +1694,12 @@ export default function StudentDashboard() {
                                                                         </div>
                                                                         <div className="flex-1">
                                                                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                                                {result.isPdfTest
-                                                                                    ? (result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks} marks` : 'Awaiting evaluation')
-                                                                                    : `${result.score}/${result.totalQuestions} correct`
-                                                                                }
+                                                                                {(() => {
+                                                                                    if (result.isPdfTest) return result.pdfEvaluated ? `${result.pdfMarksAwarded}/${result.pdfMaxMarks} marks` : 'Awaiting evaluation';
+                                                                                    if (result.evaluationStatus === 'pending' || result.evaluationStatus === 'under_review') return 'Awaiting evaluation';
+                                                                                    if (result.evaluationStatus === 'evaluated') return 'Evaluated — coming soon';
+                                                                                    return `${getResultScoreFraction(result)} ${result.evaluationStatus === 'published' && (result.evaluationMode === 'manual' || result.evaluationMode === 'hybrid') ? 'marks' : 'correct'}`;
+                                                                                })()}
                                                                             </p>
                                                                             <p className="text-xs text-gray-400 mt-0.5">
                                                                                 {result.subject} • Completed {result.timestamp ? new Date(result.timestamp instanceof Date ? result.timestamp : (result.timestamp as {toDate: () => Date}).toDate()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
@@ -1829,17 +1875,10 @@ export default function StudentDashboard() {
                             const allSubjects = [...new Set(results.map(r => r.subject))];
                             const filteredResults = reportFilterSubject === 'All' ? results : results.filter(r => r.subject === reportFilterSubject);
 
-                            // Combined score calculation
-                            const scorableResults = filteredResults.filter(r => !r.isPdfTest && r.totalQuestions > 0);
-                            const pdfEvaluatedResults = filteredResults.filter(r => r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0);
-                            const totalScorable = scorableResults.length + pdfEvaluatedResults.length;
-                            const combinedScore = totalScorable > 0
-                                ? Math.round(
-                                    (
-                                        scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) +
-                                        pdfEvaluatedResults.reduce((acc, r) => acc + ((r.pdfMarksAwarded || 0) / (r.pdfMaxMarks || 1)) * 100, 0)
-                                    ) / totalScorable
-                                )
+                            // Combined score calculation (uses helpers that respect teacher evaluations)
+                            const scorableForCombined = filteredResults.map(r => getResultScoreForAverage(r)).filter((v): v is number => v !== null);
+                            const combinedScore = scorableForCombined.length > 0
+                                ? Math.round(scorableForCombined.reduce((a, b) => a + b, 0) / scorableForCombined.length)
                                 : 0;
 
                             // Circular progress values
@@ -1955,13 +1994,11 @@ export default function StudentDashboard() {
                                 {filteredResults.map((result, index) => {
                                     const reportAvailable = isReportAvailable(result);
                                     const reportExpired = isReportExpired(result);
-                                    const scorePercent = result.isPdfTest
-                                        ? (result.pdfEvaluated && result.pdfMaxMarks ? Math.round(((result.pdfMarksAwarded || 0) / result.pdfMaxMarks) * 100) : 0)
-                                        : (result.totalQuestions > 0 ? Math.round((result.score / result.totalQuestions) * 100) : 0);
+                                    const isPendingEvaluation = result.evaluationStatus === 'pending' || result.evaluationStatus === 'under_review';
+                                    const isEvaluatedNotPublished = result.evaluationStatus === 'evaluated';
+                                    const scorePercent = getResultScorePercent(result) ?? 0;
                                     const style = subjectStyles[result.subject] || defaultStyle;
-                                    const scoreLabel = result.isPdfTest
-                                        ? (result.pdfEvaluated ? `Score: ${result.pdfMarksAwarded}/${result.pdfMaxMarks}` : 'Awaiting evaluation')
-                                        : `Score: ${result.score}/${result.totalQuestions}`;
+                                    const scoreLabel = getResultScoreLabel(result);
                                     const dateStr = new Date(result.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + new Date(result.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
                                     return (
@@ -1971,15 +2008,15 @@ export default function StudentDashboard() {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.04 * index }}
                                             className={`group relative bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden transition-all duration-200 ${
-                                                reportExpired
+                                                reportExpired || isPendingEvaluation
                                                     ? 'border-gray-200 dark:border-gray-800'
                                                     : 'border-gray-200 dark:border-gray-800 hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-200 dark:hover:border-indigo-800'
                                             }`}
                                         >
                                             <div
-                                                className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 cursor-pointer ${reportExpired ? 'opacity-70' : ''}`}
+                                                className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 ${isPendingEvaluation ? 'cursor-default' : 'cursor-pointer'} ${reportExpired ? 'opacity-70' : ''}`}
                                                 onClick={() => {
-                                                    if (reportAvailable && !reportExpired) {
+                                                    if (reportAvailable && !reportExpired && !isPendingEvaluation && !isEvaluatedNotPublished) {
                                                         setSelectedReport(result);
                                                     }
                                                 }}
@@ -1996,25 +2033,38 @@ export default function StudentDashboard() {
                                                         {result.testTitle}
                                                     </h4>
 
-                                                    {/* Subject badge + Score badge */}
+                                                    {/* Subject badge + Score/Status badge */}
                                                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.badgeBg} ${style.badgeText}`}>
                                                             {result.subject}
                                                         </span>
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                                            scorePercent >= 70
-                                                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                                                                : scorePercent >= 40
-                                                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                                                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                                                        }`}>
-                                                            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d={scorePercent >= 40 ? "M2 8L6 3L10 8" : "M2 4L6 9L10 4"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                            {scorePercent}%
-                                                        </span>
-                                                        {reportExpired && (
-                                                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                                                Expired
+                                                        {isPendingEvaluation ? (
+                                                            <span className="eval-status-badge eval-status-pending">
+                                                                <span className="eval-pulse-dot bg-amber-500" />
+                                                                Pending Evaluation
                                                             </span>
+                                                        ) : isEvaluatedNotPublished ? (
+                                                            <span className="eval-status-badge eval-status-evaluated">
+                                                                ✅ Evaluated
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                                    scorePercent >= 70
+                                                                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                                                                        : scorePercent >= 40
+                                                                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                                                                        : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                                                }`}>
+                                                                    <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d={scorePercent >= 40 ? "M2 8L6 3L10 8" : "M2 4L6 9L10 4"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                    {scorePercent}%
+                                                                </span>
+                                                                {reportExpired && (
+                                                                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                                                        Expired
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
 
@@ -2061,8 +2111,8 @@ export default function StudentDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* Action buttons row for available reports */}
-                                            {reportAvailable && !reportExpired && (
+                                            {/* Action buttons row for available reports — only show when published or auto-evaluated */}
+                                            {reportAvailable && !reportExpired && !isPendingEvaluation && !isEvaluatedNotPublished && (
                                                 <div className="flex items-center gap-2 px-4 sm:px-5 pb-4 pt-0">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); downloadReport(result); }}
@@ -2229,9 +2279,7 @@ export default function StudentDashboard() {
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedReport.testTitle}</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        {selectedReport.subject} • {selectedReport.isPdfTest
-                                            ? (selectedReport.pdfEvaluated ? `Marks: ${selectedReport.pdfMarksAwarded}/${selectedReport.pdfMaxMarks} (${Math.round(((selectedReport.pdfMarksAwarded || 0) / (selectedReport.pdfMaxMarks || 1)) * 100)}%)` : 'Awaiting evaluation')
-                                            : `Score: ${selectedReport.score}/${selectedReport.totalQuestions} (${selectedReport.totalQuestions > 0 ? Math.round((selectedReport.score / selectedReport.totalQuestions) * 100) : 0}%)`}
+                                        {selectedReport.subject} • {getResultScoreLabel(selectedReport)}
                                     </p>
                                 </div>
                                 <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
@@ -2241,91 +2289,292 @@ export default function StudentDashboard() {
 
                             {/* Modal Body - Scrollable */}
                             <div className="flex-1 overflow-y-auto p-6">
-                                {selectedReport.detailedAnswers && selectedReport.detailedAnswers.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {selectedReport.detailedAnswers.map((answer, index) => (
-                                            <div
-                                                key={answer.questionId || index}
-                                                className={`p-4 rounded-xl border ${answer.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${answer.isCorrect ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                                                        {answer.isCorrect ? (
-                                                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-                                                        ) : (
-                                                            <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                                                        )}
+                                {(() => {
+                                    // Check if this result needs teacher evaluation and hasn't been published
+                                    const needsEval = selectedReport.evaluationStatus === 'pending' || selectedReport.evaluationStatus === 'under_review' || selectedReport.evaluationStatus === 'evaluated';
+                                    const isManualOrHybrid = selectedReport.evaluationMode === 'manual' || selectedReport.evaluationMode === 'hybrid';
+
+                                    if (needsEval && isManualOrHybrid) {
+                                        // Show awaiting evaluation view
+                                        return (
+                                            <div className="text-center py-16">
+                                                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                                                    <Clock className="w-10 h-10 text-amber-500" />
+                                                </div>
+                                                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                                    {selectedReport.evaluationStatus === 'evaluated' ? 'Evaluation Complete' : 'Evaluation in Progress'}
+                                                </h4>
+                                                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                                                    {selectedReport.evaluationStatus === 'evaluated'
+                                                        ? 'Your teacher has reviewed your answers. The detailed report will be available once results are published.'
+                                                        : selectedReport.evaluationStatus === 'under_review'
+                                                        ? 'Your teacher is currently reviewing your answers. You\'ll be notified when the results are ready.'
+                                                        : 'Your answers have been submitted and are waiting for your teacher to review. You\'ll be notified when the results are published.'}
+                                                </p>
+
+                                                {/* Basic submission info (no scores or answers) */}
+                                                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 max-w-sm mx-auto space-y-3 text-left">
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-500 dark:text-gray-400">Questions</span>
+                                                        <span className="font-semibold text-gray-900 dark:text-white">{selectedReport.totalQuestions}</span>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-medium text-gray-900 dark:text-white mb-2">
-                                                            Q{index + 1}: {answer.questionText}
-                                                        </p>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                                                            <div className={`p-2 rounded-lg ${answer.isCorrect ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}`}>
-                                                                <span className="text-gray-500 dark:text-gray-400">Your Answer: </span>
-                                                                <span className={`font-medium ${answer.isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                                                                    {answer.userAnswer || 'Not answered'}
-                                                                </span>
-                                                            </div>
-                                                            {!answer.isCorrect && (
-                                                                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
-                                                                    <span className="text-gray-500 dark:text-gray-400">Correct Answer: </span>
-                                                                    <span className="font-medium text-green-700 dark:text-green-300">
-                                                                        {answer.correctAnswer}
-                                                                    </span>
-                                                                </div>
-                                                            )}
+                                                    {selectedReport.timeTakenSeconds && (
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-gray-500 dark:text-gray-400">Time Taken</span>
+                                                            <span className="font-semibold text-gray-900 dark:text-white">
+                                                                {Math.floor(selectedReport.timeTakenSeconds / 60)}m {selectedReport.timeTakenSeconds % 60}s
+                                                            </span>
                                                         </div>
-                                                        {/* Explanation */}
-                                                        {answer.explanation && (
-                                                            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                                <div className="flex items-start gap-2">
-                                                                    <span className="text-base mt-0.5">💡</span>
-                                                                    <div>
-                                                                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Explanation</p>
-                                                                        <p className="text-sm text-amber-800 dark:text-amber-300">{answer.explanation}</p>
+                                                    )}
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-500 dark:text-gray-400">Submitted</span>
+                                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                                            {new Date(selectedReport.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-500 dark:text-gray-400">Status</span>
+                                                        <span className={`font-semibold ${
+                                                            selectedReport.evaluationStatus === 'evaluated'
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : 'text-amber-600 dark:text-amber-400'
+                                                        }`}>
+                                                            {selectedReport.evaluationStatus === 'evaluated' ? '✅ Evaluated' : selectedReport.evaluationStatus === 'under_review' ? '👀 Under Review' : '⏳ Pending'}
+                                                        </span>
+                                                    </div>
+                                                    {selectedReport.evaluationMode && (
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-gray-500 dark:text-gray-400">Evaluation Type</span>
+                                                            <span className="font-semibold text-gray-900 dark:text-white capitalize">
+                                                                {selectedReport.evaluationMode === 'hybrid' ? 'Auto + Manual' : selectedReport.evaluationMode}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Teacher feedback if evaluated but not published */}
+                                                {selectedReport.evaluationStatus === 'evaluated' && selectedReport.teacherFeedback && (
+                                                    <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 max-w-md mx-auto text-left">
+                                                        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Teacher Feedback</p>
+                                                        <p className="text-sm text-blue-800 dark:text-blue-300">{selectedReport.teacherFeedback}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    // Published / auto-evaluated — show full report
+                                    if (selectedReport.detailedAnswers && selectedReport.detailedAnswers.length > 0) {
+                                        // For published manual/hybrid results, show evaluation data if available
+                                        const hasQuestionEvals = selectedReport.questionEvaluations && selectedReport.questionEvaluations.length > 0;
+
+                                        if (hasQuestionEvals && (selectedReport.evaluationMode === 'manual' || selectedReport.evaluationMode === 'hybrid')) {
+                                            // Show teacher-evaluated format
+                                            return (
+                                                <div className="space-y-4">
+                                                    {/* Overall feedback */}
+                                                    {selectedReport.teacherFeedback && (
+                                                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800 mb-4">
+                                                            <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">📝 Teacher\'s Overall Feedback</p>
+                                                            <p className="text-sm text-blue-800 dark:text-blue-300">{selectedReport.teacherFeedback}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Strength & Improvement areas */}
+                                                    {(selectedReport.strengthAreas && selectedReport.strengthAreas.length > 0) && (
+                                                        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                                                            <p className="text-xs font-semibold text-green-600 dark:text-green-400 mb-2">💪 Strengths</p>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {selectedReport.strengthAreas.map((s, i) => (
+                                                                    <span key={i} className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">{s}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {(selectedReport.improvementAreas && selectedReport.improvementAreas.length > 0) && (
+                                                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                                                            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">📈 Areas to Improve</p>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {selectedReport.improvementAreas.map((s, i) => (
+                                                                    <span key={i} className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{s}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Per-question evaluations */}
+                                                    {selectedReport.questionEvaluations!.map((qe, index) => {
+                                                        const da = selectedReport.detailedAnswers?.[index];
+                                                        const statusColor = qe.status === 'correct'
+                                                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                                                            : qe.status === 'partially_correct'
+                                                            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                                                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+                                                        const statusIcon = qe.status === 'correct' ? '✅' : qe.status === 'partially_correct' ? '⚠️' : '❌';
+
+                                                        return (
+                                                            <div key={qe.questionId || index} className={`p-4 rounded-xl border ${statusColor}`}>
+                                                                <div className="flex items-start gap-3">
+                                                                    <span className="text-lg mt-0.5">{statusIcon}</span>
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center justify-between mb-2">
+                                                                            <p className="font-medium text-gray-900 dark:text-white text-sm">
+                                                                                Q{index + 1}: {qe.questionText}
+                                                                            </p>
+                                                                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-2 flex-shrink-0">
+                                                                                {qe.obtainedMarks}/{qe.maxMarks}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {/* Student's answer */}
+                                                                        {da && (
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-2">
+                                                                                <div className="p-2 rounded-lg bg-white/60 dark:bg-gray-800/60">
+                                                                                    <span className="text-gray-500 dark:text-gray-400">Your Answer: </span>
+                                                                                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                                                                                        {da.userAnswer || 'Not answered'}
+                                                                                    </span>
+                                                                                </div>
+                                                                                {da.correctAnswer && (
+                                                                                    <div className="p-2 rounded-lg bg-green-100/60 dark:bg-green-900/30">
+                                                                                        <span className="text-gray-500 dark:text-gray-400">Correct Answer: </span>
+                                                                                        <span className="font-medium text-green-700 dark:text-green-300">
+                                                                                            {da.correctAnswer}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Teacher feedback per question */}
+                                                                        {qe.feedback && (
+                                                                            <div className="mt-2 p-2 bg-blue-50/80 dark:bg-blue-900/20 rounded-lg">
+                                                                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Teacher: </span>
+                                                                                <span className="text-sm text-blue-800 dark:text-blue-300">{qe.feedback}</span>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Explanation */}
+                                                                        {da?.explanation && (
+                                                                            <div className="mt-2 p-2 bg-amber-50/80 dark:bg-amber-900/20 rounded-lg">
+                                                                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">💡 Explanation: </span>
+                                                                                <span className="text-sm text-amber-800 dark:text-amber-300">{da.explanation}</span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                        );
+                                                    })}
                                                 </div>
+                                            );
+                                        }
+
+                                        // Auto-evaluated (original format)
+                                        return (
+                                            <div className="space-y-4">
+                                                {selectedReport.detailedAnswers.map((answer, index) => (
+                                                    <div
+                                                        key={answer.questionId || index}
+                                                        className={`p-4 rounded-xl border ${answer.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${answer.isCorrect ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                                                                {answer.isCorrect ? (
+                                                                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                                                ) : (
+                                                                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="font-medium text-gray-900 dark:text-white mb-2">
+                                                                    Q{index + 1}: {answer.questionText}
+                                                                </p>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                                                    <div className={`p-2 rounded-lg ${answer.isCorrect ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}`}>
+                                                                        <span className="text-gray-500 dark:text-gray-400">Your Answer: </span>
+                                                                        <span className={`font-medium ${answer.isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                                                                            {answer.userAnswer || 'Not answered'}
+                                                                        </span>
+                                                                    </div>
+                                                                    {!answer.isCorrect && (
+                                                                        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                                                                            <span className="text-gray-500 dark:text-gray-400">Correct Answer: </span>
+                                                                            <span className="font-medium text-green-700 dark:text-green-300">
+                                                                                {answer.correctAnswer}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {/* Explanation */}
+                                                                {answer.explanation && (
+                                                                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                        <div className="flex items-start gap-2">
+                                                                            <span className="text-base mt-0.5">💡</span>
+                                                                            <div>
+                                                                                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Explanation</p>
+                                                                                <p className="text-sm text-amber-800 dark:text-amber-300">{answer.explanation}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600 dark:text-gray-400">Detailed answer breakdown is not available for this test.</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                                            {selectedReport.isPdfTest
-                                                ? (selectedReport.pdfEvaluated ? `Your marks: ${selectedReport.pdfMarksAwarded}/${selectedReport.pdfMaxMarks} (${Math.round(((selectedReport.pdfMarksAwarded || 0) / (selectedReport.pdfMaxMarks || 1)) * 100)}%)` : 'Awaiting teacher evaluation')
-                                                : `Your score: ${selectedReport.score}/${selectedReport.totalQuestions} (${selectedReport.totalQuestions > 0 ? Math.round((selectedReport.score / selectedReport.totalQuestions) * 100) : 0}%)`}
-                                        </p>
-                                    </div>
-                                )}
+                                        );
+                                    }
+
+                                    // No detailed answers available
+                                    return (
+                                        <div className="text-center py-12">
+                                            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                            <p className="text-gray-600 dark:text-gray-400">Detailed answer breakdown is not available for this test.</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                                                {getResultScoreLabel(selectedReport)}
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Modal Footer */}
                             <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">{selectedReport.score} Correct</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <XCircle className="w-4 h-4 text-red-600" />
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">{selectedReport.totalQuestions - selectedReport.score} Incorrect</span>
-                                    </div>
+                                    {/* Only show score breakdown if published */}
+                                    {selectedReport.evaluationStatus === 'published' || !selectedReport.evaluationMode || selectedReport.evaluationMode === 'auto' ? (
+                                        <>
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {selectedReport.questionEvaluations
+                                                        ? `${selectedReport.marksObtained?.toFixed(1) || selectedReport.score}/${selectedReport.totalMarks || selectedReport.totalQuestions}`
+                                                        : `${selectedReport.score} Correct`}
+                                                </span>
+                                            </div>
+                                            {!selectedReport.questionEvaluations && (
+                                                <div className="flex items-center gap-2">
+                                                    <XCircle className="w-4 h-4 text-red-600" />
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">{selectedReport.totalQuestions - selectedReport.score} Incorrect</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Results pending</span>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => downloadReport(selectedReport)}
-                                        className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Download PDF</span>
-                                    </button>
+                                    {/* Only show download if published */}
+                                    {(selectedReport.evaluationStatus === 'published' || !selectedReport.evaluationMode || selectedReport.evaluationMode === 'auto') && (
+                                        <button
+                                            onClick={() => downloadReport(selectedReport)}
+                                            className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Download PDF</span>
+                                        </button>
+                                    )}
                                     <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
                                         Close Report
                                     </button>

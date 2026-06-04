@@ -32,6 +32,8 @@ import { getTestById, getQuestionsByTestId, submitTestResult, hasStudentTakenTes
 import type { Test, Question } from '@/types';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import { addMistakesFromResult } from '@/services/mistakeBucketService';
+import { OBJECTIVE_QUESTION_TYPES } from '@/lib/constants';
+import type { EvaluationMode } from '@/types';
 
 // Circular Progress Component
 function CircularProgress({
@@ -790,6 +792,20 @@ export default function TestPage() {
             const timeTakenSeconds = currentStartTime ? Math.floor((endTime.getTime() - currentStartTime.getTime()) / 1000) : 0;
 
             // Submit with detailed answers and timing/anti-cheat data
+            // Determine evaluation status based on test's evaluation mode
+            const evalMode: EvaluationMode = currentTest.evaluationMode || 'auto';
+            let evaluationStatus: 'pending' | 'published' = 'published';
+            
+            if (evalMode === 'manual') {
+                evaluationStatus = 'pending';
+            } else if (evalMode === 'hybrid') {
+                // Check if there are any subjective questions
+                const hasSubjective = currentQuestions.some(q => 
+                    !OBJECTIVE_QUESTION_TYPES.includes(q.type as typeof OBJECTIVE_QUESTION_TYPES[number])
+                );
+                evaluationStatus = hasSubjective ? 'pending' : 'published';
+            }
+
             await submitTestResult({
                 studentId: currentUser.uid,
                 studentName: currentUser.name,
@@ -815,7 +831,10 @@ export default function TestPage() {
                 copyAttempts: copyAttemptsRef.current,
                 rightClickAttempts: rightClickAttemptsRef.current,
                 fullscreenExits: fullscreenExitsRef.current,
-                antiCheatEnabled
+                antiCheatEnabled,
+                // Evaluation data
+                evaluationStatus,
+                evaluationMode: evalMode,
             });
 
             // Exit fullscreen on submit and cleanup
@@ -1095,46 +1114,117 @@ export default function TestPage() {
     if (isSubmitted) {
         const percentage = Math.round((score / questions.length) * 100);
         const timeTaken = testStartTime && testEndTime ? Math.floor((testEndTime.getTime() - testStartTime.getTime()) / 1000) : 0;
+        const evalMode = test?.evaluationMode || 'auto';
+        const isPendingEval = evalMode === 'manual' || (evalMode === 'hybrid' && questions.some(q => !OBJECTIVE_QUESTION_TYPES.includes(q.type as typeof OBJECTIVE_QUESTION_TYPES[number])));
+
+        // Calculate expected result date
+        const expectedDays = test?.expectedResultDays || 5;
+        const expectedDate = new Date();
+        expectedDate.setDate(expectedDate.getDate() + expectedDays);
 
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-6">
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-lg w-full bg-white dark:bg-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-800 text-center">
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#1650EB] to-[#1650EB] flex items-center justify-center">
-                        <CheckCircle className="w-10 h-10 text-white" />
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }} className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${isPendingEval ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-[#1650EB] to-[#1650EB]'}`}>
+                        {isPendingEval ? (
+                            <Clock className="w-10 h-10 text-white" />
+                        ) : (
+                            <CheckCircle className="w-10 h-10 text-white" />
+                        )}
                     </motion.div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Test Completed!</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        {isPendingEval ? 'Submitted Successfully!' : 'Test Completed!'}
+                    </h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">{test?.title}</p>
 
-                    <div className="flex justify-center mb-6">
-                        <CircularProgress percentage={percentage} />
-                    </div>
+                    {isPendingEval ? (
+                        /* Pending Evaluation Card */
+                        <div className="space-y-4 mb-6">
+                            <div className="eval-card p-5 text-left space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="eval-status-badge eval-status-pending">
+                                        <span className="eval-pulse-dot bg-amber-500" />
+                                        Pending Evaluation
+                                    </div>
+                                </div>
 
-                    {/* Score Details */}
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-4 space-y-2">
-                        <p className="text-lg text-gray-900 dark:text-white">
-                            <span className="font-bold text-[#1650EB]">{score}</span> / <span className="font-bold">{questions.length}</span> correct
-                        </p>
-                        {test?.negativeMarking && (
-                            <div className="text-sm">
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Marks: <span className="font-semibold text-green-600">{marksObtained.toFixed(2)}</span> / {totalMarks}
-                                </p>
-                                {negativeMarksApplied > 0 && (
-                                    <p className="text-red-500 text-xs">
-                                        (-{negativeMarksApplied.toFixed(2)} negative marks)
-                                    </p>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                        <span className="text-gray-600 dark:text-gray-400">Submitted on</span>
+                                        <span className="font-medium text-gray-900 dark:text-white ml-auto">
+                                            {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                        <span className="text-gray-600 dark:text-gray-400">Status</span>
+                                        <span className="font-medium text-amber-600 dark:text-amber-400 ml-auto">
+                                            Awaiting Teacher Review
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <Flag className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                        <span className="text-gray-600 dark:text-gray-400">Results expected</span>
+                                        <span className="font-medium text-gray-900 dark:text-white ml-auto">
+                                            {expectedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Evaluation mode info */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300 text-left">
+                                {evalMode === 'manual' ? (
+                                    <p>📝 Your teacher will manually review all answers. You&apos;ll be notified when results are published.</p>
+                                ) : (
+                                    <p>🔄 Objective questions have been auto-graded. Your teacher will review subjective answers. You&apos;ll be notified when full results are ready.</p>
                                 )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Time Taken */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">
-                        <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-400">
-                            <Clock className="w-5 h-5" />
-                            <span className="font-medium">Time taken: {formatDuration(timeTaken)}</span>
+                            {/* Time Taken */}
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                                    <Clock className="w-4 h-4" />
+                                    <span className="text-sm">Time taken: {formatDuration(timeTaken)}</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        /* Auto Evaluation - Show Score Immediately */
+                        <>
+                            <div className="flex justify-center mb-6">
+                                <CircularProgress percentage={percentage} />
+                            </div>
+
+                            {/* Score Details */}
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-4 space-y-2">
+                                <p className="text-lg text-gray-900 dark:text-white">
+                                    <span className="font-bold text-[#1650EB]">{score}</span> / <span className="font-bold">{questions.length}</span> correct
+                                </p>
+                                {test?.negativeMarking && (
+                                    <div className="text-sm">
+                                        <p className="text-gray-600 dark:text-gray-400">
+                                            Marks: <span className="font-semibold text-green-600">{marksObtained.toFixed(2)}</span> / {totalMarks}
+                                        </p>
+                                        {negativeMarksApplied > 0 && (
+                                            <p className="text-red-500 text-xs">
+                                                (-{negativeMarksApplied.toFixed(2)} negative marks)
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Time Taken */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">
+                                <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-400">
+                                    <Clock className="w-5 h-5" />
+                                    <span className="font-medium">Time taken: {formatDuration(timeTaken)}</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* Anti-cheat Report */}
                     {antiCheatEnabled && (tabSwitchCount > 0 || copyAttempts > 0 || rightClickAttempts > 0 || fullscreenExits > 0) && (

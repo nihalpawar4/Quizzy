@@ -953,6 +953,33 @@ export async function createAnnouncement(announcement: {
 }
 
 /**
+ * Create notification when a test result is published to a student
+ */
+export async function createResultNotification(data: {
+    studentId: string;
+    studentClass: number;
+    testTitle: string;
+    subject: string;
+    score: number;
+    totalMarks: number;
+    resultId: string;
+    teacherId: string;
+    teacherName: string;
+}): Promise<string> {
+    const percentage = data.totalMarks > 0 ? Math.round((data.score / data.totalMarks) * 100) : 0;
+    return createNotification({
+        type: 'result',
+        title: '📊 Test Results Published',
+        message: `Your ${data.testTitle} has been evaluated. Score: ${data.score}/${data.totalMarks} (${percentage}%)`,
+        targetClass: data.studentClass,
+        createdBy: data.teacherId,
+        createdByName: data.teacherName,
+        linkedId: data.resultId,
+        subject: data.subject,
+    });
+}
+
+/**
  * Subscribe to announcements created by a specific teacher (real-time)
  */
 export function subscribeToTeacherAnnouncements(

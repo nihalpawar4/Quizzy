@@ -90,5 +90,27 @@ export const COLLECTIONS = {
     DAILY_QUIZ_RESULTS: 'dailyQuizResults',
     // Games Zone
     GAME_STATS: 'gameStats',
+    // Evaluation Drafts (auto-save during evaluation)
+    EVALUATION_DRAFTS: 'evaluationDrafts',
+} as const;
+
+// Evaluation mode options for test creation
+export const EVALUATION_MODES = [
+    { value: 'auto' as const, label: 'Auto Evaluation', description: 'MCQ, True/False, Fill in Blank checked automatically', icon: '⚡' },
+    { value: 'manual' as const, label: 'Manual Evaluation', description: 'Teacher checks all questions manually', icon: '✍️' },
+    { value: 'hybrid' as const, label: 'Hybrid Evaluation', description: 'Objective auto-checked, subjective requires teacher review', icon: '🔄' },
+];
+
+// Question types that can be auto-graded
+export const OBJECTIVE_QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank'] as const;
+// Question types that require manual grading
+export const SUBJECTIVE_QUESTION_TYPES = ['short_answer', 'one_word'] as const;
+
+// Evaluation status labels and colors
+export const EVALUATION_STATUS_CONFIG = {
+    pending: { label: 'Pending Evaluation', color: 'amber', icon: '⏳' },
+    under_review: { label: 'Under Review', color: 'blue', icon: '🔍' },
+    evaluated: { label: 'Evaluated', color: 'green', icon: '✅' },
+    published: { label: 'Published', color: 'emerald', icon: '📊' },
 } as const;
 

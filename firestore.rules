@@ -320,5 +320,16 @@ service cloud.firestore {
       // Only teachers can update settings
       allow write: if isTeacher();
     }
+    
+    // ==================== EVALUATION DRAFTS COLLECTION ====================
+    
+    match /evaluationDrafts/{draftId} {
+      // Only teachers can read evaluation drafts
+      allow read: if isTeacher();
+      // Only teachers can create and update drafts
+      allow create, update: if isTeacher();
+      // Only teachers can delete drafts
+      allow delete: if isTeacher();
+    }
   }
 }

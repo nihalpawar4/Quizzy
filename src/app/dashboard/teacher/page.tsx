@@ -51,6 +51,7 @@ import {
     DollarSign,
     ToggleLeft,
     ToggleRight,
+    ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -85,7 +86,7 @@ import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
 import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User, SubjectNote, Notification, ClassChangeRequest } from '@/types';
-import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS } from '@/lib/constants';
+import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS, EVALUATION_MODES } from '@/lib/constants';
 import { collection, query, orderBy, onSnapshot, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChat } from '@/contexts/ChatContext';
@@ -95,6 +96,7 @@ import { saveLastRoute } from '@/lib/routePersistence';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer' | 'mixed' | 'pdf_upload';
+type EvalModeType = 'auto' | 'manual' | 'hybrid';
 
 interface QuestionTypeOption {
     value: QuestionType;
@@ -171,7 +173,7 @@ export default function TeacherDashboard() {
 
     // Create test states
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [createStep, setCreateStep] = useState<1 | 2 | 3>(1); // Step 1: Details, Step 2: Question Type, Step 3: Upload
+    const [createStep, setCreateStep] = useState<1 | 2 | 3 | 4>(1); // Step 1: Details, Step 2: Evaluation Mode, Step 3: Question Type, Step 4: Upload
     const [newTest, setNewTest] = useState<{
         title: string;
         subject: typeof SUBJECTS[number];
@@ -190,6 +192,8 @@ export default function TeacherDashboard() {
         isScheduleEnabled: boolean;
         expiresAt: string;
         isExpiryEnabled: boolean;
+        evaluationMode: EvalModeType;
+        expectedResultDays: number;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -208,6 +212,8 @@ export default function TeacherDashboard() {
         isScheduleEnabled: false,
         expiresAt: '',
         isExpiryEnabled: false,
+        evaluationMode: 'auto',
+        expectedResultDays: 5,
     });
 
     // Proctoring report modal state
@@ -695,6 +701,8 @@ export default function TeacherDashboard() {
                     isCombinedSubject: newTest.isCombinedSubject,
                     combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
                     isScheduleEnabled: newTest.isScheduleEnabled,
+                    evaluationMode: newTest.evaluationMode,
+                    expectedResultDays: newTest.expectedResultDays,
                     ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
                     ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
                 });
@@ -749,6 +757,8 @@ export default function TeacherDashboard() {
                 isCombinedSubject: newTest.isCombinedSubject,
                 combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
                 isScheduleEnabled: newTest.isScheduleEnabled,
+                evaluationMode: newTest.evaluationMode,
+                expectedResultDays: newTest.expectedResultDays,
                 ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
                 ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
             });
@@ -796,6 +806,8 @@ export default function TeacherDashboard() {
             isScheduleEnabled: false,
             expiresAt: '',
             isExpiryEnabled: false,
+            evaluationMode: 'auto',
+            expectedResultDays: 5,
         });
         setCsvFile(null);
         setJsonInput('');
@@ -1428,6 +1440,23 @@ export default function TeacherDashboard() {
                             </button>
                         ))}
                     </div>
+                </motion.div>
+
+                {/* Evaluation Center Quick Access */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="mb-6">
+                    <button
+                        onClick={() => router.push('/dashboard/teacher/evaluation')}
+                        className="w-full sm:w-auto flex items-center gap-3 px-5 py-3 eval-card hover:shadow-lg transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <ClipboardCheck className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Evaluation Center</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Review & publish manual evaluations</p>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-gray-400 ml-auto group-hover:translate-x-1 transition-transform" />
+                    </button>
                 </motion.div>
 
                 {/* Stats Cards - Clickable */}
@@ -2616,8 +2645,72 @@ export default function TeacherDashboard() {
                                             </div>
                                         )}
 
-                                        {/* STEP 2: Question Type */}
+                                        {/* STEP 2: Evaluation Mode */}
                                         {createStep === 2 && (
+                                            <div className="space-y-6">
+                                                <p className="text-gray-600 dark:text-gray-400">Choose how this test should be evaluated:</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                    {EVALUATION_MODES.map((mode) => (
+                                                        <button
+                                                            key={mode.value}
+                                                            onClick={() => setNewTest({ ...newTest, evaluationMode: mode.value })}
+                                                            className={`eval-mode-card text-left ${newTest.evaluationMode === mode.value ? 'selected' : ''}`}
+                                                        >
+                                                            <span className="text-3xl">{mode.icon}</span>
+                                                            <p className="font-semibold text-gray-900 dark:text-white mt-3">{mode.label}</p>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{mode.description}</p>
+                                                            {newTest.evaluationMode === mode.value && (
+                                                                <div className="absolute top-3 right-3">
+                                                                    <CheckCircle className="w-5 h-5 text-[#1650EB]" />
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Expected Result Days - only for manual/hybrid */}
+                                                {(newTest.evaluationMode === 'manual' || newTest.evaluationMode === 'hybrid') && (
+                                                    <div className="eval-card p-4 space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <CalendarDays className="w-4 h-4 text-[#1650EB]" />
+                                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                Expected Result Days
+                                                            </label>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            Students will see &quot;Results expected in X days&quot; after submitting.
+                                                        </p>
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                max={30}
+                                                                value={newTest.expectedResultDays}
+                                                                onChange={(e) => setNewTest({ ...newTest, expectedResultDays: parseInt(e.target.value) || 5 })}
+                                                                className="input w-24"
+                                                            />
+                                                            <span className="text-sm text-gray-500 dark:text-gray-400">days after submission</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Info box */}
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
+                                                    {newTest.evaluationMode === 'auto' && (
+                                                        <p>📌 All questions will be auto-graded. Students see results immediately after submission.</p>
+                                                    )}
+                                                    {newTest.evaluationMode === 'manual' && (
+                                                        <p>📌 You will manually evaluate every answer. Students see &quot;Pending Evaluation&quot; until you publish results.</p>
+                                                    )}
+                                                    {newTest.evaluationMode === 'hybrid' && (
+                                                        <p>📌 MCQ, True/False, and Fill-in-Blank are auto-graded. Short Answer and One Word questions require your manual review.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* STEP 3: Question Type */}
+                                        {createStep === 3 && (
                                             <div className="space-y-6">
                                                 <p className="text-gray-600 dark:text-gray-400">Select the type of questions for this test:</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2632,8 +2725,8 @@ export default function TeacherDashboard() {
                                             </div>
                                         )}
 
-                                        {/* STEP 3: Upload Questions */}
-                                        {createStep === 3 && (
+                                        {/* STEP 4: Upload Questions */}
+                                        {createStep === 4 && (
                                             <div className="space-y-6">
                                                 <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 flex items-center gap-3">
                                                     <span className="text-2xl">{QUESTION_TYPES.find(t => t.value === newTest.questionType)?.icon}</span>
@@ -2932,11 +3025,11 @@ export default function TeacherDashboard() {
 
                                     {/* Footer with Navigation */}
                                     <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-between flex-shrink-0">
-                                        <button onClick={() => createStep > 1 ? setCreateStep((createStep - 1) as 1 | 2 | 3) : (setShowCreateModal(false), resetCreateForm())} className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <button onClick={() => createStep > 1 ? setCreateStep((createStep - 1) as 1 | 2 | 3 | 4) : (setShowCreateModal(false), resetCreateForm())} className="px-6 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                             {createStep > 1 ? 'Back' : 'Cancel'}
                                         </button>
-                                        {createStep < 3 ? (
-                                            <button onClick={() => setCreateStep((createStep + 1) as 1 | 2 | 3)} disabled={createStep === 1 && !newTest.title.trim()} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                        {createStep < 4 ? (
+                                            <button onClick={() => setCreateStep((createStep + 1) as 1 | 2 | 3 | 4)} disabled={createStep === 1 && !newTest.title.trim()} className="flex items-center gap-2 px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                 Next <ArrowRight className="w-4 h-4" />
                                             </button>
                                         ) : (
