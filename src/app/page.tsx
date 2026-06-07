@@ -12,10 +12,10 @@ import {
   ChevronDown,
   Heart,
   MessageCircle,
-  Send,
+
   X,
   User,
-  Loader2,
+
   CheckCircle,
   Sun,
   Moon,
@@ -27,8 +27,7 @@ import {
   Award,
   Download
 } from 'lucide-react';
-import { addDoc, collection, Timestamp, getDocs, query, where, doc, getDoc, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWA } from '@/components/PWAProvider';
@@ -546,186 +545,7 @@ function InstallAppLink() {
   );
 }
 
-// ==================== FEE STRUCTURE SECTION ====================
-const feePlans = [
-  { board: 'CBSE', classes: 'Class 5 – 8', price: 6000, features: ['All Subjects', 'Weekly Tests', 'Doubt Sessions', 'Study Material', 'Progress Reports'], color: 'from-blue-600 to-blue-500', glow: 'shadow-blue-500/30', badge: '' },
-  { board: 'ICSE', classes: 'Class 5 – 8', price: 7000, features: ['All Subjects', 'Weekly Tests', 'Doubt Sessions', 'Study Material', 'Progress Reports'], color: 'from-indigo-600 to-indigo-500', glow: 'shadow-indigo-500/30', badge: '' },
-  { board: 'CBSE', classes: 'Class 9 – 10', price: 8000, subjects: 'Maths + Science', features: ['Maths + Science Focus', 'Board Prep', 'Mock Tests', 'Personal Mentoring', 'Detailed Analysis'], color: 'from-purple-600 to-purple-500', glow: 'shadow-purple-500/30', badge: 'Popular' },
-  { board: 'ICSE', classes: 'Class 9 – 10', price: 9000, subjects: 'Maths + Science', features: ['Maths + Science Focus', 'Board Prep', 'Mock Tests', 'Personal Mentoring', 'Detailed Analysis'], color: 'from-violet-600 to-violet-500', glow: 'shadow-violet-500/30', badge: 'Popular' },
-  { board: 'ALL', classes: 'Class 11 – 12', price: 10000, subjects: 'Mathematics', features: ['Advanced Maths', 'IIT/JEE Foundation', 'Board + Competitive', 'Expert Faculty', 'Weekly Tests'], color: 'from-[#1650EB] to-[#4338CA]', glow: 'shadow-[#1650EB]/30', badge: 'Premium' },
-];
 
-function FeeStructureSection() {
-  const [feeVisible, setFeeVisible] = useState(false);
-  const [loadingVisibility, setLoadingVisibility] = useState(true);
-  const [requestName, setRequestName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
-
-  useEffect(() => {
-    const checkVisibility = async () => {
-      try {
-        const settingsDoc = await getDoc(doc(db, 'settings', 'feeStructure'));
-        if (settingsDoc.exists() && settingsDoc.data().isVisible) { setFeeVisible(true); }
-      } catch (e) { console.error(e); }
-      setLoadingVisibility(false);
-    };
-    checkVisibility();
-  }, []);
-
-  useEffect(() => {
-    const savedName = localStorage.getItem('feeRequestName');
-    const savedStatus = localStorage.getItem('feeRequestStatus');
-    if (savedName) setRequestName(savedName);
-    if (savedStatus === 'pending') setRequestStatus('pending');
-    if (savedStatus === 'approved') { setRequestStatus('approved'); setFeeVisible(true); }
-    if (savedName && savedStatus === 'pending') {
-      (async () => {
-        try {
-          const q2 = query(collection(db, 'feeRequests'), where('name', '==', savedName));
-          const snap = await getDocs(q2);
-          if (!snap.empty) {
-            const data = snap.docs[0].data();
-            if (data.status === 'approved') { setRequestStatus('approved'); setFeeVisible(true); localStorage.setItem('feeRequestStatus', 'approved'); }
-            else if (data.status === 'rejected') { setRequestStatus('rejected'); localStorage.setItem('feeRequestStatus', 'rejected'); }
-          }
-        } catch (e) { console.error(e); }
-      })();
-    }
-  }, []);
-
-  const handleSubmitRequest = async () => {
-    const trimmed = requestName.trim();
-    if (!trimmed || trimmed.split(' ').length < 2) return;
-    setSubmitting(true);
-    try {
-      await addDoc(collection(db, 'feeRequests'), { name: trimmed, status: 'pending', createdAt: Timestamp.now() });
-      localStorage.setItem('feeRequestName', trimmed);
-      localStorage.setItem('feeRequestStatus', 'pending');
-      setRequestStatus('pending');
-      setSubmitted(true);
-    } catch (e) { console.error(e); }
-    setSubmitting(false);
-  };
-
-  if (loadingVisibility) return null;
-
-  return (
-    <section id="fees" className="py-24 px-6 relative overflow-hidden">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fee-glow { 0%,100%{box-shadow:0 0 20px rgba(22,80,235,0.1)} 50%{box-shadow:0 0 40px rgba(22,80,235,0.25)} }
-        .fee-card:hover { animation: fee-glow 2s ease-in-out infinite; }
-      ` }} />
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#1650EB]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl" />
-      </div>
-      <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ once: true }} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1650EB]/10 border border-[#1650EB]/20 rounded-full mb-6">
-            <span className="text-sm font-semibold text-[#1650EB] dark:text-[#6095DB]">💰 Transparent Pricing</span>
-          </motion.div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl text-[#020218] dark:text-white mb-4">
-            <span className="typo-serif-display">Fee</span>{' '}
-            <span className="typo-display text-[#1650EB]">Structure</span>
-          </h2>
-          <p className="typo-body text-[#6D6D6D] dark:text-gray-400 max-w-xl mx-auto">
-            Affordable pricing for quality education. CBSE &amp; ICSE boards, Classes 5 to 12.
-          </p>
-        </motion.div>
-
-        {feeVisible ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-            {feePlans.map((plan, index) => (
-              <motion.div
-                key={`${plan.board}-${plan.classes}`}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.08 }}
-                whileHover={{ y: -8, scale: 1.03 }}
-                className="fee-card relative group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:border-[#1650EB]/40"
-              >
-                {plan.badge && (
-                  <div className={`absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r ${plan.color}`}>
-                    {plan.badge}
-                  </div>
-                )}
-                <div className={`bg-gradient-to-r ${plan.color} px-5 py-4`}>
-                  <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">{plan.board === 'ALL' ? 'CBSE / ICSE' : plan.board}</p>
-                  <h3 className="text-white font-bold text-lg">{plan.classes}</h3>
-                  {plan.subjects && <p className="text-white/70 text-xs mt-0.5">{plan.subjects}</p>}
-                </div>
-                <div className="px-5 py-5">
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white">₹{plan.price.toLocaleString('en-IN')}</span>
-                    <span className="text-sm text-gray-400">/month</span>
-                  </div>
-                  <ul className="space-y-2 mt-4">
-                    {plan.features.map((feat) => (
-                      <li key={feat} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <CheckCircle className="w-3.5 h-3.5 text-[#1650EB] shrink-0" />
-                        {feat}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/auth/register?role=student" className={`mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-r ${plan.color} hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]`}>
-                    Enroll Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-lg mx-auto">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center shadow-xl shadow-gray-200/50 dark:shadow-none">
-              <div className="w-16 h-16 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <Shield className="w-8 h-8 text-[#1650EB] dark:text-[#6095DB]" />
-              </div>
-              {requestStatus === 'pending' ? (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Request Submitted! ⏳</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">Your request has been sent to the teacher for approval.</p>
-                  <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                    <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Awaiting teacher approval</span>
-                  </div>
-                </>
-              ) : requestStatus === 'rejected' ? (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Request Declined</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Please contact the teacher directly for more information.</p>
-                </>
-              ) : submitted ? (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Request Sent! ✅</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">The teacher will review your request shortly.</p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">View Fee Structure</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">Enter your full name to request access to the fee details.</p>
-                  <div className="space-y-3">
-                    <input type="text" value={requestName} onChange={(e) => setRequestName(e.target.value)} placeholder="Enter your full name (e.g. Nihal Pawar)"
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-[#1650EB] focus:ring-2 focus:ring-[#1650EB]/20 outline-none transition-all" />
-                    {requestName.trim() && requestName.trim().split(' ').length < 2 && (
-                      <p className="text-xs text-red-500">Please enter your full name (first + last name)</p>
-                    )}
-                    <button onClick={handleSubmitRequest} disabled={submitting || !requestName.trim() || requestName.trim().split(' ').length < 2}
-                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#1650EB] text-white rounded-xl font-semibold text-sm hover:bg-[#1243c7] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:-translate-y-0.5">
-                      {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><Send className="w-4 h-4" /> Request Access</>}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </div>
-    </section>
-  );
-}
 
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -825,12 +645,7 @@ export default function HomePage() {
               </AnimatePresence>
             </motion.button>
 
-            <Link
-              href="#fees"
-              className="hidden sm:block text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
-            >
-              Fees
-            </Link>
+
             <Link
               href="#faq"
               className="hidden sm:block text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
@@ -1121,8 +936,7 @@ export default function HomePage() {
         </motion.div>
       </main>
 
-      {/* Fee Structure Section */}
-      <FeeStructureSection />
+
 
       {/* FAQ Section */}
       <section id="faq" className="py-24 px-6">

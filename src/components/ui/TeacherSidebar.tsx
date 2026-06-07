@@ -9,7 +9,7 @@ import {
     BarChart3,
     BookMarked,
     HelpCircle,
-    DollarSign,
+
     Megaphone,
     Plus,
     MessageCircle,
@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 
 interface TeacherSidebarProps {
-    activeTab: 'tests' | 'analytics' | 'notes' | 'qa' | 'fees';
-    onTabChange: (tab: 'tests' | 'analytics' | 'notes' | 'qa' | 'fees') => void;
+    activeTab: 'tests' | 'analytics' | 'notes' | 'qa';
+    onTabChange: (tab: 'tests' | 'analytics' | 'notes' | 'qa') => void;
     userName: string;
     userPhotoURL?: string | null;
     totalUnreadChat: number;
@@ -43,7 +43,7 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'analytics' | 'notes' | 'qa' | 'fees';
+    tab?: 'tests' | 'analytics' | 'notes' | 'qa';
     href?: string;
     badge?: number;
     onClick?: () => void;
@@ -99,14 +99,7 @@ export default function TeacherSidebar({
             badge: pendingQACount > 0 ? pendingQACount : undefined,
             activeColor: 'bg-orange-500',
         },
-        {
-            id: 'fees',
-            label: 'Fee Requests',
-            shortLabel: 'Fees',
-            icon: DollarSign,
-            tab: 'fees',
-            activeColor: 'bg-amber-500',
-        },
+
     ];
 
     const quickItems: NavItem[] = [
@@ -281,7 +274,6 @@ export default function TeacherSidebar({
     // Items shown in the "More" flyout on mobile
     const mobileMoreItems: NavItem[] = [
         mainItems.find(i => i.id === 'qa')!,
-        mainItems.find(i => i.id === 'fees')!,
         {
             id: 'homework',
             label: 'Homework',
@@ -657,14 +649,12 @@ export default function TeacherSidebar({
                                                     >
                                                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
                                                             item.id === 'qa' ? 'bg-orange-50 dark:bg-orange-900/20' :
-                                                            item.id === 'fees' ? 'bg-amber-50 dark:bg-amber-900/20' :
                                                             item.id === 'announce' ? 'bg-amber-50 dark:bg-amber-900/20' :
                                                             item.id === 'create-test' ? 'bg-blue-50 dark:bg-blue-900/20' :
                                                             'bg-gray-100 dark:bg-gray-800'
                                                         }`}>
                                                             <item.icon className={`w-3.5 h-3.5 ${
                                                                 item.id === 'qa' ? 'text-orange-500' :
-                                                                item.id === 'fees' ? 'text-amber-500' :
                                                                 item.id === 'announce' ? 'text-amber-500' :
                                                                 item.id === 'create-test' ? 'text-[#1650EB]' :
                                                                 'text-gray-500'
