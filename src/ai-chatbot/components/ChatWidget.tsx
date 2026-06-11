@@ -33,6 +33,10 @@ interface ChatWidgetProps {
     role: 'student' | 'teacher';
     studentClass?: number;
   } | null;
+  /** When provided, hides built-in FAB and uses this to control the panel */
+  controlledOpen?: boolean;
+  /** Called when panel wants to close (controlled mode) */
+  onClose?: () => void;
 }
 
 // ==================== SUGGESTED QUESTIONS ====================
@@ -55,8 +59,18 @@ const TEACHER_SUGGESTIONS = [
 
 // ==================== COMPONENT ====================
 
-export default function ChatWidget({ user }: ChatWidgetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ChatWidget({ user, controlledOpen, onClose }: ChatWidgetProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Controlled vs uncontrolled
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = isControlled
+    ? (v: boolean | ((p: boolean) => boolean)) => {
+        const val = typeof v === 'function' ? v(isOpen) : v;
+        if (!val && onClose) onClose();
+      }
+    : setInternalOpen;
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -172,24 +186,26 @@ export default function ChatWidget({ user }: ChatWidgetProps) {
 
   return (
     <>
-      {/* Floating Button */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-[60] w-14 h-14 bg-gradient-to-br from-[#1650EB] to-[#0a1628] text-white rounded-full shadow-lg shadow-[#1650EB]/30 flex items-center justify-center hover:shadow-xl hover:shadow-[#1650EB]/40 transition-shadow"
-            aria-label="Open AI Chat"
-          >
-            <MessageCircle className="w-6 h-6" />
-            <span className="absolute inset-0 rounded-full bg-[#1650EB] animate-ping opacity-20" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Floating Button — only in uncontrolled mode */}
+      {!isControlled && (
+        <AnimatePresence>
+          {!isOpen && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setIsOpen(true)}
+              className="fixed bottom-6 right-6 z-[60] w-14 h-14 bg-gradient-to-br from-[#1650EB] to-[#0a1628] text-white rounded-full shadow-lg shadow-[#1650EB]/30 flex items-center justify-center hover:shadow-xl hover:shadow-[#1650EB]/40 transition-shadow"
+              aria-label="Open AI Chat"
+            >
+              <MessageCircle className="w-6 h-6" />
+              <span className="absolute inset-0 rounded-full bg-[#1650EB] animate-ping opacity-20" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Chat Window */}
       <AnimatePresence>

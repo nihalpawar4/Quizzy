@@ -31,7 +31,8 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWA } from '@/components/PWAProvider';
-import { PostQuestionButton, PostQuestionModal, QuestionList } from '@/components/qa';
+import { PostQuestionModal, QuestionList } from '@/components/qa';
+import FloatingActions from '@/components/ui/FloatingActions';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
@@ -550,6 +551,7 @@ function InstallAppLink() {
 export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [showCountdown, setShowCountdown] = useState(() => {
     // Don't show countdown if deadline has already passed
     return Date.now() < ENROLLMENT_DEADLINE;
@@ -1209,8 +1211,12 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* Floating Post Question Button */}
-      <PostQuestionButton onClick={() => setIsQuestionModalOpen(true)} />
+      {/* Unified Floating Actions */}
+      <FloatingActions
+        onOpenChat={() => setIsChatOpen(true)}
+        onOpenQuestion={() => setIsQuestionModalOpen(true)}
+        isChatOpen={isChatOpen}
+      />
 
       {/* Question Submission Modal */}
       <PostQuestionModal
@@ -1219,8 +1225,12 @@ export default function HomePage() {
         user={user}
       />
 
-      {/* AI Chatbot — Powered by Gemini + RAG */}
-      <ChatWidget user={user} />
+      {/* AI Chatbot (controlled mode) */}
+      <ChatWidget
+        user={user}
+        controlledOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+      />
 
 
     </div>
