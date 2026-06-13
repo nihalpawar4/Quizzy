@@ -212,6 +212,25 @@ export interface DailyQuizResult {
     completedAt: Date;
 }
 
+// Anti-cheat persistent test session
+export type TestSessionStatus = 'in_progress' | 'completed' | 'failed';
+export type TestSessionType = 'test' | 'daily_challenge';
+
+export interface TestSession {
+    id: string;
+    userId: string;
+    testId: string;                          // testId or 'daily_YYYY-MM-DD_classN'
+    sessionType: TestSessionType;
+    currentQuestion: number;                 // 0-indexed
+    answers: (number | string | null)[];     // mirrors the test answers array
+    score: number;                           // running correct count
+    totalQuestions: number;
+    startedAt: Date;
+    lastActiveAt: Date;
+    completed: boolean;
+    status: TestSessionStatus;
+}
+
 // Game Stats for Games Zone
 export interface GameStats {
     id: string;

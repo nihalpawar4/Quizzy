@@ -49,6 +49,15 @@ import { requestAndStoreFCMToken } from '@/lib/messaging';
 import HomeworkList from '@/components/homework/HomeworkList';
 import NotesList from '@/components/notes/NotesList';
 import { getDailyQuizQuestions, hasCompletedDailyQuiz, submitDailyQuiz, getDailyQuizHistory } from '@/services/dailyQuizService';
+import {
+    createTestSession,
+    getActiveDailySession,
+    getDailyChallengeTestId,
+    updateSessionProgress,
+    completeSession as completeTestSession,
+    getActiveTestSessionIds,
+} from '@/services/testSessionService';
+import type { TestSession } from '@/types';
 
 import { useChat } from '@/contexts/ChatContext';
 import { saveLastRoute } from '@/lib/routePersistence';
@@ -74,6 +83,7 @@ export default function StudentDashboard() {
     const [tests, setTests] = useState<Test[]>([]);
     const [results, setResults] = useState<TestResult[]>([]);
     const [takenTests, setTakenTests] = useState<Set<string>>(new Set());
+    const [resumableTests, setResumableTests] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [showComingSoon, setShowComingSoon] = useState(false);
     const [comingSoonFeature, setComingSoonFeature] = useState('');
@@ -126,6 +136,7 @@ export default function StudentDashboard() {
     const [dailyHistory, setDailyHistory] = useState<{ date: string; score: number; totalQuestions: number; completedAt: Date }[]>([]);
     const [dailyHistoryLoading, setDailyHistoryLoading] = useState(false);
     const [dailyQuizScore, setDailyQuizScore] = useState<{ score: number; total: number } | null>(null);
+    const [dailyQuizSession, setDailyQuizSession] = useState<TestSession | null>(null);
 
 
     // PDF Test viewer state
@@ -425,6 +436,14 @@ export default function StudentDashboard() {
             // Derive taken tests directly from results - no extra API calls!
             const taken = new Set<string>(resultsData.map(r => r.testId));
             setTakenTests(taken);
+
+            // Load active (in-progress) test sessions to show "Resume" buttons
+            try {
+                const activeIds = await getActiveTestSessionIds(user.uid);
+                setResumableTests(activeIds);
+            } catch (err) {
+                console.error('[Quizy] Failed to load active sessions:', err);
+            }
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -656,9 +675,11 @@ export default function StudentDashboard() {
         Promise.all([
             getDailyQuizQuestions(user.studentClass),
             hasCompletedDailyQuiz(user.uid),
-        ]).then(([questions, completed]) => {
+            getActiveDailySession(user.uid, user.studentClass),
+        ]).then(([questions, completed, session]) => {
             setDailyQuizQuestions(questions);
             setDailyQuizCompleted(completed);
+            setDailyQuizSession(session);
         }).catch(err => {
             console.error('[Quizy] Daily quiz load error:', err);
         }).finally(() => {
@@ -1077,7 +1098,7 @@ export default function StudentDashboard() {
                                 {/* Name — horizontal on desktop, stacked on mobile */}
                                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white leading-tight tracking-tight">
                                     Welcome back,{' '}
-                                    <span className="font-extrabold" style={{ background: nameGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                    <span className="font-extrabold text-white">
                                         {user.name}!
                                     </span> 👋
                                 </h2>
@@ -1169,6 +1190,7 @@ export default function StudentDashboard() {
                         user={user}
                         streak={user.currentStreak || 0}
                         longestStreak={user.longestStreak || 0}
+                        existingSession={dailyQuizSession}
                         onComplete={(score, total) => {
                             setDailyQuizCompleted(true);
                             setDailyQuizScore({ score, total });
@@ -1521,6 +1543,7 @@ export default function StudentDashboard() {
                             <div className="space-y-2.5">
                                 {filteredTests.map((test, index) => {
                                     const hasTaken = takenTests.has(test.id);
+                                    const hasActiveSession = resumableTests.has(test.id);
                                     const result = results.find(r => r.testId === test.id);
                                     const isScheduled = test.scheduledStartTime && new Date(test.scheduledStartTime) > new Date();
                                     const isExpired = !hasTaken && test.expiresAt && new Date(test.expiresAt) < new Date();
@@ -1658,9 +1681,12 @@ export default function StudentDashboard() {
                                                         <Link
                                                             href={`/test/${test.id}`}
                                                             onClick={(e) => e.stopPropagation()}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
+                                                            className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full text-white hover:shadow-lg transition-all active:scale-95 ${hasActiveSession
+                                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-orange-500/20'
+                                                                : 'bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] hover:shadow-[#1650EB]/20'
+                                                            }`}
                                                         >
-                                                            Start <ArrowRight className="w-3 h-3" />
+                                                            {hasActiveSession ? 'Resume' : 'Start'} <ArrowRight className="w-3 h-3" />
                                                         </Link>
                                                     )}
                                                 </div>
@@ -1843,9 +1869,12 @@ export default function StudentDashboard() {
                                                                     ) : (
                                                                         <Link
                                                                             href={`/test/${test.id}`}
-                                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium text-sm hover:bg-[#1243c7] transition-colors"
+                                                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-medium text-sm transition-colors ${hasActiveSession
+                                                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                                                                                : 'bg-[#1650EB] hover:bg-[#1243c7]'
+                                                                            }`}
                                                                         >
-                                                                            Start Test <ArrowRight className="w-4 h-4" />
+                                                                            {hasActiveSession ? '🔄 Resume Test' : 'Start Test'} <ArrowRight className="w-4 h-4" />
                                                                         </Link>
                                                                     )
                                                                 )}
@@ -3647,10 +3676,11 @@ interface DailyQuizCardProps {
     user: AppUser;
     streak: number;
     longestStreak: number;
+    existingSession: TestSession | null;
     onComplete: (score: number, total: number) => void;
 }
 
-function DailyQuizCard({ questions, completed, loading, user, streak, longestStreak, onComplete }: DailyQuizCardProps) {
+function DailyQuizCard({ questions, completed, loading, user, streak, longestStreak, existingSession, onComplete }: DailyQuizCardProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentQ, setCurrentQ] = useState(0);
     const [selected, setSelected] = useState<number | null>(null);
@@ -3661,6 +3691,23 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
     const [resultLongest, setResultLongest] = useState(longestStreak);
     const [submitting, setSubmitting] = useState(false);
     const [streakMessage, setStreakMessage] = useState('');
+    const [sessionId, setSessionId] = useState<string | null>(existingSession?.id || null);
+    const [isFailed, setIsFailed] = useState(existingSession?.status === 'failed');
+    const sessionIdRef = useRef<string | null>(existingSession?.id || null);
+
+    // Auto-resume from existing in-progress session
+    useEffect(() => {
+        if (existingSession && existingSession.status === 'in_progress' && !isPlaying && !finished) {
+            console.log('[Quizy] Resuming daily challenge from session:', existingSession.id, 'question:', existingSession.currentQuestion);
+            setSessionId(existingSession.id);
+            sessionIdRef.current = existingSession.id;
+            setCurrentQ(existingSession.currentQuestion);
+            setCorrectCount(existingSession.score);
+            setIsPlaying(true);
+        } else if (existingSession?.status === 'failed') {
+            setIsFailed(true);
+        }
+    }, [existingSession]);
 
     // ── Loading state ──
     if (loading) {
@@ -3707,8 +3754,24 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
         setShowAnswer(true);
 
         const isCorrect = optionIndex === questions[currentQ].correctOption;
+        const newCorrectCount = isCorrect ? correctCount + 1 : correctCount;
         if (isCorrect) {
-            setCorrectCount(prev => prev + 1);
+            setCorrectCount(newCorrectCount);
+        }
+
+        // Auto-save progress to Firestore session (fire-and-forget)
+        const sid = sessionIdRef.current;
+        if (sid) {
+            const updatedAnswers = new Array(questions.length).fill(null);
+            // Mark current as answered
+            for (let i = 0; i <= currentQ; i++) {
+                updatedAnswers[i] = i === currentQ ? optionIndex : i;
+            }
+            updateSessionProgress(sid, {
+                currentQuestion: Math.min(currentQ + 1, questions.length - 1),
+                answers: updatedAnswers,
+                score: newCorrectCount,
+            }).catch(err => console.error('[Quizy] Daily session save failed:', err));
         }
 
         // Auto-advance after 1.5s
@@ -3719,7 +3782,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
                 setShowAnswer(false);
             } else {
                 // Quiz done — submit
-                handleFinish(correctCount + (isCorrect ? 1 : 0));
+                handleFinish(newCorrectCount);
             }
         }, 1200);
     };
@@ -3733,6 +3796,13 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
             setStreakMessage(result.message);
         } catch (err) {
             console.error('[Quizy] Daily quiz submit error:', err);
+        }
+        // Mark session as completed
+        const sid = sessionIdRef.current;
+        if (sid) {
+            completeTestSession(sid, finalScore).catch(err =>
+                console.error('[Quizy] Daily session complete failed:', err)
+            );
         }
         setSubmitting(false);
         setFinished(true);
@@ -3888,13 +3958,59 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
         );
     }
 
+    // ── Failed state (challenge failed today) ──
+    if (isFailed) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-gradient-to-r from-red-500/90 to-rose-600 rounded-2xl p-5 text-white"
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🔒</div>
+                        <div>
+                            <h3 className="font-bold text-lg">Challenge Failed Today</h3>
+                            <p className="text-white/80 text-sm">Come back tomorrow for a new challenge!</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="flex items-center gap-1 text-2xl font-bold">
+                            🔥 {streak}
+                        </div>
+                        <p className="text-white/70 text-xs">day streak</p>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
     // ── Card state (not started) ──
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg hover:shadow-orange-500/20 transition-shadow"
-            onClick={() => setIsPlaying(true)}
+            onClick={async () => {
+                // Create a session before starting
+                if (!sessionIdRef.current) {
+                    try {
+                        const dailyTestId = getDailyChallengeTestId(user.studentClass || 0);
+                        const session = await createTestSession({
+                            userId: user.uid,
+                            testId: dailyTestId,
+                            sessionType: 'daily_challenge',
+                            totalQuestions: questions.length,
+                        });
+                        setSessionId(session.id);
+                        sessionIdRef.current = session.id;
+                        console.log('[Quizy] Created daily challenge session:', session.id);
+                    } catch (err) {
+                        console.error('[Quizy] Failed to create daily session:', err);
+                    }
+                }
+                setIsPlaying(true);
+            }}
         >
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

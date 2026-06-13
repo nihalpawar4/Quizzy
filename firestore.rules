@@ -331,5 +331,21 @@ service cloud.firestore {
       // Only teachers can delete drafts
       allow delete: if isTeacher();
     }
+    
+    // ==================== TEST SESSIONS COLLECTION (Anti-Cheat) ====================
+    
+    match /testSessions/{sessionId} {
+      // Students can read their own sessions; teachers can read all
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isTeacher());
+      // Students can create sessions for themselves only
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      // Students can update their own in-progress sessions only
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      // Only teachers can delete sessions (for admin resets)
+      allow delete: if isTeacher();
+    }
   }
 }

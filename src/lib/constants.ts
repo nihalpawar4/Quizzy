@@ -92,6 +92,8 @@ export const COLLECTIONS = {
     GAME_STATS: 'gameStats',
     // Evaluation Drafts (auto-save during evaluation)
     EVALUATION_DRAFTS: 'evaluationDrafts',
+    // Test Sessions (anti-cheat: persistent test progress)
+    TEST_SESSIONS: 'testSessions',
 } as const;
 
 // Evaluation mode options for test creation

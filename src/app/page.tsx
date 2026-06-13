@@ -35,6 +35,7 @@ import { PostQuestionModal, QuestionList } from '@/components/qa';
 import FloatingActions from '@/components/ui/FloatingActions';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import FeatureShowcase from '@/components/landing/FeatureShowcase';
 
 
 // FAQ Data - Updated with all features
@@ -684,69 +685,99 @@ export default function HomePage() {
       {/* Hero Section */}
       <main
         className="relative flex flex-col items-center justify-center min-h-screen px-6 overflow-hidden transition-[padding-top] duration-300 ease-in-out"
-        style={{ paddingTop: countdownHeight + 80 }}
+        style={{ paddingTop: countdownHeight + 64 }}
       >
-        {/* Animated Background */}
+        {/* Animated Background — Premium */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Large radial glow behind headline */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[900px] h-[700px] rounded-full blur-[140px] opacity-40 dark:opacity-25"
+            style={{ background: 'radial-gradient(ellipse, rgba(22,80,235,0.35) 0%, rgba(96,149,219,0.15) 50%, transparent 70%)' }}
+          />
+
+          {/* Subtle dot grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
+            style={{
+              backgroundImage: 'radial-gradient(circle, #1650EB 1px, transparent 1px)',
+              backgroundSize: '32px 32px',
+            }}
+          />
+
           {/* Gradient Orbs */}
           <motion.div
             animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.2, 0.4, 0.2],
+              scale: [1, 1.15, 1],
+              opacity: [0.15, 0.3, 0.15],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#6095DB]/30 dark:bg-[#1650EB]/20 rounded-full blur-3xl"
+            className="absolute top-[20%] left-[15%] w-[500px] h-[500px] bg-[#6095DB]/25 dark:bg-[#1650EB]/15 rounded-full blur-[100px]"
             style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
             animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.2, 0.4, 0.2],
+              scale: [1.1, 1, 1.1],
+              opacity: [0.15, 0.3, 0.15],
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#1650EB]/25 dark:bg-[#6095DB]/15 rounded-full blur-3xl"
+            className="absolute bottom-[15%] right-[10%] w-[450px] h-[450px] bg-[#1650EB]/20 dark:bg-[#6095DB]/12 rounded-full blur-[100px]"
             style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
             animate={{
-              scale: [1, 1.3, 1],
-              x: [0, 50, 0],
+              scale: [1, 1.2, 1],
+              x: [0, 30, 0],
             }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/2 right-1/3 w-64 h-64 bg-[#6095DB]/20 dark:bg-[#1650EB]/10 rounded-full blur-3xl"
+            className="absolute top-[45%] right-[25%] w-[300px] h-[300px] bg-[#6095DB]/15 dark:bg-[#1650EB]/8 rounded-full blur-[80px]"
             style={{ willChange: 'transform' }}
           />
 
-          {/* Floating Particles */}
-          {[...Array(4)].map((_, i) => (
+          {/* Floating Particles — more to fill space */}
+          {[...Array(8)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-2 h-2 bg-[#1650EB]/50 dark:bg-[#6095DB]/40 rounded-full"
+              className="absolute rounded-full"
               style={{
-                left: `${15 + i * 15}%`,
-                top: `${20 + (i % 3) * 25}%`,
+                left: `${8 + i * 11}%`,
+                top: `${15 + (i % 4) * 20}%`,
+                width: i % 3 === 0 ? 6 : i % 2 === 0 ? 4 : 3,
+                height: i % 3 === 0 ? 6 : i % 2 === 0 ? 4 : 3,
+                background: i % 2 === 0 ? 'rgba(22,80,235,0.4)' : 'rgba(96,149,219,0.35)',
               }}
               animate={{
-                y: [0, -30, 0],
-                opacity: [0.4, 1, 0.4],
+                y: [0, -25 - i * 3, 0],
+                opacity: [0.3, 0.8, 0.3],
               }}
               transition={{
-                duration: 3 + i * 0.5,
+                duration: 3 + i * 0.4,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: i * 0.3,
+                delay: i * 0.25,
               }}
             />
           ))}
+
+          {/* Animated horizontal lines */}
+          <motion.div
+            animate={{ opacity: [0.03, 0.06, 0.03] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[30%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#1650EB] to-transparent"
+          />
+          <motion.div
+            animate={{ opacity: [0.02, 0.05, 0.02] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute top-[70%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#6095DB] to-transparent"
+          />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center">
+        <div className="relative z-10 max-w-[1100px] w-full mx-auto text-center">
           {/* Experts Academy Top Label */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="mb-4"
+            className="mb-3"
           >
             <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
               {"// EXPERTS_ACADEMY_OF_EXCELLENCE"}
@@ -758,7 +789,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#6095DB]/10 dark:bg-[#6095DB]/20 border border-[#6095DB]/30 dark:border-[#6095DB]/50 rounded-full mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#6095DB]/10 dark:bg-[#6095DB]/20 border border-[#6095DB]/30 dark:border-[#6095DB]/50 rounded-full mb-6"
           >
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
@@ -771,13 +802,13 @@ export default function HomePage() {
             </span>
           </motion.div>
 
-          {/* Main Headline — 3 lines: "Master Your Exams" / "with excellent tutors" / typing */}
+          {/* Main Headline — LARGER, dominant focal point */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-4xl sm:text-5xl lg:text-7xl text-[#020218] dark:text-white mb-3 text-center"
-            style={{ lineHeight: 1.1 }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-[#020218] dark:text-white mb-2 text-center"
+            style={{ lineHeight: 1.05 }}
           >
             <motion.span
               initial={{ opacity: 0, x: -20 }}
@@ -798,7 +829,7 @@ export default function HomePage() {
             </motion.span>
           </motion.h1>
 
-          {/* Pen underline animation — draws curved line under heading */}
+          {/* Pen underline animation */}
           <PenUnderline />
 
           {/* Line 2: "with excellent tutors" */}
@@ -806,7 +837,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="typo-serif-display text-xl sm:text-2xl lg:text-3xl text-[#6D6D6D] dark:text-gray-400 mb-3 text-center"
+            className="typo-serif-display text-xl sm:text-2xl lg:text-3xl text-[#6D6D6D] dark:text-gray-400 mb-2 text-center"
           >
             with excellent tutors
           </motion.p>
@@ -816,7 +847,7 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9 }}
-            className="mb-8 h-7 sm:h-8 flex items-center justify-center"
+            className="mb-6 h-7 sm:h-8 flex items-center justify-center"
           >
             <TypingAnimation />
           </motion.div>
@@ -826,13 +857,13 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="typo-body text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-10"
+            className="typo-body text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-8"
           >
             Practice smarter, not harder. Take interactive tests, track your progress,
             and achieve academic excellence with our distraction-free platform.
           </motion.p>
 
-          {/* CTA Buttons — slightly smaller, matching typography */}
+          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -841,7 +872,7 @@ export default function HomePage() {
           >
             <Link
               href="/auth/register?role=student"
-              className="group relative flex items-center gap-2 px-6 py-3 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+              className="group relative flex items-center gap-2 px-7 py-3.5 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               <motion.span
                 className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
@@ -853,7 +884,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/auth/login?role=teacher"
-              className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+              className="group flex items-center gap-2 px-7 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
             >
               Teacher Portal
               <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
@@ -865,19 +896,35 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-8 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
+            className="mt-6 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
           >
             <Heart className="w-4 h-4 text-[#1650EB]" />
             <span className="typo-accent text-[11px]">Trusted by students across India</span>
           </motion.div>
         </div>
+      </main>
 
-        {/* Features Grid */}
+      {/* Feature Showcase — Interactive Product Demo */}
+      <FeatureShowcase />
+
+      {/* Features Grid */}
+      <section className="relative px-6 py-20 sm:py-24 bg-gradient-to-b from-white via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12 max-w-7xl mx-auto"
+        >
+          <h2 className="text-3xl sm:text-4xl text-[#020218] dark:text-white mb-4" style={{ lineHeight: 1.1 }}>
+            <span className="typo-serif-display">Features we </span>
+            <span className="typo-display text-[#1650EB]">provide</span>
+          </h2>
+        </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto mt-20"
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
         >
           {[
             {
@@ -936,8 +983,7 @@ export default function HomePage() {
             </motion.div>
           ))}
         </motion.div>
-      </main>
-
+      </section>
 
 
       {/* FAQ Section */}

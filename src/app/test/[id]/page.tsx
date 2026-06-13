@@ -29,11 +29,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTestById, getQuestionsByTestId, submitTestResult, hasStudentTakenTest } from '@/lib/services';
-import type { Test, Question } from '@/types';
+import type { Test, Question, TestSession } from '@/types';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import { addMistakesFromResult } from '@/services/mistakeBucketService';
 import { OBJECTIVE_QUESTION_TYPES } from '@/lib/constants';
 import type { EvaluationMode } from '@/types';
+import {
+    createTestSession,
+    getActiveTestSession,
+    updateSessionProgress,
+    completeSession,
+} from '@/services/testSessionService';
 
 // Circular Progress Component
 function CircularProgress({
@@ -193,6 +199,7 @@ export default function TestPage() {
     // Instructions screen state
     const [showInstructionsScreen, setShowInstructionsScreen] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
+    const [isResuming, setIsResuming] = useState(false);
 
 
 
@@ -208,6 +215,12 @@ export default function TestPage() {
     // Submit error state (separate from load error to avoid replacing the whole UI)
     const [submitError, setSubmitError] = useState<string | null>(null);
     const submitRetryCountRef = useRef(0);
+
+    // Anti-cheat session tracking
+    const [activeSession, setActiveSession] = useState<TestSession | null>(null);
+    const activeSessionRef = useRef<TestSession | null>(null);
+    const sessionSavePendingRef = useRef(false);
+    useEffect(() => { activeSessionRef.current = activeSession; }, [activeSession]);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -586,17 +599,39 @@ export default function TestPage() {
             }
 
             setQuestions(questionsData);
-            setAnswers(new Array(questionsData.length).fill(null));
 
             // Calculate total marks
             const marksPerQ = testData.marksPerQuestion || 1;
             setTotalMarks(questionsData.length * marksPerQ);
 
+            // ── Anti-cheat: Check for existing active session ──
+            try {
+                const existingSession = await getActiveTestSession(user!.uid, testId);
+                if (existingSession && existingSession.status === 'in_progress') {
+                    // Resume from saved session
+                    console.log('[Quizy] Resuming test from session:', existingSession.id, 'question:', existingSession.currentQuestion);
+                    setActiveSession(existingSession);
+                    setAnswers(existingSession.answers as AnswerValue[]);
+                    setCurrentIndex(existingSession.currentQuestion);
+                    setIsResuming(true);
+
+                    // Show instructions screen with "Resume" button
+                    setHasAgreed(true); // Auto-agree since they already started
+                    setShowInstructionsScreen(true);
+                    return;
+                }
+            } catch (sessionErr) {
+                console.error('[Quizy] Session check failed (non-blocking):', sessionErr);
+            }
+
+            // No active session — fresh start
+            setAnswers(new Array(questionsData.length).fill(null));
+
             // Show instructions or start test directly
             if (testData.showInstructions !== false) {
                 setShowInstructionsScreen(true);
             } else {
-                startTimer(testData);
+                await startTestWithSession(testData, questionsData.length);
                 if (testData.enableAntiCheat) {
                     setTimeout(() => enterFullscreen(), 500);
                 }
@@ -610,15 +645,16 @@ export default function TestPage() {
     };
 
     // Initialize the tamper-proof deadline-based timer
-    const startTimer = (testData: Test) => {
-        setTestStartTime(new Date());
+    const startTimer = (testData: Test, sessionStartTime?: Date) => {
+        const startTime = sessionStartTime || new Date();
+        setTestStartTime(startTime);
 
         if (testData.duration) {
             // Always clear any old persisted deadline first to prevent stale timers on retake
             clearPersistedDeadline();
 
-            // Calculate fresh deadline
-            let timerDeadline = Date.now() + testData.duration * 60 * 1000;
+            // Calculate deadline from actual start time (not now) — critical for resume
+            let timerDeadline = startTime.getTime() + testData.duration * 60 * 1000;
 
             // If test has an expiresAt, use whichever comes first
             if (testData.expiresAt) {
@@ -640,17 +676,47 @@ export default function TestPage() {
         }
     };
 
+    // Resume timer from a persisted session's startedAt timestamp
+    const resumeTimerFromSession = (testData: Test, session: TestSession) => {
+        startTimer(testData, session.startedAt);
+    };
 
+    // Start test and create a Firestore session
+    const startTestWithSession = async (testData: Test, questionCount: number) => {
+        startTimer(testData);
+        // Create persistent session in Firestore
+        try {
+            const session = await createTestSession({
+                userId: user!.uid,
+                testId: testData.id,
+                sessionType: 'test',
+                totalQuestions: questionCount,
+            });
+            setActiveSession(session);
+            console.log('[Quizy] Created test session:', session.id);
+        } catch (err) {
+            console.error('[Quizy] Failed to create test session (non-blocking):', err);
+        }
+    };
 
     // Start test after agreeing to instructions
-    const startTestAfterInstructions = () => {
+    const startTestAfterInstructions = async () => {
         if (!hasAgreed || !test) return;
 
         setShowInstructionsScreen(false);
-        startTimer(test);
 
-        if (test.enableAntiCheat) {
-            setTimeout(() => enterFullscreen(), 500);
+        if (isResuming && activeSession) {
+            // Resuming — restore timer from session, don't create new session
+            resumeTimerFromSession(test, activeSession);
+            if (test.enableAntiCheat) {
+                setTimeout(() => enterFullscreen(), 500);
+            }
+        } else {
+            // Fresh start — create new session
+            await startTestWithSession(test, questions.length);
+            if (test.enableAntiCheat) {
+                setTimeout(() => enterFullscreen(), 500);
+            }
         }
     };
 
@@ -658,6 +724,29 @@ export default function TestPage() {
         setAnswers(prev => {
             const newAnswers = [...prev];
             newAnswers[currentIndex] = value;
+
+            // Auto-save progress to Firestore session (fire-and-forget)
+            const session = activeSessionRef.current;
+            if (session && !sessionSavePendingRef.current) {
+                sessionSavePendingRef.current = true;
+                updateSessionProgress(session.id, {
+                    currentQuestion: currentIndex,
+                    answers: newAnswers,
+                    score: newAnswers.filter((a, i) => {
+                        if (a === null) return false;
+                        const q = questionsRef.current[i];
+                        if (!q) return false;
+                        if (typeof a === 'number') return a === q.correctOption;
+                        if (typeof a === 'string') return a.toLowerCase().trim() === (q.correctAnswer || q.options[0] || '').toLowerCase().trim();
+                        return false;
+                    }).length,
+                }).catch(err => {
+                    console.error('[Quizy] Session save failed:', err);
+                }).finally(() => {
+                    sessionSavePendingRef.current = false;
+                });
+            }
+
             return newAnswers;
         });
     }, [currentIndex]);
@@ -669,14 +758,34 @@ export default function TestPage() {
     const handleNext = useCallback(() => {
         if (currentIndex < questions.length - 1) {
             setDirection(1);
-            setCurrentIndex(prev => prev + 1);
+            const nextIdx = currentIndex + 1;
+            setCurrentIndex(nextIdx);
+            // Update session currentQuestion
+            const session = activeSessionRef.current;
+            if (session) {
+                updateSessionProgress(session.id, {
+                    currentQuestion: nextIdx,
+                    answers: answersRef.current,
+                    score: 0, // score recalculated on next answer
+                }).catch(() => {});
+            }
         }
     }, [currentIndex, questions.length]);
 
     const handlePrevious = useCallback(() => {
         if (currentIndex > 0) {
             setDirection(-1);
-            setCurrentIndex(prev => prev - 1);
+            const prevIdx = currentIndex - 1;
+            setCurrentIndex(prevIdx);
+            // Update session currentQuestion
+            const session = activeSessionRef.current;
+            if (session) {
+                updateSessionProgress(session.id, {
+                    currentQuestion: prevIdx,
+                    answers: answersRef.current,
+                    score: 0,
+                }).catch(() => {});
+            }
         }
     }, [currentIndex]);
 
@@ -870,6 +979,14 @@ export default function TestPage() {
                 );
             } catch (mbErr) {
                 console.error('[Quizy] Mistake Bucket save failed (non-blocking):', mbErr);
+            }
+
+            // Mark session as completed in Firestore
+            const currentSession = activeSessionRef.current;
+            if (currentSession) {
+                completeSession(currentSession.id, correctCount).catch(err =>
+                    console.error('[Quizy] Session complete failed:', err)
+                );
             }
 
             setIsSubmitted(true);
@@ -1103,7 +1220,9 @@ export default function TestPage() {
                                 : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
                                 }`}
                         >
-                            {hasAgreed ? '🚀 Start Test Now' : '☑️ Please agree to start'}
+                            {isResuming
+                                ? '🔄 Resume Test Now'
+                                : hasAgreed ? '🚀 Start Test Now' : '☑️ Please agree to start'}
                         </button>
                     </div>
                 </motion.div>
