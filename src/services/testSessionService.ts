@@ -228,3 +228,51 @@ export async function getActiveTestSessionIds(userId: string): Promise<Set<strin
     });
     return ids;
 }
+
+// ── Weekly Test Session Helpers ───────────────────────────────────
+
+/** Build a deterministic weekly test session testId key. */
+export function getWeeklyTestSessionId(studentClass: number, weekNumber: number): string {
+    return `weekly_W${weekNumber}_class${studentClass}`;
+}
+
+/**
+ * Find this week's weekly test session for a user.
+ * Checks for any session (in_progress, failed, or completed).
+ */
+export async function getActiveWeeklySession(
+    userId: string,
+    studentClass: number,
+    weekNumber: number
+): Promise<TestSession | null> {
+    const weeklyTestId = getWeeklyTestSessionId(studentClass, weekNumber);
+    const ref = collection(db, COLLECTIONS.TEST_SESSIONS);
+    const q = query(
+        ref,
+        where('userId', '==', userId),
+        where('testId', '==', weeklyTestId),
+        where('sessionType', '==', 'weekly_test')
+    );
+
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    const docSnap = snap.docs[0];
+    const data = docSnap.data();
+
+    return {
+        id: docSnap.id,
+        userId: data.userId,
+        testId: data.testId,
+        sessionType: data.sessionType,
+        currentQuestion: data.currentQuestion,
+        answers: data.answers,
+        score: data.score,
+        totalQuestions: data.totalQuestions,
+        startedAt: data.startedAt?.toDate() || new Date(),
+        lastActiveAt: data.lastActiveAt?.toDate() || new Date(),
+        completed: data.completed,
+        status: data.status,
+    };
+}
+

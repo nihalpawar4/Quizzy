@@ -94,6 +94,8 @@ export const COLLECTIONS = {
     EVALUATION_DRAFTS: 'evaluationDrafts',
     // Test Sessions (anti-cheat: persistent test progress)
     TEST_SESSIONS: 'testSessions',
+    // Weekly Test Results
+    WEEKLY_TEST_RESULTS: 'weeklyTestResults',
 } as const;
 
 // Evaluation mode options for test creation

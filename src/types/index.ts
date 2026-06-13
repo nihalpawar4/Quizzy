@@ -94,6 +94,9 @@ export interface Test {
     resultReleaseType?: ResultReleaseType; // immediate or scheduled
     resultReleaseDate?: Date; // Scheduled date/time for result release
     expectedResultDays?: number; // Days after submission for expected result (default 5)
+    // Weekly Test (teacher-uploaded override for auto-generated weekly tests)
+    isWeeklyTest?: boolean; // If true, this test is a weekly test
+    weeklyTestNumber?: number; // Weekly Test 1, 2, 3...
 }
 
 // Question Types - supports multiple formats
@@ -212,9 +215,30 @@ export interface DailyQuizResult {
     completedAt: Date;
 }
 
+// Weekly Test result
+export interface WeeklyTestResult {
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentClass: number;
+    weekNumber: number;        // Weekly Test 1, 2, 3...
+    weekDate: string;          // YYYY-MM-DD of the Sunday
+    score: number;
+    totalQuestions: number;    // always 30
+    completedAt: Date;
+    timeTakenSeconds?: number; // How long the student took
+    detailedAnswers?: {
+        questionText: string;
+        userAnswer: string;
+        correctAnswer: string;
+        isCorrect: boolean;
+        options: string[];
+    }[];
+}
+
 // Anti-cheat persistent test session
 export type TestSessionStatus = 'in_progress' | 'completed' | 'failed';
-export type TestSessionType = 'test' | 'daily_challenge';
+export type TestSessionType = 'test' | 'daily_challenge' | 'weekly_test';
 
 export interface TestSession {
     id: string;

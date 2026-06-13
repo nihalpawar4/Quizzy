@@ -172,7 +172,7 @@ export default function FeatureShowcase() {
   const currentTab = tabs[activeTab];
 
   return (
-    <section className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden">
+    <section id="product-tour" className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[#1650EB]/5 dark:bg-[#1650EB]/10 rounded-full blur-[120px]" />

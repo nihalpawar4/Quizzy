@@ -14,6 +14,7 @@ import {
   MessageCircle,
 
   X,
+  Menu,
   User,
 
   CheckCircle,
@@ -25,7 +26,11 @@ import {
   Star,
   Shield,
   Award,
-  Download
+  Download,
+  Home,
+  LayoutGrid,
+  HelpCircle,
+  Users
 } from 'lucide-react';
 
 import { useTheme } from '@/contexts/ThemeContext';
@@ -553,6 +558,8 @@ export default function HomePage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [showCountdown, setShowCountdown] = useState(() => {
     // Don't show countdown if deadline has already passed
     return Date.now() < ENROLLMENT_DEADLINE;
@@ -574,6 +581,13 @@ export default function HomePage() {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
+  // Scroll listener for navbar glass effect
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Show loading while checking auth
   if (loading) {
     return (
@@ -591,94 +605,234 @@ export default function HomePage() {
       {/* Enrollment Popup */}
       <EnrollmentPopup />
 
-      {/* Minimal Navigation - smoothly adjusts when countdown is dismissed */}
+      {/* ── Glassmorphism Navbar ── */}
       <nav
-        className="fixed left-0 right-0 z-50 px-6 py-4 bg-white/90 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800/50 transition-[top] duration-300 ease-in-out"
+        className={`fixed left-0 right-0 z-50 transition-all duration-500 ease-out ${
+          scrolled
+            ? 'py-2.5 px-4 sm:px-6'
+            : 'py-4 px-4 sm:px-6'
+        }`}
         style={{ top: countdownHeight }}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2"
-          >
-            <div className="w-10 h-10 bg-[#1650EB] rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-white" />
-            </div>
-            <span className="typo-brand text-2xl text-[#020218] dark:text-white">Quizy</span>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3"
-
-          >
-            {/* Theme Toggle Button */}
-            <motion.button
-              onClick={toggleTheme}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#6D6D6D] dark:text-gray-400 hover:bg-[#1650EB]/10 dark:hover:bg-[#1650EB]/20 hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-colors"
-              aria-label="Toggle theme"
-
+        <div className={`max-w-7xl mx-auto rounded-2xl transition-all duration-500 ${
+          scrolled
+            ? 'bg-white/70 dark:bg-gray-900/70 shadow-lg shadow-black/[0.03] dark:shadow-black/20 border border-white/50 dark:border-gray-700/40'
+            : 'bg-white/50 dark:bg-gray-900/40 border border-white/30 dark:border-gray-800/30'
+        } backdrop-blur-xl backdrop-saturate-150`}>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+            {/* Logo */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2.5"
             >
-              <AnimatePresence mode="wait">
-                {resolvedTheme === 'dark' ? (
-                  <motion.div
-                    key="sun"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Sun className="w-5 h-5" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="moon"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Moon className="w-5 h-5" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
+              <div className="w-9 h-9 bg-gradient-to-br from-[#1650EB] to-[#4f7df7] rounded-xl flex items-center justify-center shadow-md shadow-[#1650EB]/20">
+                <GraduationCap className="w-5 h-5 text-white" />
+              </div>
+              <span className="typo-brand text-xl text-[#020218] dark:text-white">Quizy</span>
+            </motion.div>
 
-
-            <Link
-              href="#faq"
-              className="hidden sm:block text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+            {/* Desktop Nav Links */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="hidden md:flex items-center gap-1"
             >
-              FAQ
-            </Link>
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
+              {[
+                { label: 'Home', href: '#' },
+                { label: 'Product Tour', href: '#product-tour' },
+                { label: 'Features', href: '#features' },
+                { label: 'FAQ', href: '#faq' },
+                { label: 'Community', href: '#community' },
+              ].map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="relative px-3.5 py-2 text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-[#020218] dark:hover:text-white rounded-lg hover:bg-gray-900/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200 group"
+                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                >
+                  {item.label}
+                  <span className="absolute bottom-1 left-3.5 right-3.5 h-[1.5px] bg-[#1650EB] dark:bg-[#6095DB] scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-full" />
+                </Link>
+              ))}
+            </motion.div>
+
+            {/* Right Section */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2"
+            >
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-900/[0.05] dark:hover:bg-white/[0.08] hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-all duration-200"
+                aria-label="Toggle theme"
               >
-                Dashboard
-              </Link>
-            ) : (
-              <>
+                <AnimatePresence mode="wait">
+                  {resolvedTheme === 'dark' ? (
+                    <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <Sun className="w-[18px] h-[18px]" />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <Moon className="w-[18px] h-[18px]" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </button>
+
+              {/* Desktop Auth Buttons */}
+              <div className="hidden md:flex items-center gap-2">
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="px-4 py-2 bg-gradient-to-r from-[#1650EB] to-[#3b6ff5] text-white rounded-xl text-[13px] font-semibold hover:shadow-lg hover:shadow-[#1650EB]/25 hover:-translate-y-[1px] transition-all duration-300"
+                    style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="px-3.5 py-2 text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-[#020218] dark:hover:text-white rounded-xl hover:bg-gray-900/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200"
+                      style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      className="px-4 py-2 bg-gradient-to-r from-[#1650EB] to-[#3b6ff5] text-white rounded-xl text-[13px] font-semibold hover:shadow-lg hover:shadow-[#1650EB]/25 hover:-translate-y-[1px] transition-all duration-300"
+                      style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                    >
+                      Get Started
+                    </Link>
+                  </>
+                )}
+              </div>
+              {/* Mobile Auth Button — always visible */}
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="md:hidden px-3.5 py-2 bg-gradient-to-r from-[#1650EB] to-[#3b6ff5] text-white rounded-xl text-[13px] font-semibold hover:shadow-lg hover:shadow-[#1650EB]/25 transition-all duration-300"
+                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                >
+                  Dashboard
+                </Link>
+              ) : (
                 <Link
                   href="/auth/login"
-                  className="text-sm text-[#6D6D6D] dark:text-gray-400 hover:text-[#020218] dark:hover:text-white transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+                  className="md:hidden px-3.5 py-2 text-[13px] font-medium text-gray-600 dark:text-gray-300 rounded-xl border border-gray-200/60 dark:border-gray-600/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-200"
+                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
                 >
                   Sign In
                 </Link>
-                <Link
-                  href="/auth/register"
-                  className="px-4 py-2 bg-[#1650EB] text-white rounded-lg text-sm hover:bg-[#1243c7] transition-colors shadow-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}
-                >
-                  Get Started
-                </Link>
-              </>
+              )}
+
+              {/* Mobile Hamburger */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-900/[0.05] dark:hover:bg-white/[0.08] transition-all duration-200"
+                aria-label="Toggle menu"
+              >
+                <AnimatePresence mode="wait">
+                  {isMobileMenuOpen ? (
+                    <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <X className="w-5 h-5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <Menu className="w-5 h-5" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </button>
+            </motion.div>
+          </div>
+
+          {/* ── Mobile Dropdown Menu ── */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.25, 0.8, 0.25, 1] }}
+                className="md:hidden overflow-hidden"
+              >
+                <div className="px-4 pb-5 pt-1 border-t border-gray-200/40 dark:border-gray-700/30">
+                  <div className="space-y-1 mb-4">
+                    {[
+                      { label: 'Home', href: '#', icon: Home },
+                      { label: 'Product Tour', href: '#product-tour', icon: Sparkles },
+                      { label: 'Features', href: '#features', icon: Zap },
+                      { label: 'FAQ', href: '#faq', icon: HelpCircle },
+                      { label: 'Community', href: '#community', icon: Users },
+                    ].map((item, i) => (
+                      <motion.div
+                        key={item.label}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.05 + i * 0.05, duration: 0.25 }}
+                      >
+                        <Link
+                          href={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-900/[0.04] dark:hover:bg-white/[0.06] hover:text-[#1650EB] dark:hover:text-[#6095DB] transition-all duration-200 group"
+                          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+                        >
+                          <item.icon className="w-4 h-4 text-gray-400 group-hover:text-[#1650EB] dark:group-hover:text-[#6095DB] transition-colors" />
+                          {item.label}
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Mobile Auth Buttons */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.25 }}
+                    className="pt-3 border-t border-gray-200/40 dark:border-gray-700/30 space-y-2"
+                  >
+                    {user ? (
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-[#1650EB] to-[#3b6ff5] text-white rounded-xl text-sm font-semibold shadow-md shadow-[#1650EB]/20 hover:shadow-lg transition-all"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        Dashboard
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    ) : (
+                      <>
+                        <Link
+                          href="/auth/login"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center justify-center w-full py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-xl border border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all"
+                          style={{ fontFamily: 'var(--font-display)' }}
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          href="/auth/register"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-[#1650EB] to-[#3b6ff5] text-white rounded-xl text-sm font-semibold shadow-md shadow-[#1650EB]/20 hover:shadow-lg transition-all"
+                          style={{ fontFamily: 'var(--font-display)' }}
+                        >
+                          Get Started
+                          <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </>
+                    )}
+                  </motion.div>
+                </div>
+              </motion.div>
             )}
-          </motion.div>
+          </AnimatePresence>
         </div>
       </nav>
 
@@ -689,11 +843,7 @@ export default function HomePage() {
       >
         {/* Animated Background — Premium */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Large radial glow behind headline */}
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[900px] h-[700px] rounded-full blur-[140px] opacity-40 dark:opacity-25"
-            style={{ background: 'radial-gradient(ellipse, rgba(22,80,235,0.35) 0%, rgba(96,149,219,0.15) 50%, transparent 70%)' }}
-          />
+
 
           {/* Subtle dot grid pattern */}
           <div
@@ -708,19 +858,19 @@ export default function HomePage() {
           <motion.div
             animate={{
               scale: [1, 1.15, 1],
-              opacity: [0.15, 0.3, 0.15],
+              opacity: [0.05, 0.12, 0.05],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[20%] left-[15%] w-[500px] h-[500px] bg-[#6095DB]/25 dark:bg-[#1650EB]/15 rounded-full blur-[100px]"
+            className="absolute top-[20%] left-[15%] w-[500px] h-[500px] bg-[#6095DB]/15 dark:bg-[#1650EB]/8 rounded-full blur-[100px]"
             style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
             animate={{
               scale: [1.1, 1, 1.1],
-              opacity: [0.15, 0.3, 0.15],
+              opacity: [0.05, 0.1, 0.05],
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[15%] right-[10%] w-[450px] h-[450px] bg-[#1650EB]/20 dark:bg-[#6095DB]/12 rounded-full blur-[100px]"
+            className="absolute bottom-[15%] right-[10%] w-[450px] h-[450px] bg-[#1650EB]/10 dark:bg-[#6095DB]/6 rounded-full blur-[100px]"
             style={{ willChange: 'transform, opacity' }}
           />
           <motion.div
@@ -729,7 +879,7 @@ export default function HomePage() {
               x: [0, 30, 0],
             }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[45%] right-[25%] w-[300px] h-[300px] bg-[#6095DB]/15 dark:bg-[#1650EB]/8 rounded-full blur-[80px]"
+            className="absolute top-[45%] right-[25%] w-[300px] h-[300px] bg-[#6095DB]/8 dark:bg-[#1650EB]/5 rounded-full blur-[80px]"
             style={{ willChange: 'transform' }}
           />
 
@@ -908,7 +1058,7 @@ export default function HomePage() {
       <FeatureShowcase />
 
       {/* Features Grid */}
-      <section className="relative px-6 py-20 sm:py-24 bg-gradient-to-b from-white via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
+      <section id="features" className="relative px-6 py-20 sm:py-24 bg-gradient-to-b from-white via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -1019,7 +1169,9 @@ export default function HomePage() {
       </section>
 
       {/* Community Questions Section */}
-      <QuestionList user={user} />
+      <div id="community">
+        <QuestionList user={user} />
+      </div>
 
       {/* Footer */}
       <footer className="relative overflow-hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">

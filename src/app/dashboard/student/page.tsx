@@ -39,7 +39,7 @@ import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, del
 import { subscribeToMistakes, subscribeToMasteredMistakes, recordAttempt } from '@/services/mistakeBucketService';
 import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
-import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser, GameStats } from '@/types';
+import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser, GameStats, WeeklyTestResult } from '@/types';
 import type { Homework } from '@/types/homework';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -66,6 +66,8 @@ import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import StudentSidebar from '@/components/ui/StudentSidebar';
+import WeeklyTestCard from '@/components/WeeklyTestCard';
+import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
 // import GamesZone from '@/components/games/GamesZone';
 // import { subscribeToCoins } from '@/services/coinService';
 // import { subscribeToGameStats } from '@/services/gameService';
@@ -137,6 +139,11 @@ export default function StudentDashboard() {
     const [dailyHistoryLoading, setDailyHistoryLoading] = useState(false);
     const [dailyQuizScore, setDailyQuizScore] = useState<{ score: number; total: number } | null>(null);
     const [dailyQuizSession, setDailyQuizSession] = useState<TestSession | null>(null);
+
+    // Weekly Test state
+    const [isSundayToday, setIsSundayToday] = useState(false);
+    const [weeklyTestCompleted, setWeeklyTestCompleted] = useState(false);
+    const [weeklyHistory, setWeeklyHistory] = useState<WeeklyTestResult[]>([]);
 
 
     // PDF Test viewer state
@@ -668,9 +675,25 @@ export default function StudentDashboard() {
     //     return () => unsub();
     // }, [user?.uid]);
 
-    // Load Daily Quiz Challenge data
+    // Detect if today is Sunday (for Weekly Test) + pre-check completion
+    useEffect(() => {
+        const sunday = isSunday();
+        setIsSundayToday(sunday);
+        if (sunday && user?.uid) {
+            const wn = getWeeklyTestNumber();
+            hasCompletedWeeklyTest(user.uid, wn).then(completed => {
+                if (completed) setWeeklyTestCompleted(true);
+            }).catch(() => {});
+        }
+    }, [user?.uid]);
+
+    // Load Daily Quiz Challenge data (skip on Sundays — Weekly Test shown instead)
     useEffect(() => {
         if (!user?.uid || !user?.studentClass) return;
+        if (isSundayToday) {
+            setDailyQuizLoading(false);
+            return;
+        }
         setDailyQuizLoading(true);
         Promise.all([
             getDailyQuizQuestions(user.studentClass),
@@ -685,7 +708,7 @@ export default function StudentDashboard() {
         }).finally(() => {
             setDailyQuizLoading(false);
         });
-    }, [user?.uid, user?.studentClass]);
+    }, [user?.uid, user?.studentClass, isSundayToday]);
 
     // Real-time listener for user profile changes (class change from profile settings)
     // When studentClass is changed in Firestore, this triggers refreshUser() which updates
@@ -1181,8 +1204,22 @@ export default function StudentDashboard() {
                 )}
 
 
-                {/* Daily Quiz Challenge — only shown when loaded and not completed */}
-                {activeTab === 'tests' && !dailyQuizLoading && !dailyQuizCompleted && (
+                {/* Weekly Test — shown on Sundays, hidden after completion (like daily challenge) */}
+                {activeTab === 'tests' && isSundayToday && !weeklyTestCompleted && (
+                    <WeeklyTestCard
+                        user={user}
+                        onComplete={(score, total) => {
+                            setWeeklyTestCompleted(true);
+                            setDailyQuizScore({ score, total });
+                            refreshUser();
+                            // Auto-hide the score toast after 4 seconds
+                            setTimeout(() => setDailyQuizScore(null), 4000);
+                        }}
+                    />
+                )}
+
+                {/* Daily Quiz Challenge — only shown on non-Sundays when loaded and not completed */}
+                {activeTab === 'tests' && !isSundayToday && !dailyQuizLoading && !dailyQuizCompleted && (
                     <DailyQuizCard
                         questions={dailyQuizQuestions}
                         completed={dailyQuizCompleted}
@@ -1213,8 +1250,8 @@ export default function StudentDashboard() {
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl">🎉</span>
                                 <div>
-                                    <p className="font-bold">Daily Challenge Complete!</p>
-                                    <p className="text-white/80 text-sm">Score: {dailyQuizScore.score}/{dailyQuizScore.total} • 🔥 Streak updated!</p>
+                                    <p className="font-bold">{isSundayToday ? 'Weekly Test Complete!' : 'Daily Challenge Complete!'}</p>
+                                    <p className="text-white/80 text-sm">Score: {dailyQuizScore.score}/{dailyQuizScore.total}{!isSundayToday && ' • 🔥 Streak updated!'}</p>
                                 </div>
                             </div>
                             <button onClick={() => setDailyQuizScore(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -1277,8 +1314,12 @@ export default function StudentDashboard() {
                                         if (!showDailyHistory && dailyHistory.length === 0) {
                                             setDailyHistoryLoading(true);
                                             try {
-                                                const history = await getDailyQuizHistory(user.uid);
-                                                setDailyHistory(history);
+                                                const [dHistory, wHistory] = await Promise.all([
+                                                    getDailyQuizHistory(user.uid),
+                                                    getWeeklyTestHistory(user.uid),
+                                                ]);
+                                                setDailyHistory(dHistory);
+                                                setWeeklyHistory(wHistory);
                                             } catch (e) { console.error(e); }
                                             setDailyHistoryLoading(false);
                                         }
@@ -1290,9 +1331,9 @@ export default function StudentDashboard() {
                                     }`}
                                 >
                                     🔥 Daily Challenge
-                                    {dailyHistory.length > 0 && (
+                                    {(dailyHistory.length + weeklyHistory.length) > 0 && (
                                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showDailyHistory ? 'bg-white/25 text-white' : 'bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-200'}`}>
-                                            {dailyHistory.length}
+                                            {dailyHistory.length + weeklyHistory.length}
                                         </span>
                                     )}
                                 </button>
@@ -1481,6 +1522,41 @@ export default function StudentDashboard() {
                                                             );
                                                         })}
                                                     </div>
+                                                )}
+
+                                                {/* Weekly Test History */}
+                                                {weeklyHistory.length > 0 && (
+                                                    <>
+                                                        <div className="flex items-center gap-2 mt-4 mb-2">
+                                                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                                                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">📋 Weekly Tests</span>
+                                                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                                                        </div>
+                                                        {weeklyHistory.map((entry) => {
+                                                            const pct = Math.round((entry.score / entry.totalQuestions) * 100);
+                                                            return (
+                                                                <div key={entry.id} className="flex items-center justify-between p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="text-lg">📋</span>
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                Week {entry.weekNumber}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                {new Date(entry.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {entry.totalQuestions} questions
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <span className={`text-sm font-bold ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                                                                            {entry.score}/{entry.totalQuestions}
+                                                                        </span>
+                                                                        <p className="text-xs text-gray-400">{pct}%</p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </>
                                                 )}
                                             </div>
                                         </motion.div>

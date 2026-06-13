@@ -184,6 +184,8 @@ export default function TeacherDashboard() {
         isExpiryEnabled: boolean;
         evaluationMode: EvalModeType;
         expectedResultDays: number;
+        isWeeklyTest: boolean;
+        weeklyTestNumber: number;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -204,6 +206,8 @@ export default function TeacherDashboard() {
         isExpiryEnabled: false,
         evaluationMode: 'auto',
         expectedResultDays: 5,
+        isWeeklyTest: false,
+        weeklyTestNumber: 1,
     });
 
     // Proctoring report modal state
@@ -755,6 +759,7 @@ export default function TeacherDashboard() {
                 isScheduleEnabled: newTest.isScheduleEnabled,
                 evaluationMode: newTest.evaluationMode,
                 expectedResultDays: newTest.expectedResultDays,
+                ...(newTest.isWeeklyTest ? { isWeeklyTest: true, weeklyTestNumber: newTest.weeklyTestNumber } : {}),
                 ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
                 ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
             });
@@ -804,6 +809,8 @@ export default function TeacherDashboard() {
             isExpiryEnabled: false,
             evaluationMode: 'auto',
             expectedResultDays: 5,
+            isWeeklyTest: false,
+            weeklyTestNumber: 1,
         });
         setCsvFile(null);
         setJsonInput('');
@@ -1637,7 +1644,7 @@ export default function TeacherDashboard() {
                         </motion.div>
 
                         {/* ── MY TESTS — Linear-style List ── */}
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 dark:border-gray-800/60 overflow-hidden">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 dark:border-gray-800/60">
                             <div className="p-5 pb-0">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">My Tests</h3>
@@ -1736,6 +1743,11 @@ export default function TeacherDashboard() {
                                                         {status.label}
                                                     </span>
 
+                                                    {test.isWeeklyTest && (
+                                                        <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 flex-shrink-0">
+                                                            📋 W{test.weeklyTestNumber}
+                                                        </span>
+                                                    )}
                                                     <div className="hidden md:block text-center min-w-[55px]">
                                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                                             {test.isPdfTest ? `${testResults.filter(r => r.pdfEvaluated).length}/${testResults.length}` : testResults.length}
@@ -1758,13 +1770,25 @@ export default function TeacherDashboard() {
                                                         <AnimatePresence>
                                                             {activeTestMenu === test.id && (
                                                                 <>
-                                                                    <div className="fixed inset-0 z-40" onClick={() => setActiveTestMenu(null)} />
+                                                                    <div className="fixed inset-0 z-[80]" onClick={() => setActiveTestMenu(null)} />
                                                                     <motion.div
                                                                         initial={{ opacity: 0, scale: 0.95, y: -4 }}
                                                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                                                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
                                                                         transition={{ duration: 0.15 }}
-                                                                        className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-700 py-1.5 z-50 overflow-hidden"
+                                                                        className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700 py-1.5 z-[81]"
+                                                                        style={{ bottom: 'auto', top: '100%' }}
+                                                                        ref={(el) => {
+                                                                            if (el) {
+                                                                                const rect = el.getBoundingClientRect();
+                                                                                if (rect.bottom > window.innerHeight - 20) {
+                                                                                    el.style.top = 'auto';
+                                                                                    el.style.bottom = '100%';
+                                                                                    el.style.marginBottom = '4px';
+                                                                                    el.style.marginTop = '0';
+                                                                                }
+                                                                            }
+                                                                        }}
                                                                     >
                                                                         <button onClick={() => { viewDetailedAnalytics(test); setActiveTestMenu(null); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                                                             <Eye className="w-4 h-4 text-gray-400" /> View Analytics
@@ -2370,6 +2394,34 @@ export default function TeacherDashboard() {
                                                             );
                                                         })}
                                                     </div>
+                                                </div>
+
+                                                {/* Weekly Test Toggle */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center">
+                                                            <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Weekly Test</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Mark this as a Weekly Test (replaces auto-generated test on Sundays)</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, isWeeklyTest: !newTest.isWeeklyTest })}
+                                                            className={`w-12 h-6 rounded-full transition-colors flex-shrink-0 ${newTest.isWeeklyTest ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                        >
+                                                            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.isWeeklyTest ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                                        </button>
+                                                    </div>
+                                                    {newTest.isWeeklyTest && (
+                                                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Week Number *</label>
+                                                                <input type="number" value={newTest.weeklyTestNumber} onChange={(e) => setNewTest({ ...newTest, weeklyTestNumber: Math.max(1, Number(e.target.value)) })} min={1} max={999} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 outline-none" />
+                                                                <p className="text-xs text-gray-400 mt-1">Weekly Test 1, 2, 3... — this overrides the auto-generated test for that week</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Scheduled Start Time Section with Enable/Disable Toggle */}

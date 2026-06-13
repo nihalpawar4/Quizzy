@@ -3,8 +3,8 @@
 // Handles BACKGROUND push notifications (even when app is closed)
 // Works like Swiggy/Zomato push notifications on mobile
 
-importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging-compat.js');
 
 // Firebase configuration
 const firebaseConfig = {
@@ -74,32 +74,28 @@ self.addEventListener('push', (event) => {
         return;
     }
 
-    // If the message has a `notification` key, the browser will auto-display it.
-    // We only need to manually show for data-only messages (no notification key).
-    if (payload.notification) {
-        // Browser handles this natively — do nothing
-        return;
-    }
+    // Extract notification info from whichever key is available
+    const notif = payload.notification || {};
+    const d = payload.data || {};
+    
+    const title = d.title || notif.title || '📚 Quizy';
+    const body = d.body || notif.body || 'New notification';
 
-    // Data-only message — manually show notification
-    if (payload.data) {
-        const d = payload.data;
-        event.waitUntil(
-            self.registration.showNotification(d.title || '📚 Quizy', {
-                body: d.body || 'New notification',
-                icon: d.icon || '/icons/icon-192x192.png',
-                badge: d.badge || '/icons/icon-72x72.png',
-                vibrate: [200, 100, 200],
-                data: {
-                    type: d.type || 'general',
-                    url: d.url || '/dashboard',
-                    tag: d.tag || 'quizy-notification',
-                },
+    event.waitUntil(
+        self.registration.showNotification(title, {
+            body,
+            icon: d.icon || notif.icon || '/icons/icon-192x192.png',
+            badge: d.badge || '/icons/icon-72x72.png',
+            vibrate: [200, 100, 200],
+            data: {
+                type: d.type || 'general',
+                url: d.url || '/dashboard',
                 tag: d.tag || 'quizy-notification',
-                renotify: true,
-            })
-        );
-    }
+            },
+            tag: d.tag || 'quizy-notification',
+            renotify: true,
+        })
+    );
 });
 
 // Handle notification click - open the app to the right page
