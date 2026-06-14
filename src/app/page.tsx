@@ -39,7 +39,6 @@ import { usePWA } from '@/components/PWAProvider';
 import { PostQuestionModal, QuestionList } from '@/components/qa';
 import FloatingActions from '@/components/ui/FloatingActions';
 
-import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import FeatureShowcase from '@/components/landing/FeatureShowcase';
 
 
@@ -588,15 +587,6 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <MotivationalLoader />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Enrollment Countdown Timer */}
@@ -841,49 +831,9 @@ export default function HomePage() {
         className="relative flex flex-col items-center justify-center min-h-screen px-6 overflow-hidden transition-[padding-top] duration-300 ease-in-out"
         style={{ paddingTop: countdownHeight + 64 }}
       >
-        {/* Animated Background — Premium */}
+
+        {/* Floating Particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-
-
-          {/* Subtle dot grid pattern */}
-          <div
-            className="absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
-            style={{
-              backgroundImage: 'radial-gradient(circle, #1650EB 1px, transparent 1px)',
-              backgroundSize: '32px 32px',
-            }}
-          />
-
-          {/* Gradient Orbs */}
-          <motion.div
-            animate={{
-              scale: [1, 1.15, 1],
-              opacity: [0.05, 0.12, 0.05],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[20%] left-[15%] w-[500px] h-[500px] bg-[#6095DB]/15 dark:bg-[#1650EB]/8 rounded-full blur-[100px]"
-            style={{ willChange: 'transform, opacity' }}
-          />
-          <motion.div
-            animate={{
-              scale: [1.1, 1, 1.1],
-              opacity: [0.05, 0.1, 0.05],
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[15%] right-[10%] w-[450px] h-[450px] bg-[#1650EB]/10 dark:bg-[#6095DB]/6 rounded-full blur-[100px]"
-            style={{ willChange: 'transform, opacity' }}
-          />
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              x: [0, 30, 0],
-            }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[45%] right-[25%] w-[300px] h-[300px] bg-[#6095DB]/8 dark:bg-[#1650EB]/5 rounded-full blur-[80px]"
-            style={{ willChange: 'transform' }}
-          />
-
-          {/* Floating Particles — more to fill space */}
           {[...Array(8)].map((_, i) => (
             <motion.div
               key={i}
@@ -907,21 +857,10 @@ export default function HomePage() {
               }}
             />
           ))}
-
-          {/* Animated horizontal lines */}
-          <motion.div
-            animate={{ opacity: [0.03, 0.06, 0.03] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[30%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#1650EB] to-transparent"
-          />
-          <motion.div
-            animate={{ opacity: [0.02, 0.05, 0.02] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute top-[70%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#6095DB] to-transparent"
-          />
         </div>
 
         <div className="relative z-10 max-w-[1100px] w-full mx-auto text-center">
+
           {/* Experts Academy Top Label */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
