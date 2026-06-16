@@ -333,6 +333,7 @@ export default function TeacherDashboard() {
     // Tests tab local filter/search states
     const [testTabFilter, setTestTabFilter] = useState<'all' | 'active' | 'scheduled' | 'completed' | 'drafts'>('all');
     const [testSearchQuery, setTestSearchQuery] = useState('');
+    const [testClassFilter, setTestClassFilter] = useState<number | 'all'>('all');
     const [activeTestMenu, setActiveTestMenu] = useState<string | null>(null);
     const [showAllTests, setShowAllTests] = useState(false);
 
@@ -1281,6 +1282,7 @@ export default function TeacherDashboard() {
             const q = testSearchQuery.toLowerCase();
             if (!test.title.toLowerCase().includes(q) && !test.subject.toLowerCase().includes(q)) return false;
         }
+        if (testClassFilter !== 'all' && test.targetClass !== testClassFilter) return false;
         const now = new Date();
         const isSch = test.scheduledStartTime && new Date(test.scheduledStartTime) > now;
         const isExp = test.expiresAt && new Date(test.expiresAt) < now;
@@ -1552,16 +1554,6 @@ export default function TeacherDashboard() {
                                 <Plus className="w-4 h-4" />
                                 Create Test
                             </button>
-                            <button onClick={() => setShowAnnouncementModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex-shrink-0">
-                                <Megaphone className="w-4 h-4" />
-                                Announcement
-                            </button>
-                            {announcements.length > 0 && (
-                                <button onClick={() => setShowManageAnnouncementsModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex-shrink-0">
-                                    <span className="text-xs">•••</span>
-                                    <span className="text-[10px] font-bold bg-amber-500 text-white rounded-full px-1.5 py-0.5 leading-none">{announcements.length}</span>
-                                </button>
-                            )}
                         </motion.div>
 
                         {/* ── AI INSIGHTS + EVALUATION CENTER ── */}
@@ -1659,9 +1651,24 @@ export default function TeacherDashboard() {
                                                 className="pl-9 pr-4 py-2 w-full sm:w-52 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB]/20 focus:border-[#1650EB] outline-none transition-all"
                                             />
                                         </div>
-                                        <button className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-                                            <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-                                        </button>
+                                        <div className="relative flex-shrink-0">
+                                            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                                            <select
+                                                value={testClassFilter}
+                                                onChange={(e) => { setTestClassFilter(e.target.value === 'all' ? 'all' : Number(e.target.value)); setShowAllTests(false); }}
+                                                className={`pl-8 pr-8 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl text-sm font-medium outline-none transition-all appearance-none cursor-pointer ${
+                                                    testClassFilter !== 'all'
+                                                        ? 'border-[#1650EB]/40 dark:border-[#6095DB]/40 text-[#1650EB] dark:text-[#6095DB] ring-2 ring-[#1650EB]/10 dark:ring-[#6095DB]/10'
+                                                        : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <option value="all">All Classes</option>
+                                                {CLASS_OPTIONS.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-0.5 border-b border-gray-200/80 dark:border-gray-800 -mx-5 px-5 overflow-x-auto scrollbar-hide">
@@ -1693,9 +1700,9 @@ export default function TeacherDashboard() {
                                     <div className="text-center py-16">
                                         <BookOpen className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                            {testSearchQuery || testTabFilter !== 'all' ? 'No tests match your filters.' : 'No tests created yet.'}
+                                            {testSearchQuery || testTabFilter !== 'all' || testClassFilter !== 'all' ? 'No tests match your filters.' : 'No tests created yet.'}
                                         </p>
-                                        {!testSearchQuery && testTabFilter === 'all' && (
+                                        {!testSearchQuery && testTabFilter === 'all' && testClassFilter === 'all' && (
                                             <button onClick={() => setShowCreateModal(true)} className="text-sm text-[#1650EB] dark:text-[#6095DB] font-semibold hover:underline">
                                                 {"Create your first test →"}
                                             </button>

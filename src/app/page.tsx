@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   GraduationCap,
   BookOpen,
@@ -38,6 +39,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePWA } from '@/components/PWAProvider';
 import { PostQuestionModal, QuestionList } from '@/components/qa';
 import FloatingActions from '@/components/ui/FloatingActions';
+import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
 import FeatureShowcase from '@/components/landing/FeatureShowcase';
 
@@ -575,10 +577,18 @@ export default function HomePage() {
   }, []);
   const { resolvedTheme, setTheme } = useTheme();
   const { user, loading } = useAuth();
+  const router = useRouter();
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
+
+  // Auto-redirect logged-in users to their dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   // Scroll listener for navbar glass effect
   useEffect(() => {
@@ -586,6 +596,15 @@ export default function HomePage() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Show loading state while checking auth / redirecting
+  if (loading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <MotivationalLoader subtitle="Redirecting to your dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
