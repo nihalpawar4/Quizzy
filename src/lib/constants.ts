@@ -96,6 +96,8 @@ export const COLLECTIONS = {
     TEST_SESSIONS: 'testSessions',
     // Weekly Test Results
     WEEKLY_TEST_RESULTS: 'weeklyTestResults',
+    // Daily Surprise Rewards
+    DAILY_REWARDS: 'dailyRewards',
 } as const;
 
 // Evaluation mode options for test creation

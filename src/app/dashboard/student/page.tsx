@@ -66,6 +66,7 @@ import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import StudentSidebar from '@/components/ui/StudentSidebar';
+import DailySurpriseReward from '@/components/DailySurpriseReward';
 import WeeklyTestCard from '@/components/WeeklyTestCard';
 import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
 // import GamesZone from '@/components/games/GamesZone';
@@ -3024,6 +3025,9 @@ export default function StudentDashboard() {
 
 
             </div>{/* Close flex-1 content wrapper */}
+
+            {/* Daily Surprise Reward Overlay */}
+            <DailySurpriseReward userId={user.uid} />
         </div>
     );
 }

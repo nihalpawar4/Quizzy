@@ -24,6 +24,8 @@ export interface User {
     pendingClassChange?: number; // Requested class number
     // Game coins
     coins?: number; // Virtual currency earned from games
+    // Experience points
+    xp?: number; // Total XP earned across all activities
 }
 
 // Class change request (requires teacher approval)

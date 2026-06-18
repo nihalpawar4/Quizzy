@@ -109,13 +109,15 @@ export default function ProfilePage() {
                 ? Math.round(scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / totalScorable)
                 : 0;
             setAverageScore(avg);
-            // XP: 10 points per test + score bonus
-            const xp = scorableResults.reduce((acc, r) => acc + 10 + Math.round((r.score / r.totalQuestions) * 40), 0);
-            setXpPoints(xp);
+            // XP: Use the real user.xp from Firestore (includes daily rewards, etc.)
+            // Fallback: calculate from test results if user.xp is not set yet
+            const firestoreXP = user.xp ?? 0;
+            const testXP = scorableResults.reduce((acc, r) => acc + 10 + Math.round((r.score / r.totalQuestions) * 40), 0);
+            setXpPoints(Math.max(firestoreXP, testXP));
         } catch (error) {
             console.error('Error loading stats:', error);
         }
-    }, [user?.uid]);
+    }, [user?.uid, user?.xp]);
 
     useEffect(() => {
         if (!authLoading && !user) {

@@ -1,0 +1,587 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Daily Surprise Reward — 3D Overlay Layout
+   All UI centered over the R3F Canvas
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Fullscreen overlay ──────────────────────────────────────────────── */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(3, 7, 20, 0.35);
+    backdrop-filter: blur(7px) saturate(1.1);
+    -webkit-backdrop-filter: blur(7px) saturate(1.1);
+    overflow: hidden;
+}
+
+/* ─── 3D Scene container — centered square ────────────────────────────── */
+
+.sceneContainer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, 80vw);
+    height: min(360px, 80vw);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* ─── UI layer (on top of Canvas) ─────────────────────────────────────── */
+
+.uiOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    pointer-events: none;
+}
+
+.uiOverlay > * {
+    pointer-events: auto;
+}
+
+/* ─── Center content (headlines, countdown) ───────────────────────────── */
+
+.centerContent {
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+/* ─── Mute button ─────────────────────────────────────────────────────── */
+
+.muteButton {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(148, 163, 184, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    pointer-events: auto;
+    z-index: 20;
+}
+
+.muteButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(148, 163, 184, 1);
+}
+
+/* ─── Headlines ───────────────────────────────────────────────────────── */
+
+.headline {
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: #eef2ff;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin: 0 0 4px;
+}
+
+.headlineAccent {
+    display: block;
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 22px;
+    font-weight: 600;
+    color: #6daaff;
+    margin: 0 0 8px;
+}
+
+.headlineGradient {
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── CTA button ──────────────────────────────────────────────────────── */
+
+.ctaButton {
+    margin-top: 20px;
+    padding: 13px 44px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.4),
+        0 8px 24px -4px rgba(37, 99, 235, 0.35);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.ctaButton:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.5),
+        0 12px 32px -4px rgba(37, 99, 235, 0.45);
+}
+
+.ctaButton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: shimmer 4s ease-in-out infinite 1s;
+}
+
+@keyframes shimmer {
+    0%, 65%, 100% { left: -100%; }
+    80% { left: 100%; }
+}
+
+/* ─── Countdown ───────────────────────────────────────────────────────── */
+
+.countdownNumber {
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 100px;
+    font-weight: 800;
+    color: #6daaff;
+    line-height: 1;
+    text-shadow: 0 0 60px rgba(100, 160, 255, 0.3);
+    user-select: none;
+    display: block;
+    text-align: center;
+}
+
+.countdownLabel {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(148, 163, 184, 0.7);
+    display: block;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+/* ─── Reward Card ─────────────────────────────────────────────────────── */
+
+.rewardPhase {
+    width: 100%;
+    max-width: 380px;
+}
+
+.rewardCard {
+    width: 100%;
+    background: rgba(10, 18, 45, 0.85);
+    backdrop-filter: blur(32px) saturate(1.3);
+    -webkit-backdrop-filter: blur(32px) saturate(1.3);
+    border: 1px solid rgba(100, 170, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    text-align: center;
+    box-shadow:
+        0 0 0 1px rgba(100, 170, 255, 0.05),
+        0 20px 60px -10px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.rewardCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(100, 170, 255, 0.35), transparent);
+}
+
+/* Icon */
+.rewardIconWrap {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+}
+
+.rewardIcon {
+    font-size: 26px;
+    line-height: 1;
+}
+
+.rewardTitle {
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: #eef2ff;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+}
+
+/* Rarity */
+.rewardRarity {
+    display: inline-block;
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.rarityCommon { color: rgba(148, 163, 184, 0.9); background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.12); }
+.rarityUncommon { color: rgba(96, 165, 250, 0.95); background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.15); }
+.rarityRare { color: rgba(56, 189, 248, 0.95); background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.15); }
+.rarityEpic { color: rgba(167, 139, 250, 0.95); background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.15); }
+.rarityLegendary { color: rgba(251, 191, 36, 0.95); background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.15); }
+
+.rewardDescription {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 13px;
+    color: rgba(148, 163, 184, 0.75);
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
+/* Content blocks */
+.rewardContent {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 13px;
+    color: rgba(203, 213, 225, 0.9);
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.rewardContentQuestion {
+    composes: rewardContent;
+    font-weight: 500;
+    color: rgba(226, 232, 240, 0.95);
+}
+
+/* XP badge */
+.badgeRow {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.rewardXP {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    color: #60a5fa;
+    padding: 4px 12px;
+    background: rgba(96, 165, 250, 0.08);
+    border: 1px solid rgba(96, 165, 250, 0.12);
+    border-radius: 8px;
+}
+
+/* XP counter */
+.xpCounter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 14px;
+    background: rgba(96, 165, 250, 0.06);
+    border: 1px solid rgba(96, 165, 250, 0.1);
+    border-radius: 10px;
+}
+
+.xpCounterLabel {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(148, 163, 184, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.xpCounterValue {
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: #60a5fa;
+    font-variant-numeric: tabular-nums;
+}
+
+.xpFinal {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 14px;
+    color: rgba(148, 163, 184, 0.7);
+    margin-top: 10px;
+}
+
+.xpFinal strong {
+    color: #60a5fa;
+    font-weight: 700;
+}
+
+/* ─── Quiz options ────────────────────────────────────────────────────── */
+
+.optionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.optionButton {
+    padding: 9px 6px;
+    border: 1px solid rgba(100, 170, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(203, 213, 225, 0.9);
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.35;
+}
+
+.optionButton:hover {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(100, 170, 255, 0.25);
+    color: #eef2ff;
+}
+
+.optionCorrect {
+    composes: optionButton;
+    background: rgba(34, 197, 94, 0.1) !important;
+    border-color: rgba(34, 197, 94, 0.35) !important;
+    color: #86efac !important;
+    cursor: default;
+}
+
+.optionWrong {
+    composes: optionButton;
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    color: #fca5a5 !important;
+    cursor: default;
+}
+
+.optionDisabled {
+    composes: optionButton;
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Answer feedback */
+.answerCorrect,
+.answerWrong {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.answerCorrect {
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.answerWrong {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+/* ─── Claim button ────────────────────────────────────────────────────── */
+
+.claimButton {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.3),
+        0 6px 20px -4px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s;
+}
+
+.claimButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.4),
+        0 10px 28px -4px rgba(37, 99, 235, 0.4);
+}
+
+.claimButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ─── Claimed ─────────────────────────────────────────────────────────── */
+
+.claimedIcon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.15);
+    border-radius: 14px;
+}
+
+.claimedCheckmark {
+    width: 24px;
+    height: 24px;
+    color: #4ade80;
+}
+
+.claimedTitle {
+    font-family: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: #eef2ff;
+    margin: 0 0 4px;
+}
+
+.claimedSubtext {
+    font-family: var(--font-inter, system-ui, sans-serif);
+    font-size: 13px;
+    color: rgba(148, 163, 184, 0.7);
+    margin: 0;
+}
+
+/* Sparkles (legendary) */
+.sparkleDots {
+    position: absolute;
+    inset: -20px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.sparkleDot {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(251, 191, 36, 0.5);
+    border-radius: 50%;
+    animation: sparkle 2.5s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0); }
+    30% { opacity: 1; transform: scale(1); }
+    70% { opacity: 0.4; transform: scale(0.5); }
+}
+
+/* ─── SVG Illustration Colors ─────────────────────────────────────────── */
+
+.illustrationGold { color: #fbbf24; }
+.illustrationAmber { color: #f59e0b; }
+.illustrationYellow { color: #facc15; }
+.illustrationCyan { color: #22d3ee; }
+.illustrationBlue { color: #60a5fa; }
+.illustrationGreen { color: #4ade80; }
+.illustrationPurple { color: #a78bfa; }
+
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+    .uiOverlay {
+        padding: 12px;
+    }
+
+    .headline { font-size: 20px; }
+    .headlineAccent { font-size: 16px; }
+    .countdownNumber { font-size: 72px; }
+    .ctaButton { padding: 11px 32px; font-size: 14px; }
+
+    .centerContent {
+        max-width: 100%;
+    }
+
+    .rewardPhase {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .rewardCard {
+        border-radius: 20px 20px 0 0;
+        padding: 18px 14px 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+        max-height: 65vh;
+    }
+
+    .rewardTitle { font-size: 16px; }
+    .rewardDescription { font-size: 12px; margin-bottom: 8px; }
+    .rewardContent { font-size: 12px; padding: 8px 10px; margin-bottom: 8px; }
+    .rewardContentQuestion { font-size: 12px; }
+
+    .rewardIconWrap { width: 48px; height: 48px; margin-bottom: 10px; }
+
+    .optionsGrid {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .optionButton { padding: 8px 6px; font-size: 11px; }
+    .badgeRow { margin-bottom: 8px; }
+    .xpCounter { padding: 6px 10px; margin-bottom: 8px; }
+    .claimButton { padding: 11px; font-size: 13px; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .rewardPhase { max-width: 360px; }
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .sparkleDot,
+    .ctaButton::after {
+        animation: none !important;
+    }
+}

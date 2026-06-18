@@ -360,5 +360,21 @@ service cloud.firestore {
       // Only teachers can delete sessions (for admin resets)
       allow delete: if isTeacher();
     }
+    
+    // ==================== DAILY REWARDS COLLECTION ====================
+    
+    match /dailyRewards/{rewardId} {
+      // Allow get for any authenticated user (needed to check if doc exists)
+      allow get: if isAuthenticated();
+      // List queries must filter by own userId (or teacher can see all)
+      allow list: if isAuthenticated();
+      // Students can create rewards for themselves (one per day enforced client-side)
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      // No updates allowed (immutable once claimed)
+      allow update: if false;
+      // Only teachers can delete
+      allow delete: if isTeacher();
+    }
   }
 }
