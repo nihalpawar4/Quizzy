@@ -18,7 +18,12 @@ import {
     ChevronLeft,
     Home,
     Gamepad2,
+    Crown,
 } from 'lucide-react';
+import { usePremium } from '@/contexts/PremiumContext';
+import ProfileFrame from '@/components/ui/ProfileFrame';
+import PremiumBadge from '@/components/ui/PremiumBadge';
+import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 
 interface SidebarProps {
     activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice';
@@ -68,6 +73,7 @@ export default function StudentSidebar({
     streak = 0,
 }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const { activeProfileFrame, activeBadge } = usePremium();
 
     const studyItems: NavItem[] = [
         {
@@ -133,6 +139,14 @@ export default function StudentSidebar({
             icon: HelpCircle,
             comingSoon: true,
             activeColor: 'bg-orange-500',
+        },
+        {
+            id: 'premium',
+            label: 'Quizy Premium',
+            shortLabel: 'Premium',
+            icon: Crown,
+            href: '/premium',
+            activeColor: 'bg-amber-500',
         },
     ];
 
@@ -280,7 +294,12 @@ export default function StudentSidebar({
         >
             {/* User info */}
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{userName}</p>
+                <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{userName}</p>
+                    {activeBadge && activeBadge !== 'none' && (
+                        <PremiumBadge badgeType={activeBadge as BadgeType} size="sm" />
+                    )}
+                </div>
                 <p className="text-[11px] text-gray-400 dark:text-gray-500">Class {userClass} • Student</p>
             </div>
             <div className="p-1.5">
@@ -308,6 +327,16 @@ export default function StudentSidebar({
                         <Settings className="w-3.5 h-3.5 text-[#1650EB]" />
                     </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Settings</span>
+                </Link>
+                <Link
+                    href="/premium"
+                    onClick={() => setShowProfileDropdown(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50/80 dark:hover:bg-amber-900/10 transition-colors group"
+                >
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                        <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quizy Premium</span>
                 </Link>
                 <button
                     onClick={() => { setShowProfileDropdown(false); onSignOut(); }}
@@ -421,7 +450,7 @@ export default function StudentSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/"
+                            href="/dashboard/student"
                             className="p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
                             title="Home"
                         >
@@ -439,19 +468,18 @@ export default function StudentSidebar({
                                 </span>
                             )}
                         </button>
-                        {/* Profile avatar */}
+                        {/* Profile avatar with frame */}
                         <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="p-0.5 rounded-full hover:ring-2 hover:ring-[#1650EB]/20 transition-all"
+                                className="rounded-full hover:ring-2 hover:ring-[#1650EB]/20 transition-all"
                             >
-                                {userPhotoURL ? (
-                                    <img src={userPhotoURL} alt={userName} className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-gray-900 shadow-sm" />
-                                ) : (
-                                    <div className="w-8 h-8 bg-[#1650EB]/10 rounded-full flex items-center justify-center">
-                                        <User className="w-4 h-4 text-[#1650EB]" />
-                                    </div>
-                                )}
+                                <ProfileFrame
+                                    frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
+                                    photoURL={userPhotoURL}
+                                    userName={userName}
+                                    size={30}
+                                />
                             </button>
                             <AnimatePresence>
                                 {showProfileDropdown && profileDropdownContent}
@@ -545,7 +573,7 @@ export default function StudentSidebar({
                         )}
                         {/* Home */}
                         <Link
-                            href="/"
+                            href="/dashboard/student"
                             className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
                             title="Home"
                         >

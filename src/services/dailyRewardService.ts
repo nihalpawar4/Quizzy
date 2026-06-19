@@ -6,6 +6,7 @@
 import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
+import { activatePremiumTrial, addStreakShields } from '@/services/premiumService';
 
 // ─── Reward Type Definitions ───────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export type RewardType =
     | 'xp_boost'
     | 'streak_protection'
     | 'challenge_ticket'
-    | 'premium_access'
+    | 'premium_trial'
     | 'legendary';
 
 export interface RewardData {
@@ -65,7 +66,7 @@ const REWARD_WEIGHTS: WeightedReward[] = [
     { type: 'xp_boost',           weight: 8  },
     { type: 'streak_protection',  weight: 5  },
     { type: 'challenge_ticket',   weight: 3  },
-    { type: 'premium_access',     weight: 3  },
+    { type: 'premium_trial',      weight: 3  },
     { type: 'legendary',          weight: 1  },
 ];
 
@@ -376,12 +377,12 @@ function generateRewardData(type: RewardType): RewardData {
             };
         }
 
-        case 'premium_access': {
+        case 'premium_trial': {
             return {
-                type: 'premium_access',
-                title: '1-Day Premium Access',
+                type: 'premium_trial',
+                title: '24h Premium Trial',
                 description: 'Enjoy all premium features for 24 hours!',
-                content: 'Premium access has been activated for the next 24 hours.',
+                content: 'Premium access has been activated for the next 24 hours. Enjoy bubble themes, profile frames, detailed analytics & more!',
                 xp: 10,
                 coins: 0,
                 icon: 'crown',
@@ -471,6 +472,14 @@ export async function claimDailyReward(
         await updateDoc(userRef, {
             xp: increment(reward.xp),
         });
+    }
+
+    // Handle special reward types
+    if (reward.type === 'premium_trial') {
+        await activatePremiumTrial(userId, 24);
+    }
+    if (reward.type === 'streak_protection') {
+        await addStreakShields(userId, 1);
     }
 
     // Update localStorage

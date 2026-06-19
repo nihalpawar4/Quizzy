@@ -60,6 +60,7 @@ import {
 import type { TestSession } from '@/types';
 
 import { useChat } from '@/contexts/ChatContext';
+import { usePremium } from '@/contexts/PremiumContext';
 import { saveLastRoute } from '@/lib/routePersistence';
 import { generatePDFWithCover } from '@/lib/utils/generatePDFCover';
 import { getUserProfile } from '@/lib/services';
@@ -76,6 +77,7 @@ import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHis
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { totalUnreadCount } = useChat();
+    const { isPremium: isPremiumUser } = usePremium();
     const router = useRouter();
 
     // Save current route for persistence
@@ -322,7 +324,9 @@ export default function StudentDashboard() {
     };
 
     // Check if report is available (instantly available up to 24 hours after submission)
+    // Premium users: reports NEVER expire
     const isReportAvailable = (result: TestResult): boolean => {
+        if (isPremiumUser) return true;
         if (!currentTime) return true;
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
         const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000); // 24 hours
@@ -330,7 +334,9 @@ export default function StudentDashboard() {
     };
 
     // Check if report has expired (after 24 hours)
+    // Premium users: reports NEVER expire
     const isReportExpired = (result: TestResult): boolean => {
+        if (isPremiumUser) return false;
         if (!currentTime) return false;
         const submittedAt = result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp);
         const twentyFourHoursLater = new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000);

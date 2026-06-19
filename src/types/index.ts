@@ -26,6 +26,20 @@ export interface User {
     coins?: number; // Virtual currency earned from games
     // Experience points
     xp?: number; // Total XP earned across all activities
+    // Premium status
+    isPremium?: boolean;
+    premiumPurchasedAt?: Date;
+    premiumTrialExpiresAt?: Date;
+    // Cosmetic preferences (premium)
+    activeBubbleTheme?: string;     // 'default' | 'sparkle' | 'neon' | 'fire' | 'water'
+    activeProfileFrame?: string;    // 'none' | 'gold' | 'diamond' | 'fire' | 'aurora'
+    activeBadge?: string;           // 'none' | 'pro' | 'elite' | 'diamond' | 'scholar'
+    // Streak shields
+    streakShieldsRemaining?: number;
+    // XP Boost
+    xpBoostActive?: boolean;
+    xpBoostExpiresAt?: Date;
+    xpBoostMultiplier?: number;
 }
 
 // Class change request (requires teacher approval)

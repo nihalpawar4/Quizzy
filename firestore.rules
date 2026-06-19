@@ -376,5 +376,19 @@ service cloud.firestore {
       // Only teachers can delete
       allow delete: if isTeacher();
     }
+    
+    // ==================== PREMIUM PURCHASES COLLECTION ====================
+    
+    match /premiumPurchases/{purchaseId} {
+      // Authenticated users can read purchase records
+      allow read: if isAuthenticated();
+      // Users can create their own purchase records
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      // Purchase records are immutable
+      allow update: if false;
+      // Only teachers can delete (admin cleanup)
+      allow delete: if isTeacher();
+    }
   }
 }

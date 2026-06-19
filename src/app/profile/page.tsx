@@ -43,11 +43,16 @@ import { uploadProfilePicture, deleteProfilePicture } from '@/lib/profilePicture
 import { saveLastRoute } from '@/lib/routePersistence';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import ProfileFrame from '@/components/ui/ProfileFrame';
+import PremiumBadge from '@/components/ui/PremiumBadge';
+import { usePremium } from '@/contexts/PremiumContext';
+import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 import type { TestResult } from '@/types';
 
 export default function ProfilePage() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { theme, setTheme } = useTheme();
+    const { activeProfileFrame, activeBadge } = usePremium();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,11 +114,8 @@ export default function ProfilePage() {
                 ? Math.round(scorableResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / totalScorable)
                 : 0;
             setAverageScore(avg);
-            // XP: Use the real user.xp from Firestore (includes daily rewards, etc.)
-            // Fallback: calculate from test results if user.xp is not set yet
-            const firestoreXP = user.xp ?? 0;
-            const testXP = scorableResults.reduce((acc, r) => acc + 10 + Math.round((r.score / r.totalQuestions) * 40), 0);
-            setXpPoints(Math.max(firestoreXP, testXP));
+            // XP: Use only the canonical user.xp from Firestore (same source as Premium page)
+            setXpPoints(user.xp ?? 0);
         } catch (error) {
             console.error('Error loading stats:', error);
         }
@@ -424,19 +426,14 @@ export default function ProfilePage() {
                 >
                     <div className="px-5 pt-5 pb-2">
                         <div className="flex items-start gap-4">
-                            {/* Avatar */}
+                            {/* Avatar with ProfileFrame */}
                             <div className="relative flex-shrink-0">
-                                {user.photoURL ? (
-                                    <img
-                                        src={user.photoURL}
-                                        alt={user.name}
-                                        className="w-[88px] h-[88px] rounded-full object-cover border-4 border-white shadow-lg"
-                                    />
-                                ) : (
-                                    <div className="w-[88px] h-[88px] bg-gradient-to-br from-[#1650EB] to-[#6095DB] rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                                        <User className="w-10 h-10 text-white" />
-                                    </div>
-                                )}
+                                <ProfileFrame
+                                    frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
+                                    photoURL={user.photoURL}
+                                    userName={user.name}
+                                    size={80}
+                                />
                                 {/* Camera/Edit button */}
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
@@ -462,6 +459,9 @@ export default function ProfilePage() {
                             <div className="flex-1 min-w-0 pt-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <h2 className="text-lg font-bold text-gray-900 truncate">{user.name}</h2>
+                                    {activeBadge && activeBadge !== 'none' && (
+                                        <PremiumBadge badgeType={activeBadge as BadgeType} size="md" />
+                                    )}
                                     <svg viewBox="0 0 22 22" className="w-5 h-5 flex-shrink-0" fill="none">
                                         <circle cx="11" cy="11" r="11" fill="#1650EB" />
                                         <path d="M7 11.5L9.5 14L15 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

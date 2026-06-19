@@ -9,6 +9,8 @@ import { PWARegistration } from "@/components/PWAProvider";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushNotificationProvider } from "@/components/PushNotificationProvider";
 import { IncomingCallModal, CallScreen } from "@/components/call";
+import { PremiumProvider } from "@/contexts/PremiumContext";
+import TouchBubbles from "@/components/ui/TouchBubbles";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -130,19 +132,23 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <ChatProvider>
-              <CallProvider>
-                <PushNotificationProvider>
-                  {children}
-                  {/* PWA Components */}
-                  <PWARegistration />
-                  <InstallPrompt />
-                  {/* Call Components (global) */}
-                  <IncomingCallModal />
-                  <CallScreen />
-                </PushNotificationProvider>
-              </CallProvider>
-            </ChatProvider>
+            <PremiumProvider>
+              <ChatProvider>
+                <CallProvider>
+                  <PushNotificationProvider>
+                    {children}
+                    {/* PWA Components */}
+                    <PWARegistration />
+                    <InstallPrompt />
+                    {/* Call Components (global) */}
+                    <IncomingCallModal />
+                    <CallScreen />
+                    {/* Touch Bubbles (global interaction) */}
+                    <TouchBubbles />
+                  </PushNotificationProvider>
+                </CallProvider>
+              </ChatProvider>
+            </PremiumProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

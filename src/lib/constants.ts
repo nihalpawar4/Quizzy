@@ -98,7 +98,12 @@ export const COLLECTIONS = {
     WEEKLY_TEST_RESULTS: 'weeklyTestResults',
     // Daily Surprise Rewards
     DAILY_REWARDS: 'dailyRewards',
+    // Premium Purchases
+    PREMIUM_PURCHASES: 'premiumPurchases',
 } as const;
+
+// Premium XP cost
+export const PREMIUM_XP_COST = 999;
 
 // Evaluation mode options for test creation
 export const EVALUATION_MODES = [

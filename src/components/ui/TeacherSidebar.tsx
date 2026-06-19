@@ -36,6 +36,8 @@ interface TeacherSidebarProps {
     onSignOut: () => void;
     onCreateTest: () => void;
     onAnnounce: () => void;
+    onNotificationClick?: () => void;
+    notificationCount?: number;
 }
 
 interface NavItem {
@@ -61,6 +63,8 @@ export default function TeacherSidebar({
     onSignOut,
     onCreateTest,
     onAnnounce,
+    onNotificationClick,
+    notificationCount = 0,
 }: TeacherSidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -460,12 +464,26 @@ export default function TeacherSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/"
+                            href="/dashboard/teacher"
                             className="p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
                             title="Home"
                         >
                             <Home className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </Link>
+                        {/* Notification */}
+                        {onNotificationClick && (
+                            <button
+                                onClick={onNotificationClick}
+                                className="relative p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
+                            >
+                                <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                {notificationCount > 0 && (
+                                    <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-1 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                                        {notificationCount > 9 ? '9+' : notificationCount}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                         {/* Profile avatar */}
                         <div className="relative" ref={profileRef}>
                             <button
@@ -709,7 +727,7 @@ export default function TeacherSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/"
+                            href="/dashboard/teacher"
                             className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
                             title="Home"
                         >
