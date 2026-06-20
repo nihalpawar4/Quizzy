@@ -26,6 +26,7 @@ interface PremiumContextType {
     isPremium: boolean;
     isTrial: boolean;
     trialExpiresAt: Date | null;
+    hasClaimedTrial: boolean;
     loading: boolean;
     // Cosmetics
     activeBubbleTheme: BubbleTheme;
@@ -48,6 +49,7 @@ const defaultStatus: PremiumContextType = {
     isPremium: false,
     isTrial: false,
     trialExpiresAt: null,
+    hasClaimedTrial: false,
     loading: true,
     activeBubbleTheme: 'default',
     activeProfileFrame: 'none',
@@ -87,24 +89,27 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         return () => unsub();
     }, [user?.uid]);
 
-    // ─── Launch trial: 1-hour free premium for every student on first encounter ───
+    // ─── Launch trial: 24-hour free premium for first-time student ───
     useEffect(() => {
         if (!user?.uid || !status || loading || launchTrialChecked.current) return;
         if (user.role !== 'student') return;
         launchTrialChecked.current = true;
 
-        // Skip if already premium (purchased or active trial)
+        // Skip if already premium (purchased or active trial) or already claimed
         if (status.isPremium) return;
 
-        // Check localStorage to prevent re-triggering
+        // Check localStorage to prevent re-triggering on the same device
         const key = `quizy_premium_launch_trial_${user.uid}`;
         if (typeof window !== 'undefined' && localStorage.getItem(key)) return;
 
-        // Activate 1-hour trial and mark as done
-        activatePremiumTrial(user.uid, 1)
-            .then(() => {
+        // Activate 24-hour trial (server-side also checks first-time)
+        activatePremiumTrial(user.uid, 24)
+            .then((result) => {
                 if (typeof window !== 'undefined') {
                     localStorage.setItem(key, new Date().toISOString());
+                }
+                if (!result.success) {
+                    console.log('Trial not activated:', result.error);
                 }
             })
             .catch(console.error);
@@ -140,6 +145,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         isPremium: status?.isPremium ?? false,
         isTrial: status?.isTrial ?? false,
         trialExpiresAt: status?.trialExpiresAt ?? null,
+        hasClaimedTrial: status?.hasClaimedTrial ?? false,
         loading,
         activeBubbleTheme: (status?.activeBubbleTheme as BubbleTheme) ?? 'default',
         activeProfileFrame: (status?.activeProfileFrame as ProfileFrameType) ?? 'none',

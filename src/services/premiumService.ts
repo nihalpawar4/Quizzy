@@ -13,6 +13,7 @@ export interface PremiumStatus {
     isPremium: boolean;
     isTrial: boolean;
     trialExpiresAt: Date | null;
+    hasClaimedTrial: boolean;
     purchasedAt: Date | null;
     activeBubbleTheme: string;
     activeProfileFrame: string;
@@ -71,6 +72,7 @@ export function resolvePremiumStatus(userData: Record<string, unknown>): Premium
         isPremium: isPermanent || isTrial,
         isTrial: !isPermanent && isTrial,
         trialExpiresAt: trialExpiry,
+        hasClaimedTrial: !!userData.premiumTrialClaimedAt,
         purchasedAt: userData.premiumPurchasedAt
             ? (userData.premiumPurchasedAt as { toDate?: () => Date }).toDate?.() || new Date(userData.premiumPurchasedAt as string)
             : null,
@@ -89,7 +91,7 @@ export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
     const snap = await getDoc(userRef);
     if (!snap.exists()) {
         return {
-            isPremium: false, isTrial: false, trialExpiresAt: null, purchasedAt: null,
+            isPremium: false, isTrial: false, trialExpiresAt: null, hasClaimedTrial: false, purchasedAt: null,
             activeBubbleTheme: 'default', activeProfileFrame: 'none', activeBadge: 'none',
             streakShieldsRemaining: 0, xpBoostActive: false, xpBoostExpiresAt: null, xpBoostMultiplier: 1,
         };
@@ -150,15 +152,36 @@ export async function purchasePremium(userId: string): Promise<{ success: boolea
     return { success: true };
 }
 
-// ─── Activate Premium Trial ────────────────────────────────────────────
+// ─── Activate Premium Trial (first-time only) ─────────────────────────
 
-export async function activatePremiumTrial(userId: string, hours: number = 24): Promise<void> {
+export async function activatePremiumTrial(userId: string, hours: number = 24): Promise<{ success: boolean; error?: string }> {
     const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+        return { success: false, error: 'User not found' };
+    }
+
+    const data = snap.data();
+
+    // Block if already permanently premium
+    if (data.isPremium === true) {
+        return { success: false, error: 'Already a premium member!' };
+    }
+
+    // Block if trial was already claimed (one-time only)
+    if (data.premiumTrialClaimedAt) {
+        return { success: false, error: 'You have already claimed your free trial.' };
+    }
+
     const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
 
     await updateDoc(userRef, {
         premiumTrialExpiresAt: expiresAt,
+        premiumTrialClaimedAt: new Date(),
     });
+
+    return { success: true };
 }
 
 // ─── Cosmetic Setters ──────────────────────────────────────────────────

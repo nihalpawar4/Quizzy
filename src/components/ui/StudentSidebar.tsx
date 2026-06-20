@@ -450,7 +450,7 @@ export default function StudentSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/dashboard/student"
+                            href="/"
                             className="p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
                             title="Home"
                         >
@@ -573,7 +573,7 @@ export default function StudentSidebar({
                         )}
                         {/* Home */}
                         <Link
-                            href="/dashboard/student"
+                            href="/"
                             className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
                             title="Home"
                         >
@@ -598,11 +598,19 @@ export default function StudentSidebar({
                                 className="p-0.5 rounded-full hover:ring-2 hover:ring-[#1650EB]/15 transition-all"
                             >
                                 {userPhotoURL ? (
-                                    <img src={userPhotoURL} alt={userName} className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-900 shadow-md" />
+                                    <ProfileFrame
+                                        frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
+                                        photoURL={userPhotoURL}
+                                        userName={userName}
+                                        size={36}
+                                    />
                                 ) : (
-                                    <div className="w-9 h-9 bg-[#1650EB]/10 dark:bg-[#1650EB]/20 rounded-full flex items-center justify-center border border-[#1650EB]/10">
-                                        <User className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
-                                    </div>
+                                    <ProfileFrame
+                                        frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
+                                        photoURL={null}
+                                        userName={userName}
+                                        size={36}
+                                    />
                                 )}
                             </button>
                             <AnimatePresence>
