@@ -18,6 +18,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import { claimDailyStreak } from '@/lib/services';
+import { awardActivityXp } from '@/services/coinService';
 import type { Question, User } from '@/types';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -213,6 +214,13 @@ export async function submitDailyQuiz(
         totalQuestions,
         completedAt: Timestamp.now(),
     });
+
+    // 1.5) Award XP: 10 XP for daily challenge + 15 bonus if >80%
+    try {
+        await awardActivityXp(user.uid, 'daily_challenge', score, totalQuestions);
+    } catch (xpErr) {
+        console.error('[Quizy] Daily challenge XP award failed (non-blocking):', xpErr);
+    }
 
     // 2) Claim the streak (uses existing infrastructure)
     const streakResult = await claimDailyStreak(user.uid, user);

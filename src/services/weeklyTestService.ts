@@ -16,6 +16,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import type { Question, User, WeeklyTestResult } from '@/types';
+import { awardActivityXp } from '@/services/coinService';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -262,6 +263,13 @@ export async function submitWeeklyTest(
         detailedAnswers: detailedAnswers || [],
         completedAt: Timestamp.now(),
     });
+
+    // Award XP: 30 XP for weekly challenge + 15 bonus if >80%
+    try {
+        await awardActivityXp(user.uid, 'weekly_challenge', score, totalQuestions);
+    } catch (xpErr) {
+        console.error('[Quizy] Weekly test XP award failed (non-blocking):', xpErr);
+    }
 }
 
 // ── Weekly Test History ──────────────────────────────────────────────

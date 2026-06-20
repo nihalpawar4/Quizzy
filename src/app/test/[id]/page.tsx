@@ -40,6 +40,7 @@ import {
     updateSessionProgress,
     completeSession,
 } from '@/services/testSessionService';
+import { awardActivityXp } from '@/services/coinService';
 
 // Circular Progress Component
 function CircularProgress({
@@ -955,6 +956,18 @@ export default function TestPage() {
 
             // Clear persisted deadline from sessionStorage
             clearPersistedDeadline();
+
+            // Award XP: 10 XP for test completion + 15 bonus if >80%
+            try {
+                await awardActivityXp(
+                    currentUser.uid,
+                    'test',
+                    correctCount,
+                    currentQuestions.length
+                );
+            } catch (xpErr) {
+                console.error('[Quizy] Test XP award failed (non-blocking):', xpErr);
+            }
 
             // Save wrong answers to Mistake Bucket for Practice Mode
             try {
