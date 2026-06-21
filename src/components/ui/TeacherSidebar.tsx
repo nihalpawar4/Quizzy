@@ -464,7 +464,7 @@ export default function TeacherSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/dashboard/teacher"
+                            href="/?home=true"
                             className="p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
                             title="Home"
                         >
@@ -727,7 +727,7 @@ export default function TeacherSidebar({
                         </Link>
                         {/* Home */}
                         <Link
-                            href="/dashboard/teacher"
+                            href="/?home=true"
                             className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
                             title="Home"
                         >

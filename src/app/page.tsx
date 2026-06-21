@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   GraduationCap,
   BookOpen,
@@ -578,17 +578,20 @@ export default function HomePage() {
   const { resolvedTheme, setTheme } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromDashboard = searchParams.get('home') === 'true';
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   // Auto-redirect logged-in users to their dashboard
+  // Skip redirect if user explicitly clicked "Home" from dashboard (?home=true)
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !isFromDashboard) {
       router.push('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isFromDashboard]);
 
   // Scroll listener for navbar glass effect
   useEffect(() => {
@@ -598,7 +601,7 @@ export default function HomePage() {
   }, []);
 
   // Show loading state while checking auth / redirecting
-  if (loading || user) {
+  if (loading || (user && !isFromDashboard)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <MotivationalLoader subtitle="Redirecting to your dashboard..." />

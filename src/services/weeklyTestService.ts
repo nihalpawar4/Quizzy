@@ -21,7 +21,7 @@ import { awardActivityXp } from '@/services/coinService';
 // ── Constants ────────────────────────────────────────────────────────
 
 /** First Sunday from which we start counting weekly tests. */
-const EPOCH_SUNDAY = '2026-06-15'; // Week 1
+const EPOCH_SUNDAY = '2026-06-21'; // Week 1 (first Sunday)
 
 /** Number of questions in a weekly test. */
 export const WEEKLY_TEST_QUESTION_COUNT = 30;

@@ -144,7 +144,7 @@ export default function StudentDashboard() {
     const [dailyQuizSession, setDailyQuizSession] = useState<TestSession | null>(null);
 
     // Weekly Test state
-    const [isSundayToday, setIsSundayToday] = useState(false);
+    const [isSundayToday, setIsSundayToday] = useState(() => isSunday());
     const [weeklyTestCompleted, setWeeklyTestCompleted] = useState(false);
     const [weeklyHistory, setWeeklyHistory] = useState<WeeklyTestResult[]>([]);
 
