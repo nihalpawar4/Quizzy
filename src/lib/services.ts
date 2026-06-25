@@ -530,14 +530,16 @@ export async function deleteResult(resultId: string): Promise<void> {
 
 /**
  * Get results for a specific student
+ * @param studentClass - Optional: when provided, only returns results for this class
  */
-export async function getResultsByStudent(studentId: string): Promise<TestResult[]> {
+export async function getResultsByStudent(studentId: string, studentClass?: number): Promise<TestResult[]> {
     const resultsRef = collection(db, COLLECTIONS.RESULTS);
-    const q = query(
-        resultsRef,
-        where('studentId', '==', studentId),
-        orderBy('timestamp', 'desc')
-    );
+    // Build query constraints dynamically based on whether class filter is needed
+    const baseConstraints = [where('studentId', '==', studentId)];
+    if (studentClass !== undefined) {
+        baseConstraints.push(where('studentClass', '==', studentClass));
+    }
+    const q = query(resultsRef, ...baseConstraints, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
 
     return snapshot.docs.map(doc => {

@@ -414,28 +414,28 @@ export default function WeeklyTestCard({ user, onComplete }: WeeklyTestCardProps
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-xl shadow-purple-500/20"
+                className="mb-6 relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-purple-500/20"
             >
                 {/* Decorative elements */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
 
-                <div className="relative flex items-center justify-between">
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/10">
-                            <BookOpen className="w-7 h-7" />
+                        <div className="w-11 h-11 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/10 shrink-0">
+                            <BookOpen className="w-5 h-5 sm:w-7 sm:h-7" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg">Weekly Test {weekNumber}</h3>
-                                <span className="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-base sm:text-lg">Weekly Test {weekNumber}</h3>
+                                <span className="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                                     Sunday Special
                                 </span>
                             </div>
-                            <p className="text-white/70 text-sm mt-0.5">
+                            <p className="text-white/70 text-xs sm:text-sm mt-0.5">
                                 {WEEKLY_TEST_QUESTION_COUNT} questions • {Math.floor(WEEKLY_TEST_TIMER_SECONDS / 60)} min timer
                             </p>
-                            <p className="text-white/50 text-xs mt-1">
+                            <p className="text-white/50 text-xs mt-1 hidden sm:block">
                                 Based on your completed tests — same concepts, new questions!
                             </p>
                         </div>
@@ -444,7 +444,7 @@ export default function WeeklyTestCard({ user, onComplete }: WeeklyTestCardProps
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setPhase('instructions')}
-                        className="flex items-center gap-2 bg-white text-purple-700 px-5 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all flex-shrink-0"
+                        className="flex items-center justify-center gap-2 bg-white text-purple-700 px-5 py-2.5 sm:py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all flex-shrink-0 w-full sm:w-auto"
                     >
                         <Play className="w-4 h-4 fill-current" />
                         Start Test

@@ -188,7 +188,8 @@ export default function TestPage() {
     useEffect(() => { testStartTimeRef.current = testStartTime; }, [testStartTime]);
 
     // Auto-submit tracking: count total violations (tab switches + fullscreen exits)
-    // 1st violation = warning, 2nd violation = auto-submit (works on ALL devices including mobile)
+    // Desktop (>=1024px): 5 violations = auto-submit (minimizing, switching windows is common)
+    // Mobile (<1024px): 3 violations = auto-submit (tab switching is more suspicious)
     // Debounce: on mobile, a single tab switch can fire both visibilitychange AND fullscreenchange
     // simultaneously, so we debounce to prevent double-counting within 1.5 seconds
     const violationCountRef = useRef(0);
@@ -196,6 +197,9 @@ export default function TestPage() {
     const [showViolationWarning, setShowViolationWarning] = useState(false);
     const [violationWarningMessage, setViolationWarningMessage] = useState('');
     const autoSubmitTriggeredRef = useRef(false);
+    // Desktop gets a higher threshold since minimizing/switching windows is normal behavior
+    const isDesktopRef = useRef(typeof window !== 'undefined' && window.innerWidth >= 1024);
+    const getViolationThreshold = () => isDesktopRef.current ? 5 : 3;
 
     // Instructions screen state
     const [showInstructionsScreen, setShowInstructionsScreen] = useState(false);
@@ -317,12 +321,14 @@ export default function TestPage() {
                     if (now - lastViolationTimeRef.current > 1500) {
                         lastViolationTimeRef.current = now;
                         violationCountRef.current += 1;
-                        if (violationCountRef.current <= 2) {
-                            // First or second violation: show blocking warning
-                            setViolationWarningMessage(`⚠️ WARNING: Tab switch detected! (${violationCountRef.current}/2 warnings) One more violation and your test will be automatically submitted.`);
+                        const threshold = getViolationThreshold();
+                        const warningsLeft = threshold - violationCountRef.current;
+                        if (violationCountRef.current < threshold) {
+                            // Show blocking warning with remaining count
+                            setViolationWarningMessage(`⚠️ WARNING: Tab switch detected! (${violationCountRef.current}/${threshold - 1} warnings) ${warningsLeft <= 1 ? 'Next violation will auto-submit your test!' : `${warningsLeft} warnings remaining.`}`);
                             setShowViolationWarning(true);
-                        } else if (violationCountRef.current >= 3) {
-                            // Third violation: auto-submit
+                        } else if (violationCountRef.current >= threshold) {
+                            // Threshold reached: auto-submit
                             autoSubmitTriggeredRef.current = true;
                             setShowViolationWarning(false);
                             handleFinalSubmit();
@@ -451,17 +457,22 @@ export default function TestPage() {
                 // Auto-submit logic — applies to ALL screen sizes (desktop + mobile)
                 // Debounce: skip if a violation was already counted within 1.5s (prevents
                 // double-counting when both visibilitychange + fullscreenchange fire together)
-                if (!autoSubmitTriggeredRef.current) {
+                // On desktop, fullscreen exits are NOT counted as violations because
+                // minimizing the window inherently exits fullscreen — this is normal desktop behavior.
+                // On mobile, fullscreen exits are still counted as violations.
+                if (!autoSubmitTriggeredRef.current && !isDesktopRef.current) {
                     const now = Date.now();
                     if (now - lastViolationTimeRef.current > 1500) {
                         lastViolationTimeRef.current = now;
                         violationCountRef.current += 1;
-                        if (violationCountRef.current <= 2) {
-                            // First or second violation: show blocking warning
-                            setViolationWarningMessage(`⚠️ WARNING: You exited fullscreen! (${violationCountRef.current}/2 warnings) One more violation and your test will be automatically submitted.`);
+                        const threshold = getViolationThreshold();
+                        const warningsLeft = threshold - violationCountRef.current;
+                        if (violationCountRef.current < threshold) {
+                            // Show blocking warning
+                            setViolationWarningMessage(`⚠️ WARNING: You exited fullscreen! (${violationCountRef.current}/${threshold - 1} warnings) ${warningsLeft <= 1 ? 'Next violation will auto-submit your test!' : `${warningsLeft} warnings remaining.`}`);
                             setShowViolationWarning(true);
-                        } else if (violationCountRef.current >= 3) {
-                            // Third violation: auto-submit
+                        } else if (violationCountRef.current >= threshold) {
+                            // Threshold reached: auto-submit
                             autoSubmitTriggeredRef.current = true;
                             setShowViolationWarning(false);
                             handleFinalSubmit();

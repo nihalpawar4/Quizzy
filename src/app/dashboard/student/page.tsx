@@ -418,7 +418,7 @@ export default function StudentDashboard() {
 
             // Update local state immediately
             setTakenTests(prev => new Set([...prev, test.id]));
-            const updatedResults = await getResultsByStudent(user.uid);
+            const updatedResults = await getResultsByStudent(user.uid, user.studentClass);
             setResults(updatedResults);
         } catch (error) {
             console.error('Error downloading PDF:', error);
@@ -444,7 +444,7 @@ export default function StudentDashboard() {
             if (testsData) {
                 setTests(testsData);
             }
-            const resultsData = await getResultsByStudent(user.uid);
+            const resultsData = await getResultsByStudent(user.uid, user.studentClass);
             setResults(resultsData);
 
             // Derive taken tests directly from results - no extra API calls!
@@ -694,13 +694,9 @@ export default function StudentDashboard() {
         }
     }, [user?.uid]);
 
-    // Load Daily Quiz Challenge data (skip on Sundays — Weekly Test shown instead)
+    // Load Daily Quiz Challenge data (available every day including Sundays as fallback)
     useEffect(() => {
         if (!user?.uid || !user?.studentClass) return;
-        if (isSundayToday) {
-            setDailyQuizLoading(false);
-            return;
-        }
         setDailyQuizLoading(true);
         Promise.all([
             getDailyQuizQuestions(user.studentClass),
@@ -715,7 +711,7 @@ export default function StudentDashboard() {
         }).finally(() => {
             setDailyQuizLoading(false);
         });
-    }, [user?.uid, user?.studentClass, isSundayToday]);
+    }, [user?.uid, user?.studentClass]);
 
     // Real-time listener for user profile changes (class change from profile settings)
     // When studentClass is changed in Firestore, this triggers refreshUser() which updates
@@ -1225,8 +1221,8 @@ export default function StudentDashboard() {
                     />
                 )}
 
-                {/* Daily Quiz Challenge — only shown on non-Sundays when loaded and not completed */}
-                {activeTab === 'tests' && !isSundayToday && !dailyQuizLoading && !dailyQuizCompleted && (
+                {/* Daily Quiz Challenge — available every day (on Sundays serves as fallback for streak) */}
+                {activeTab === 'tests' && !dailyQuizLoading && !dailyQuizCompleted && (
                     <DailyQuizCard
                         questions={dailyQuizQuestions}
                         completed={dailyQuizCompleted}
@@ -1257,8 +1253,8 @@ export default function StudentDashboard() {
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl">🎉</span>
                                 <div>
-                                    <p className="font-bold">{isSundayToday ? 'Weekly Test Complete!' : 'Daily Challenge Complete!'}</p>
-                                    <p className="text-white/80 text-sm">Score: {dailyQuizScore.score}/{dailyQuizScore.total}{!isSundayToday && ' • 🔥 Streak updated!'}</p>
+                                    <p className="font-bold">{isSundayToday && weeklyTestCompleted ? 'Weekly Test Complete!' : 'Daily Challenge Complete!'}</p>
+                                    <p className="text-white/80 text-sm">Score: {dailyQuizScore.score}/{dailyQuizScore.total} • 🔥 Streak updated!</p>
                                 </div>
                             </div>
                             <button onClick={() => setDailyQuizScore(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -1674,11 +1670,11 @@ export default function StudentDashboard() {
                                         <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-[24px] border ${isExpanded ? 'border-[#1650EB]/20 ring-1 ring-[#1650EB]/5 shadow-lg shadow-[#1650EB]/5' : `${iconSvgConfig.border} hover:shadow-md`} overflow-hidden ${isExpired ? 'opacity-55' : ''} transition-all duration-200`}>
                                             {/* Main Row */}
                                             <div
-                                                className="flex items-center gap-3.5 px-4 py-4 cursor-pointer"
+                                                className="flex items-center gap-3 sm:gap-3.5 px-3 sm:px-4 py-3 sm:py-4 cursor-pointer"
                                                 onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
                                             >
                                                 {/* Subject Icon — SVG Illustration */}
-                                                <div className="w-[52px] h-[52px] shrink-0">
+                                                <div className="w-10 h-10 sm:w-[52px] sm:h-[52px] shrink-0">
                                                     {isPdf ? pdfIconSvg : iconSvgConfig.svg}
                                                 </div>
 
@@ -1717,8 +1713,8 @@ export default function StudentDashboard() {
                                                     </div>
                                                 </div>
 
-                                                {/* Score Pill — only shown for completed tests */}
-                                                <div className="shrink-0">
+                                                {/* Score Pill — only shown for completed tests (hidden on mobile, visible on sm+) */}
+                                                <div className="shrink-0 hidden sm:block">
                                                     {hasTaken && result && !isPdf ? (
                                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                                                             scorePercent !== null && scorePercent >= 70 ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' :
@@ -1736,8 +1732,8 @@ export default function StudentDashboard() {
                                                     ) : null}
                                                 </div>
 
-                                                {/* Action Button */}
-                                                <div className="shrink-0">
+                                                {/* Action Button — hidden on mobile (available in expanded view), visible on sm+ */}
+                                                <div className="shrink-0 hidden sm:block">
                                                     {hasTaken ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setExpandedTestId(expandedTestId === test.id ? null : test.id); }}

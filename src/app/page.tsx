@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -555,7 +555,7 @@ function InstallAppLink() {
 
 
 
-export default function HomePage() {
+function HomePageInner() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -1393,5 +1393,17 @@ export default function HomePage() {
 
 
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <MotivationalLoader subtitle="Loading..." />
+      </div>
+    }>
+      <HomePageInner />
+    </Suspense>
   );
 }

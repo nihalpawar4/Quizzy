@@ -42,6 +42,8 @@ import {
 import ProfileFrame from '@/components/ui/ProfileFrame';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
+import { getResultsByStudent } from '@/lib/services';
+import type { TestResult } from '@/types';
 
 // ─── Theme-aware design tokens ───────────────────────────────────────
 function getPremiumTheme(isDark: boolean) {
@@ -88,18 +90,101 @@ const FRAME_DISPLAY: { id: ProfileFrameType; label: string }[] = [
     { id: 'aurora', label: 'Aurora' },
 ];
 
-const ANALYTICS_STATS = [
-    { label: 'Accuracy', value: '87%', color: '#10B981', data: [62, 68, 71, 75, 78, 82, 87] },
-    { label: 'Rank Growth', value: 'Top 3%', color: '#1650EB', data: [40, 48, 55, 62, 70, 78, 88] },
-    { label: 'XP Earned', value: '12.4k', color: '#8B5CF6', data: [30, 42, 50, 58, 65, 72, 80] },
-    { label: 'Study Time', value: '24.6h', color: '#F59E0B', data: [55, 58, 60, 63, 68, 72, 76] },
-];
+// Analytics stats are now computed from real user data (see useRealAnalytics hook)
 
-const SOCIAL_STATS = [
-    { value: '+32%', label: 'Faster Progress', color: '#1650EB' },
-    { value: '+2.8x', label: 'Higher XP Gain', color: '#8B5CF6' },
-    { value: '+48%', label: 'Better Accuracy', color: '#10B981' },
-];
+// ─── Compute real analytics from test results ─────────────────────────
+function useRealAnalytics(userId: string | undefined, userXP: number) {
+    const [results, setResults] = useState<TestResult[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!userId) { setLoading(false); return; }
+        setLoading(true);
+        getResultsByStudent(userId)
+            .then(setResults)
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, [userId]);
+
+    return useMemo(() => {
+        if (loading || results.length === 0) {
+            // Return zeros / defaults for new users
+            const emptyAnalytics = [
+                { label: 'ACCURACY', value: results.length === 0 && !loading ? '—' : '...', color: '#10B981', data: [0] },
+                { label: 'TESTS DONE', value: results.length === 0 && !loading ? '0' : '...', color: '#1650EB', data: [0] },
+                { label: 'XP EARNED', value: results.length === 0 && !loading ? '0' : '...', color: '#8B5CF6', data: [0] },
+                { label: 'STUDY TIME', value: results.length === 0 && !loading ? '0m' : '...', color: '#F59E0B', data: [0] },
+            ];
+            const emptySocial = [
+                { value: '0', label: 'Tests Completed', color: '#1650EB' },
+                { value: '0', label: 'XP Earned', color: '#8B5CF6' },
+                { value: '—', label: 'Avg Accuracy', color: '#10B981' },
+            ];
+            return { analyticsStats: emptyAnalytics, socialStats: emptySocial, loading };
+        }
+
+        // ── Compute accuracy ──
+        const scorableResults = results.filter(r => {
+            if (r.isPdfTest) return r.pdfEvaluated && r.pdfMaxMarks && r.pdfMaxMarks > 0;
+            if (r.evaluationStatus === 'pending' || r.evaluationStatus === 'under_review' || r.evaluationStatus === 'evaluated') return false;
+            if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.totalMarks > 0 && r.marksObtained !== undefined) return true;
+            return r.totalQuestions > 0;
+        });
+
+        const accuracies = scorableResults.map(r => {
+            if (r.isPdfTest && r.pdfEvaluated && r.pdfMaxMarks) return ((r.pdfMarksAwarded || 0) / r.pdfMaxMarks) * 100;
+            if (r.evaluationStatus === 'published' && (r.evaluationMode === 'manual' || r.evaluationMode === 'hybrid') && r.totalMarks && r.totalMarks > 0 && r.marksObtained !== undefined) return (r.marksObtained / r.totalMarks) * 100;
+            return r.totalQuestions > 0 ? (r.score / r.totalQuestions) * 100 : 0;
+        });
+        const avgAccuracy = accuracies.length > 0 ? Math.round(accuracies.reduce((a, b) => a + b, 0) / accuracies.length) : 0;
+
+        // Build sparkline data from last 7 test accuracies (oldest → newest)
+        const last7Accuracies = accuracies.slice(0, 7).reverse();
+        const accuracySparkline = last7Accuracies.length > 0 ? last7Accuracies : [0];
+
+        // ── Tests completed ──
+        const testsCompleted = results.length;
+
+        // ── XP ──
+        const formattedXP = userXP >= 1000 ? `${(userXP / 1000).toFixed(1)}k` : String(userXP);
+
+        // ── Study time ──
+        const totalSeconds = results.reduce((sum, r) => sum + (r.timeTakenSeconds || 0), 0);
+        const totalMinutes = Math.round(totalSeconds / 60);
+        const studyTimeStr = totalMinutes >= 60
+            ? `${(totalMinutes / 60).toFixed(1)}h`
+            : `${totalMinutes}m`;
+
+        // Build sparkline from cumulative tests over time (last 7 data points)
+        const testsSparkline = results.length >= 2
+            ? results.slice(0, 7).reverse().map((_, i) => i + 1)
+            : [results.length];
+
+        // XP sparkline: just show current as a point
+        const xpSparkline = [Math.max(1, userXP * 0.3), Math.max(1, userXP * 0.5), Math.max(1, userXP * 0.7), Math.max(1, userXP)];
+
+        // Study time sparkline
+        const timeSparkline = results.length >= 2
+            ? results.slice(0, 7).reverse().map(r => (r.timeTakenSeconds || 0) / 60)
+            : [totalMinutes];
+
+        const analyticsStats = [
+            { label: 'ACCURACY', value: `${avgAccuracy}%`, color: '#10B981', data: accuracySparkline },
+            { label: 'TESTS DONE', value: String(testsCompleted), color: '#1650EB', data: testsSparkline },
+            { label: 'XP EARNED', value: formattedXP, color: '#8B5CF6', data: xpSparkline },
+            { label: 'STUDY TIME', value: studyTimeStr, color: '#F59E0B', data: timeSparkline },
+        ];
+
+        // ── Social proof stats (real data) ──
+        const socialStats = [
+            { value: String(testsCompleted), label: 'Tests Completed', color: '#1650EB' },
+            { value: formattedXP, label: 'Total XP', color: '#8B5CF6' },
+            { value: accuracies.length > 0 ? `${avgAccuracy}%` : '—', label: 'Avg Accuracy', color: '#10B981' },
+        ];
+
+        return { analyticsStats, socialStats, loading };
+    }, [results, loading, userXP]);
+}
 
 // ─── Background ──────────────────────────────────────────────────────
 function PremiumBackground({ p }: { p: PremiumTheme }) {
@@ -436,6 +521,9 @@ export default function PremiumPage() {
     const currentXP = user?.xp || 0;
     const canAfford = currentXP >= PREMIUM_XP_COST;
 
+    // Fetch real analytics from user's test results
+    const { analyticsStats, socialStats } = useRealAnalytics(user?.uid, currentXP);
+
     useEffect(() => {
         if (!authLoading && !user) router.push('/auth/login');
     }, [user, authLoading, router]);
@@ -700,7 +788,7 @@ export default function PremiumPage() {
 
                         <FeatureBanner p={p} title="Advanced Analytics" subtitle="Track · Improve · Rank up" icon={BarChart3} iconColor={p.emerald} delay={0.2}>
                             <div className="grid grid-cols-4 gap-2">
-                                {ANALYTICS_STATS.map((stat) => (
+                                {analyticsStats.map((stat) => (
                                     <div key={stat.label} className="p-2 rounded-xl text-center" style={{ background: `${stat.color}10`, border: `1px solid ${stat.color}18` }}>
                                         <p className="text-[8px] font-semibold uppercase" style={{ color: `${stat.color}bb` }}>{stat.label}</p>
                                         <p className="text-[13px] font-extrabold mt-0.5 tabular-nums" style={{ color: stat.color }}>{stat.value}</p>
@@ -758,7 +846,7 @@ export default function PremiumPage() {
                         >
                             <div className="flex items-center justify-between gap-3 mb-3">
                                 <div>
-                                    <p className="text-[13px] font-bold" style={{ color: p.text }}>Trusted by Top Learners</p>
+                                    <p className="text-[13px] font-bold" style={{ color: p.text }}>Your Performance</p>
                                     <div className="flex items-center gap-0.5 mt-1">
                                         {[1, 2, 3, 4, 5].map((i) => (
                                             <Star key={i} className="w-3 h-3 fill-current" style={{ color: p.amber }} />
@@ -767,7 +855,7 @@ export default function PremiumPage() {
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                {SOCIAL_STATS.map((s, i) => (
+                                {socialStats.map((s, i) => (
                                     <div key={i} className="p-2.5 rounded-xl text-center" style={{ background: `${s.color}10`, border: `1px solid ${s.color}18` }}>
                                         <p className="text-[14px] font-extrabold tabular-nums" style={{ color: s.color }}>{s.value}</p>
                                         <p className="text-[9px] font-medium mt-0.5 leading-tight" style={{ color: p.textMuted }}>{s.label}</p>

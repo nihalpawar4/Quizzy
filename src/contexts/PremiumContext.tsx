@@ -71,6 +71,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
     const [status, setStatus] = useState<PremiumStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const launchTrialChecked = useRef(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Subscribe to real-time premium status
     useEffect(() => {
@@ -87,7 +88,31 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => unsub();
-    }, [user?.uid]);
+    }, [user?.uid, refreshKey]);
+
+    // ─── Timer to detect trial expiry (time-based, not data-based) ───
+    // Firestore onSnapshot only fires when data changes, but trial expiry is
+    // time-based. This timer forces a re-evaluation when the trial period ends.
+    useEffect(() => {
+        if (!status?.isTrial || !status?.trialExpiresAt) return;
+
+        const now = Date.now();
+        const expiresAt = status.trialExpiresAt.getTime();
+        const msUntilExpiry = expiresAt - now;
+
+        if (msUntilExpiry <= 0) {
+            // Trial already expired — force re-evaluation now
+            setRefreshKey(k => k + 1);
+            return;
+        }
+
+        // Schedule re-evaluation when trial expires
+        const timer = setTimeout(() => {
+            setRefreshKey(k => k + 1);
+        }, msUntilExpiry + 500); // +500ms buffer to ensure we're past expiry
+
+        return () => clearTimeout(timer);
+    }, [status?.isTrial, status?.trialExpiresAt]);
 
     // ─── Launch trial: 24-hour free premium for first-time student ───
     useEffect(() => {

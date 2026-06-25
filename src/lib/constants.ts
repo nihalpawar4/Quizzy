@@ -103,7 +103,7 @@ export const COLLECTIONS = {
 } as const;
 
 // Premium XP cost
-export const PREMIUM_XP_COST = 999;
+export const PREMIUM_XP_COST = 499;
 
 // Evaluation mode options for test creation
 export const EVALUATION_MODES = [
