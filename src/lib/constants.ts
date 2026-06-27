@@ -102,8 +102,105 @@ export const COLLECTIONS = {
     PREMIUM_PURCHASES: 'premiumPurchases',
 } as const;
 
-// Premium XP cost
+// Premium XP cost (default / Basic tier)
 export const PREMIUM_XP_COST = 499;
+
+// Premium tier types
+export type PremiumTier = 'basic' | 'pro' | 'promax';
+
+// Premium subscription tiers
+export const PREMIUM_TIERS: {
+    id: PremiumTier;
+    name: string;
+    tagline: string;
+    price: number;
+    discount: number;
+    discountedPrice: number;
+    iconType: 'bolt' | 'crown' | 'gem';
+    color: string;
+    gradient: string;
+    glow: string;
+    features: string[];
+    highlighted?: boolean;
+    duration: string;
+}[] = [
+    {
+        id: 'basic',
+        name: 'Basic',
+        tagline: 'Get started with essentials',
+        price: 499,
+        discount: 200,
+        discountedPrice: 299,
+        iconType: 'bolt',
+        color: '#3B82F6',
+        gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+        glow: 'rgba(59,130,246,0.35)',
+        duration: '30 days',
+        features: [
+            'Bubble Themes (3 styles)',
+            'Basic Profile Frame',
+            '1 Premium Badge',
+            'Ad-Free Experience',
+            'Basic Analytics Dashboard',
+            'Priority Test Access',
+        ],
+    },
+    {
+        id: 'pro',
+        name: 'Pro',
+        tagline: 'Most popular for serious learners',
+        price: 999,
+        discount: 200,
+        discountedPrice: 799,
+        iconType: 'crown',
+        color: '#8B5CF6',
+        gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
+        glow: 'rgba(139,92,246,0.35)',
+        highlighted: true,
+        duration: '30 days',
+        features: [
+            'All Bubble Themes (5 styles)',
+            'All Profile Frames',
+            'All Premium Badges',
+            'Ad-Free Experience',
+            'Advanced Analytics & Insights',
+            '1.5x XP Multiplier',
+            'Streak Shield (3/month)',
+            'Priority Test Access',
+            'Weekly Challenge Access',
+            'Custom Quiz Creation',
+        ],
+    },
+    {
+        id: 'promax',
+        name: 'Pro Max',
+        tagline: 'Ultimate learning powerhouse',
+        price: 1999,
+        discount: 200,
+        discountedPrice: 1799,
+        iconType: 'gem',
+        color: '#F59E0B',
+        gradient: 'linear-gradient(135deg, #F59E0B, #D97706, #F97316)',
+        glow: 'rgba(245,158,11,0.4)',
+        duration: '30 days',
+        features: [
+            'All Bubble Themes + Exclusive',
+            'All Profile Frames + Animated',
+            'All Premium Badges + Diamond',
+            'Ad-Free Experience',
+            'Full Analytics Suite',
+            '2x XP Multiplier',
+            'Unlimited Streak Shields',
+            'Priority Test Access',
+            'All Weekly Challenges',
+            'Unlimited Custom Quizzes',
+            'AI-Powered Study Insights',
+            'Exclusive Leaderboard Rank',
+            'Early Feature Access',
+            'Bonus Rewards Every Week',
+        ],
+    },
+];
 
 // Evaluation mode options for test creation
 export const EVALUATION_MODES = [

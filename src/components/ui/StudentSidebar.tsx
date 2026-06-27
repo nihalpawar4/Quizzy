@@ -12,13 +12,16 @@ import {
     MessageSquare,
     HelpCircle,
     Bell,
-    User,
     LogOut,
     Settings,
     ChevronLeft,
+    ChevronRight,
     Home,
-    Gamepad2,
     Crown,
+    Menu,
+    Bot,
+    Diamond,
+    Star,
 } from 'lucide-react';
 import { usePremium } from '@/contexts/PremiumContext';
 import ProfileFrame from '@/components/ui/ProfileFrame';
@@ -26,8 +29,8 @@ import PremiumBadge from '@/components/ui/PremiumBadge';
 import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 
 interface SidebarProps {
-    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice';
-    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice') => void;
+    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help';
+    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help') => void;
     userName: string;
     userClass: number;
     userPhotoURL?: string | null;
@@ -48,11 +51,13 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice';
+    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help';
     href?: string;
     badge?: number;
     comingSoon?: boolean;
     activeColor: string;
+    iconBg?: string;
+    iconColor?: string;
 }
 
 export default function StudentSidebar({
@@ -83,15 +88,19 @@ export default function StudentSidebar({
             icon: BookOpen,
             tab: 'tests',
             activeColor: 'bg-[#1650EB]',
+            iconBg: 'bg-blue-50 dark:bg-blue-900/20',
+            iconColor: 'text-[#1650EB]',
         },
         {
-            id: 'reports',
-            label: 'My Reports',
-            shortLabel: 'Reports',
-            icon: FileText,
-            tab: 'reports',
-            badge: newReportsCount,
-            activeColor: 'bg-emerald-500',
+            id: 'practice',
+            label: 'Practice Mode',
+            shortLabel: 'Practice',
+            icon: Target,
+            tab: 'practice',
+            badge: mistakeBucketCount,
+            activeColor: 'bg-orange-500',
+            iconBg: 'bg-orange-50 dark:bg-orange-900/20',
+            iconColor: 'text-orange-500',
         },
         {
             id: 'notes',
@@ -100,7 +109,9 @@ export default function StudentSidebar({
             icon: BookMarked,
             tab: 'notes',
             badge: unreadNotesCount,
-            activeColor: 'bg-purple-500',
+            activeColor: 'bg-emerald-500',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+            iconColor: 'text-emerald-500',
         },
         {
             id: 'homework',
@@ -110,6 +121,19 @@ export default function StudentSidebar({
             tab: 'homework',
             badge: pendingHomeworkCount,
             activeColor: 'bg-indigo-500',
+            iconBg: 'bg-indigo-50 dark:bg-indigo-900/20',
+            iconColor: 'text-indigo-500',
+        },
+        {
+            id: 'reports',
+            label: 'My Reports',
+            shortLabel: 'Reports',
+            icon: FileText,
+            tab: 'reports',
+            badge: newReportsCount,
+            activeColor: 'bg-purple-500',
+            iconBg: 'bg-purple-50 dark:bg-purple-900/20',
+            iconColor: 'text-purple-500',
         },
     ];
 
@@ -122,36 +146,34 @@ export default function StudentSidebar({
             href: '/chat',
             badge: totalUnreadChat,
             activeColor: 'bg-pink-500',
-        },
-        {
-            id: 'practice',
-            label: 'Practice Mode',
-            shortLabel: 'Practice',
-            icon: Target,
-            tab: 'practice',
-            badge: mistakeBucketCount,
-            activeColor: 'bg-green-500',
+            iconBg: 'bg-pink-50 dark:bg-pink-900/20',
+            iconColor: 'text-pink-500',
         },
         {
             id: 'help',
             label: 'Help Center',
             shortLabel: 'Help',
             icon: HelpCircle,
-            comingSoon: true,
+            tab: 'help',
             activeColor: 'bg-orange-500',
+            iconBg: 'bg-amber-50 dark:bg-amber-900/20',
+            iconColor: 'text-amber-500',
         },
         {
-            id: 'premium',
-            label: 'Quizy Premium',
-            shortLabel: 'Premium',
-            icon: Crown,
-            href: '/premium',
-            activeColor: 'bg-amber-500',
+            id: 'ai-companion',
+            label: 'AI Companion',
+            shortLabel: 'AI',
+            icon: Bot,
+            comingSoon: true,
+            activeColor: 'bg-violet-500',
+            iconBg: 'bg-teal-50 dark:bg-teal-900/20',
+            iconColor: 'text-teal-500',
         },
     ];
 
     // Profile dropdown state
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
     // Close profile dropdown on outside click
@@ -204,14 +226,14 @@ export default function StudentSidebar({
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-3 w-[3px] h-5 bg-[#1650EB] dark:bg-[#6095DB] rounded-r-full" />
                 )}
 
-                {/* Icon in glass container */}
+                {/* Icon in colored container */}
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
                     isActive
                         ? 'bg-[#1650EB] shadow-md shadow-[#1650EB]/25'
-                        : 'bg-gray-100/80 dark:bg-gray-800/60 group-hover:bg-gray-200/80 dark:group-hover:bg-gray-700/60'
+                        : (item.iconBg || 'bg-gray-100/80 dark:bg-gray-800/60 group-hover:bg-gray-200/80 dark:group-hover:bg-gray-700/60')
                 }`}>
                     <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                        isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
+                        isActive ? 'text-white' : (item.iconColor || 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300')
                     }`} />
                 </div>
 
@@ -409,11 +431,44 @@ export default function StudentSidebar({
                     )}
                     <div className="space-y-0.5">
                         {quickItems.map((item) =>
-                            renderNavItem(item, false)
+                            renderNavItem(item, activeTab === item.tab)
                         )}
                     </div>
                 </div>
             </nav>
+
+            {/* Go Premium Banner */}
+            {!isCollapsed && (
+                <div className="px-3 pb-4 pt-2">
+                    <Link
+                        href="/premium"
+                        className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-50/80 via-violet-50/60 to-purple-50/80 dark:from-blue-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border border-blue-100/60 dark:border-blue-900/30 hover:shadow-md hover:shadow-blue-500/5 transition-all group cursor-pointer"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 relative">
+                            <Diamond className="w-5 h-5 text-white" />
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
+                                <Star className="w-2.5 h-2.5 text-white fill-white" />
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-bold text-gray-900 dark:text-white">Go Premium</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Unlock unlimited tests, detailed analytics & more.</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                    </Link>
+                </div>
+            )}
+            {isCollapsed && (
+                <div className="px-2 pb-4 pt-2">
+                    <Link
+                        href="/premium"
+                        className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+                        title="Go Premium"
+                    >
+                        <Diamond className="w-5 h-5 text-white" />
+                    </Link>
+                </div>
+            )}
         </div>
     );
 
@@ -489,6 +544,71 @@ export default function StudentSidebar({
                 </div>
             </div>
 
+            {/* ===== MOBILE: More Menu (small popup above More button) ===== */}
+            <AnimatePresence>
+                {showMoreMenu && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="lg:hidden fixed inset-0 z-[55]"
+                            onClick={() => setShowMoreMenu(false)}
+                        />
+                        {/* Popup */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                            transition={{ duration: 0.15 }}
+                            className="lg:hidden fixed right-4 z-[56] w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80 dark:border-gray-800/80 overflow-hidden"
+                            style={{ bottom: 'calc(72px + max(8px, env(safe-area-inset-bottom)))' }}
+                        >
+                            {/* Menu items */}
+                            <div className="p-1.5">
+                                {/* Help Center */}
+                                <button
+                                    onClick={() => { setShowMoreMenu(false); onTabChange('help'); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <HelpCircle className="w-3.5 h-3.5 text-orange-500" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Help Center</span>
+                                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/40">Soon</span>
+                                </button>
+
+                                {/* My Reports */}
+                                <button
+                                    onClick={() => { setShowMoreMenu(false); onTabChange('reports'); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                                        <FileText className="w-3.5 h-3.5 text-emerald-500" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">My Reports</span>
+                                    {newReportsCount > 0 && (
+                                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
+                                            {newReportsCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* AI Companion */}
+                                <button
+                                    onClick={() => { setShowMoreMenu(false); onComingSoon('AI Companion'); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/15 to-blue-500/10 flex items-center justify-center border border-violet-200/30 dark:border-violet-800/30">
+                                        <Bot className="w-3.5 h-3.5 text-violet-500" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Companion</span>
+                                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/40">Soon</span>
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* ===== MOBILE: Bottom Dock Navigation ===== */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[max(8px,env(safe-area-inset-bottom))]">
                 <div className="bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl rounded-[28px] border border-gray-200/50 dark:border-gray-800/50 shadow-2xl shadow-black/8 px-2 py-1.5">
@@ -498,7 +618,7 @@ export default function StudentSidebar({
                             return (
                                 <button
                                     key={item.id}
-                                    onClick={() => item.tab && onTabChange(item.tab)}
+                                    onClick={() => { setShowMoreMenu(false); item.tab && onTabChange(item.tab); }}
                                     className={`relative flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all duration-200 min-w-[56px]
                                         ${isActive
                                             ? ''
@@ -547,6 +667,44 @@ export default function StudentSidebar({
                                 </button>
                             );
                         })}
+
+                        {/* More Button */}
+                        <button
+                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                            className={`relative flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all duration-200 min-w-[56px]
+                                ${showMoreMenu
+                                    ? ''
+                                    : 'text-gray-400 dark:text-gray-500 active:scale-95'
+                                }`}
+                        >
+                            {showMoreMenu && (
+                                <motion.div
+                                    layoutId="mobileMoreBg"
+                                    className="absolute inset-0 bg-[#1650EB]/10 dark:bg-[#1650EB]/15 rounded-2xl"
+                                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                />
+                            )}
+                            <div className="relative z-10">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                                    showMoreMenu
+                                        ? 'bg-[#1650EB] shadow-md shadow-[#1650EB]/25 scale-105'
+                                        : ''
+                                }`}>
+                                    <Menu className={`w-[18px] h-[18px] transition-colors ${
+                                        showMoreMenu ? 'text-white' : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                </div>
+                                {/* Badge dot for unread chat or reports */}
+                                {(newReportsCount > 0) && !showMoreMenu && (
+                                    <span className="absolute -top-0.5 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-900" />
+                                )}
+                            </div>
+                            <span className={`relative z-10 text-[10px] font-semibold transition-colors ${
+                                showMoreMenu ? 'text-[#1650EB] dark:text-[#6095DB]' : ''
+                            }`}>
+                                More
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -571,6 +729,19 @@ export default function StudentSidebar({
                                 🔥 {streak} day{streak > 1 ? 's' : ''}
                             </span>
                         )}
+                        {/* Chat */}
+                        <Link
+                            href="/chat"
+                            className="relative p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-[#1650EB] dark:text-[#6095DB] border border-gray-200/50 dark:border-gray-700/50"
+                            title="Chat"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            {totalUnreadChat > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                                    {totalUnreadChat > 9 ? '9+' : totalUnreadChat}
+                                </span>
+                            )}
+                        </Link>
                         {/* Home */}
                         <Link
                             href="/?home=true"

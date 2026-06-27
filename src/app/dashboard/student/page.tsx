@@ -33,6 +33,14 @@ import {
     Filter,
     SlidersHorizontal,
     ChevronDown,
+    Crown,
+    Lock,
+    Construction,
+    MessageCircle,
+    Headphones,
+    Mail,
+    FileQuestion,
+    Shield,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -97,7 +105,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -2330,6 +2338,11 @@ export default function StudentDashboard() {
                     />
                 )}
 
+                {/* Help Center Tab */}
+                {activeTab === 'help' && (
+                    <HelpCenterTab />
+                )}
+
                 {/* Games Zone Tab (disabled)
                 {activeTab === 'games' && (
                     <GamesZone
@@ -4116,6 +4129,180 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
                     🏆 Best streak: {longestStreak} days — can you beat it?
                 </p>
             )}
+        </motion.div>
+    );
+}
+
+// ─── Help Center Tab (Coming Soon · Premium-gated) ──────────────────
+const HELP_FEATURES = [
+    { icon: MessageCircle, label: 'Live Chat Support', desc: 'Get instant help from our team', color: '#3B82F6' },
+    { icon: BookOpen, label: 'Knowledge Base', desc: 'Guides, tutorials & FAQs', color: '#8B5CF6' },
+    { icon: FileQuestion, label: 'Ticket System', desc: 'Submit & track support requests', color: '#10B981' },
+    { icon: Headphones, label: 'Priority Support', desc: 'Faster response for premium', color: '#F59E0B' },
+    { icon: Mail, label: 'Email Support', desc: 'Reach us at support@quizy.app', color: '#EC4899' },
+    { icon: Shield, label: 'Account Recovery', desc: 'Secure account assistance', color: '#06B6D4' },
+];
+
+function HelpCenterTab() {
+    const { isPremium } = usePremium();
+    const router = useRouter();
+    const [tooltipId, setTooltipId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (tooltipId) {
+            const t = setTimeout(() => setTooltipId(null), 2500);
+            return () => clearTimeout(t);
+        }
+    }, [tooltipId]);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-2xl mx-auto py-6 px-2"
+        >
+            {/* Hero */}
+            <div className="text-center mb-8">
+                <motion.div
+                    className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/8 dark:from-blue-500/15 dark:to-violet-500/10 border border-blue-500/10 dark:border-blue-500/15 flex items-center justify-center relative"
+                    animate={{ scale: [1, 1.04, 1], rotate: [0, 1.5, -1.5, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                    <Construction className="w-8 h-8 text-[#1650EB] dark:text-[#6095DB]" />
+                    <motion.div
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"
+                        animate={{ scale: [1, 1.25, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                    >
+                        <Sparkles className="w-2.5 h-2.5 text-white" />
+                    </motion.div>
+                </motion.div>
+
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Coming Soon!</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                    Help Center is under development and will be available soon. Stay tuned!
+                </p>
+            </div>
+
+            {/* Premium gate banner */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="p-4 rounded-2xl mb-6 flex items-center gap-3.5 border cursor-default relative"
+                style={{
+                    background: isPremium
+                        ? 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.03))'
+                        : 'linear-gradient(135deg, rgba(22,80,235,0.06), rgba(139,92,246,0.04))',
+                    borderColor: isPremium ? 'rgba(16,185,129,0.15)' : 'rgba(22,80,235,0.12)',
+                }}
+                onMouseEnter={() => !isPremium && setTooltipId('banner')}
+                onMouseLeave={() => setTooltipId(null)}
+                onClick={() => !isPremium && setTooltipId('banner')}
+            >
+                <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                        background: isPremium
+                            ? 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.1))'
+                            : 'linear-gradient(135deg, rgba(22,80,235,0.12), rgba(139,92,246,0.08))',
+                    }}
+                >
+                    {isPremium ? (
+                        <Crown className="w-5 h-5 text-emerald-500" />
+                    ) : (
+                        <Lock className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-gray-900 dark:text-white">
+                        {isPremium ? 'Premium Access Active' : 'Premium Feature'}
+                    </p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        {isPremium
+                            ? "You'll get early access when Help Center launches!"
+                            : 'Accessible to Quizy Premium members only'}
+                    </p>
+                </div>
+                {!isPremium && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); router.push('/premium'); }}
+                        className="text-[11px] font-bold px-3.5 py-2 rounded-xl text-white flex items-center gap-1 transition-all hover:-translate-y-0.5 flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg, #1650EB, #8B5CF6)', boxShadow: '0 4px 14px rgba(22,80,235,0.25)' }}
+                    >
+                        <Crown className="w-3 h-3" />
+                        Upgrade
+                    </button>
+                )}
+
+                {/* Tooltip */}
+                <AnimatePresence>
+                    {tooltipId === 'banner' && !isPremium && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            className="absolute left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-lg text-[10px] font-semibold text-white whitespace-nowrap"
+                            style={{ background: 'linear-gradient(135deg, #1650EB, #8B5CF6)', top: '100%', marginTop: 6, boxShadow: '0 4px 12px rgba(22,80,235,0.3)' }}
+                        >
+                            <div className="flex items-center gap-1">
+                                <Crown className="w-2.5 h-2.5" />
+                                Accessible to Quizy Premium members only
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+
+            {/* Upcoming features grid */}
+            <div className="mb-6">
+                <h3 className="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500 mb-3 px-0.5 tracking-wider">
+                    What&apos;s Coming
+                </h3>
+                <div className="grid grid-cols-2 gap-2.5">
+                    {HELP_FEATURES.map((feature, i) => {
+                        const Icon = feature.icon;
+                        return (
+                            <motion.div
+                                key={feature.label}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 + i * 0.05 }}
+                                className="p-3.5 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/60 group relative cursor-default overflow-hidden"
+                                onMouseEnter={() => !isPremium && setTooltipId(feature.label)}
+                                onMouseLeave={() => setTooltipId(null)}
+                                onClick={() => !isPremium && setTooltipId(feature.label)}
+                            >
+                                <div
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center mb-2.5"
+                                    style={{ background: `${feature.color}10`, border: `1px solid ${feature.color}18` }}
+                                >
+                                    <Icon className="w-4 h-4" style={{ color: feature.color }} />
+                                </div>
+                                <p className="text-[12px] font-bold text-gray-900 dark:text-white mb-0.5">{feature.label}</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">{feature.desc}</p>
+
+                                {/* Lock overlay for non-premium on hover */}
+                                {!isPremium && (
+                                    <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px]">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1650EB] dark:text-[#6095DB]">
+                                            <Lock className="w-3.5 h-3.5" />
+                                            Premium Only
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Footer */}
+            <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3" />
+                Help Center will be available exclusively for Premium members
+            </p>
         </motion.div>
     );
 }

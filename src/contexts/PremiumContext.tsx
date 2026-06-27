@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext';
 import {
     subscribeToPremiumStatus,
     purchasePremium as purchasePremiumService,
+    purchasePremiumTier as purchasePremiumTierService,
     setActiveBubbleTheme as setThemeService,
     setActiveProfileFrame as setFrameService,
     setActiveBadge as setBadgeService,
@@ -26,6 +27,7 @@ interface PremiumContextType {
     isPremium: boolean;
     isTrial: boolean;
     trialExpiresAt: Date | null;
+    premiumExpiresAt: Date | null;
     hasClaimedTrial: boolean;
     loading: boolean;
     // Cosmetics
@@ -39,6 +41,7 @@ interface PremiumContextType {
     xpBoostMultiplier: number;
     // Actions
     purchasePremium: () => Promise<{ success: boolean; error?: string }>;
+    purchasePremiumByTier: (tier: string, xpCost: number) => Promise<{ success: boolean; error?: string }>;
     setBubbleTheme: (theme: BubbleTheme) => Promise<void>;
     setProfileFrame: (frame: ProfileFrameType) => Promise<void>;
     setBadge: (badge: BadgeType) => Promise<void>;
@@ -49,6 +52,7 @@ const defaultStatus: PremiumContextType = {
     isPremium: false,
     isTrial: false,
     trialExpiresAt: null,
+    premiumExpiresAt: null,
     hasClaimedTrial: false,
     loading: true,
     activeBubbleTheme: 'default',
@@ -58,6 +62,7 @@ const defaultStatus: PremiumContextType = {
     xpBoostActive: false,
     xpBoostMultiplier: 1,
     purchasePremium: async () => ({ success: false, error: 'Not initialized' }),
+    purchasePremiumByTier: async () => ({ success: false, error: 'Not initialized' }),
     setBubbleTheme: async () => {},
     setProfileFrame: async () => {},
     setBadge: async () => {},
@@ -114,6 +119,28 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         return () => clearTimeout(timer);
     }, [status?.isTrial, status?.trialExpiresAt]);
 
+    // ─── Timer to detect purchased premium expiry (30-day subscriptions) ───
+    useEffect(() => {
+        if (!status?.isPremium || !status?.premiumExpiresAt) return;
+
+        const now = Date.now();
+        const expiresAt = status.premiumExpiresAt.getTime();
+        const msUntilExpiry = expiresAt - now;
+
+        if (msUntilExpiry <= 0) {
+            // Already expired — force re-evaluation
+            setRefreshKey(k => k + 1);
+            return;
+        }
+
+        // Schedule re-evaluation when premium expires
+        const timer = setTimeout(() => {
+            setRefreshKey(k => k + 1);
+        }, msUntilExpiry + 500);
+
+        return () => clearTimeout(timer);
+    }, [status?.isPremium, status?.premiumExpiresAt]);
+
     // ─── Launch trial: 24-hour free premium for first-time student ───
     useEffect(() => {
         if (!user?.uid || !status || loading || launchTrialChecked.current) return;
@@ -146,6 +173,12 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         return result;
     }, [user?.uid]);
 
+    const handlePurchaseByTier = useCallback(async (tier: string, xpCost: number) => {
+        if (!user?.uid) return { success: false, error: 'Not logged in' };
+        const result = await purchasePremiumTierService(user.uid, tier, xpCost);
+        return result;
+    }, [user?.uid]);
+
     const handleSetBubbleTheme = useCallback(async (theme: BubbleTheme) => {
         if (!user?.uid) return;
         await setThemeService(user.uid, theme);
@@ -170,6 +203,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         isPremium: status?.isPremium ?? false,
         isTrial: status?.isTrial ?? false,
         trialExpiresAt: status?.trialExpiresAt ?? null,
+        premiumExpiresAt: status?.premiumExpiresAt ?? null,
         hasClaimedTrial: status?.hasClaimedTrial ?? false,
         loading,
         activeBubbleTheme: (status?.activeBubbleTheme as BubbleTheme) ?? 'default',
@@ -179,6 +213,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         xpBoostActive: status?.xpBoostActive ?? false,
         xpBoostMultiplier: status?.xpBoostMultiplier ?? 1,
         purchasePremium: handlePurchase,
+        purchasePremiumByTier: handlePurchaseByTier,
         setBubbleTheme: handleSetBubbleTheme,
         setProfileFrame: handleSetProfileFrame,
         setBadge: handleSetBadge,

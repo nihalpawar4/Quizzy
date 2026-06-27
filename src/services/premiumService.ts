@@ -13,6 +13,7 @@ export interface PremiumStatus {
     isPremium: boolean;
     isTrial: boolean;
     trialExpiresAt: Date | null;
+    premiumExpiresAt: Date | null;
     hasClaimedTrial: boolean;
     purchasedAt: Date | null;
     activeBubbleTheme: string;
@@ -56,33 +57,44 @@ export const PREMIUM_BADGES: { id: BadgeType; label: string; emoji: string; desc
 
 export function resolvePremiumStatus(userData: Record<string, unknown>): PremiumStatus {
     const now = new Date();
-    const isPermanent = userData.isPremium === true;
+
+    // Trial check
     const trialExpiry = userData.premiumTrialExpiresAt
         ? (userData.premiumTrialExpiresAt as { toDate?: () => Date }).toDate?.() || new Date(userData.premiumTrialExpiresAt as string)
         : null;
     const isTrial = trialExpiry ? trialExpiry > now : false;
 
-    // Check XP boost expiry
+    // Purchased premium expiry check (30-day subscriptions)
+    const premiumExpiry = userData.premiumExpiresAt
+        ? (userData.premiumExpiresAt as { toDate?: () => Date }).toDate?.() || new Date(userData.premiumExpiresAt as string)
+        : null;
+    const isPermanent = userData.isPremium === true && (!premiumExpiry || premiumExpiry > now);
+
+    // XP boost check
     const boostExpiry = userData.xpBoostExpiresAt
         ? (userData.xpBoostExpiresAt as { toDate?: () => Date }).toDate?.() || new Date(userData.xpBoostExpiresAt as string)
         : null;
     const xpBoostActive = userData.xpBoostActive === true && boostExpiry ? boostExpiry > now : false;
 
+    const isActive = isPermanent || isTrial;
+
     return {
-        isPremium: isPermanent || isTrial,
+        isPremium: isActive,
         isTrial: !isPermanent && isTrial,
         trialExpiresAt: trialExpiry,
+        premiumExpiresAt: premiumExpiry,
         hasClaimedTrial: !!userData.premiumTrialClaimedAt,
         purchasedAt: userData.premiumPurchasedAt
             ? (userData.premiumPurchasedAt as { toDate?: () => Date }).toDate?.() || new Date(userData.premiumPurchasedAt as string)
             : null,
-        activeBubbleTheme: (userData.activeBubbleTheme as string) || 'default',
-        activeProfileFrame: (userData.activeProfileFrame as string) || 'none',
-        activeBadge: (userData.activeBadge as string) || 'none',
-        streakShieldsRemaining: (userData.streakShieldsRemaining as number) || 0,
-        xpBoostActive,
+        // Reset cosmetics to defaults when premium is expired
+        activeBubbleTheme: isActive ? ((userData.activeBubbleTheme as string) || 'default') : 'default',
+        activeProfileFrame: isActive ? ((userData.activeProfileFrame as string) || 'none') : 'none',
+        activeBadge: isActive ? ((userData.activeBadge as string) || 'none') : 'none',
+        streakShieldsRemaining: isActive ? ((userData.streakShieldsRemaining as number) || 0) : 0,
+        xpBoostActive: isActive ? xpBoostActive : false,
         xpBoostExpiresAt: boostExpiry,
-        xpBoostMultiplier: xpBoostActive ? ((userData.xpBoostMultiplier as number) || 2) : 1,
+        xpBoostMultiplier: (isActive && xpBoostActive) ? ((userData.xpBoostMultiplier as number) || 2) : 1,
     };
 }
 
@@ -91,7 +103,7 @@ export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
     const snap = await getDoc(userRef);
     if (!snap.exists()) {
         return {
-            isPremium: false, isTrial: false, trialExpiresAt: null, hasClaimedTrial: false, purchasedAt: null,
+            isPremium: false, isTrial: false, trialExpiresAt: null, premiumExpiresAt: null, hasClaimedTrial: false, purchasedAt: null,
             activeBubbleTheme: 'default', activeProfileFrame: 'none', activeBadge: 'none',
             streakShieldsRemaining: 0, xpBoostActive: false, xpBoostExpiresAt: null, xpBoostMultiplier: 1,
         };
@@ -147,6 +159,56 @@ export async function purchasePremium(userId: string): Promise<{ success: boolea
         xpSpent: PREMIUM_XP_COST,
         purchasedAt: new Date(),
         type: 'permanent',
+    });
+
+    return { success: true };
+}
+
+// ─── Purchase Premium with Tier ────────────────────────────────────────
+
+export async function purchasePremiumTier(
+    userId: string,
+    tier: string,
+    xpCost: number
+): Promise<{ success: boolean; error?: string }> {
+    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+        return { success: false, error: 'User not found' };
+    }
+
+    const data = snap.data();
+    if (data.isPremium === true) {
+        return { success: false, error: 'Already a premium member!' };
+    }
+
+    const currentXP = (data.xp as number) || 0;
+    if (currentXP < xpCost) {
+        return { success: false, error: `Not enough XP. You need ${xpCost} XP but have ${currentXP} XP.` };
+    }
+
+    // Deduct XP and activate premium with tier info + 30-day expiry
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await updateDoc(userRef, {
+        xp: increment(-xpCost),
+        isPremium: true,
+        premiumTier: tier,
+        premiumPurchasedAt: new Date(),
+        premiumExpiresAt: expiresAt,
+    });
+
+    // Log the purchase
+    const purchaseRef = doc(db, COLLECTIONS.PREMIUM_PURCHASES, `${userId}_${Date.now()}`);
+    await setDoc(purchaseRef, {
+        userId,
+        xpSpent: xpCost,
+        tier,
+        purchasedAt: new Date(),
+        expiresAt,
+        type: '30-day',
     });
 
     return { success: true };
