@@ -473,7 +473,7 @@ function TypingAnimation() {
 
 function PenUnderline() {
   return (
-    <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto h-[30px] -mt-1 mb-2">
+    <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl mx-auto h-[24px] sm:h-[28px] md:h-[30px] lg:h-[34px] -mt-1 mb-2">
       <motion.svg
         viewBox="0 0 400 30"
         fill="none"
@@ -489,23 +489,21 @@ function PenUnderline() {
           strokeLinecap="round"
           fill="none"
           initial={{ pathLength: 0 }}
-          whileInView={{ pathLength: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease: "easeOut", delay: 0.8 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
         />
         {/* Pen nib following the path */}
         <motion.g
           initial={{ x: 10, y: 20, opacity: 0 }}
-          whileInView={{
+          animate={{
             x: [10, 100, 200, 300, 390],
             y: [20, 10, 18, 26, 12],
             opacity: [0, 1, 1, 1, 0],
           }}
-          viewport={{ once: true }}
           transition={{
-            duration: 0.7,
+            duration: 0.9,
             ease: "easeOut",
-            delay: 0.8,
+            delay: 0.15,
             times: [0, 0.25, 0.5, 0.75, 1],
           }}
         >
@@ -850,168 +848,428 @@ function HomePageInner() {
 
       {/* Hero Section */}
       <main
-        className="relative flex flex-col items-center justify-center min-h-screen px-6 overflow-hidden transition-[padding-top] duration-300 ease-in-out"
-        style={{ paddingTop: countdownHeight + 64 }}
+        className="relative min-h-screen overflow-hidden transition-[padding-top] duration-300 ease-in-out"
+        style={{ paddingTop: countdownHeight + 64, background: 'linear-gradient(180deg, #F8FBFF 0%, #EEF4FF 60%, #F0F6FF 100%)' }}
       >
 
-        {/* Floating Particles */}
+        {/* ── Background Decorations ── */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(8)].map((_, i) => (
+          {/* Large radial blue glow behind illustration (right side) */}
+          <div
+            className="absolute top-[8%] right-[-5%] w-[55vw] h-[55vw] max-w-[680px] max-h-[680px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.09) 0%, rgba(37,99,235,0.03) 45%, transparent 70%)' }}
+          />
+          {/* Secondary soft glow left */}
+          <div
+            className="absolute top-[35%] left-[2%] w-[28vw] h-[28vw] max-w-[350px] max-h-[350px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 60%)' }}
+          />
+          {/* Soft blur circles */}
+          <div className="absolute top-[55%] left-[12%] w-20 h-20 rounded-full" style={{ background: 'rgba(59,130,246,0.05)', filter: 'blur(35px)' }} />
+          <div className="absolute top-[18%] right-[18%] w-28 h-28 rounded-full" style={{ background: 'rgba(37,99,235,0.04)', filter: 'blur(45px)' }} />
+
+          {/* Floating dots */}
+          {[
+            { x: '10%', y: '20%', s: 4, o: 0.2, d: 3.5 },
+            { x: '22%', y: '70%', s: 3, o: 0.18, d: 4 },
+            { x: '48%', y: '12%', s: 4, o: 0.15, d: 5 },
+            { x: '72%', y: '78%', s: 3, o: 0.2, d: 3.8 },
+            { x: '88%', y: '22%', s: 3, o: 0.15, d: 4.5 },
+            { x: '92%', y: '55%', s: 3, o: 0.18, d: 3.2 },
+            { x: '6%', y: '50%', s: 3, o: 0.15, d: 4.8 },
+            { x: '56%', y: '82%', s: 4, o: 0.12, d: 5.5 },
+          ].map((dot, i) => (
             <motion.div
               key={i}
-              className="absolute rounded-full"
-              style={{
-                left: `${8 + i * 11}%`,
-                top: `${15 + (i % 4) * 20}%`,
-                width: i % 3 === 0 ? 6 : i % 2 === 0 ? 4 : 3,
-                height: i % 3 === 0 ? 6 : i % 2 === 0 ? 4 : 3,
-                background: i % 2 === 0 ? 'rgba(22,80,235,0.4)' : 'rgba(96,149,219,0.35)',
-              }}
-              animate={{
-                y: [0, -25 - i * 3, 0],
-                opacity: [0.3, 0.8, 0.3],
-              }}
-              transition={{
-                duration: 3 + i * 0.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 0.25,
-              }}
+              className="absolute rounded-full bg-[#1650EB]"
+              style={{ left: dot.x, top: dot.y, width: dot.s, height: dot.s, opacity: dot.o }}
+              animate={{ y: [0, -14, 0], opacity: [dot.o, dot.o + 0.12, dot.o] }}
+              transition={{ duration: dot.d, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
             />
           ))}
         </div>
 
-        <div className="relative z-10 max-w-[1100px] w-full mx-auto text-center">
+        {/* ── Bottom Wave ── */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[1]">
+          <svg viewBox="0 0 1440 100" fill="none" preserveAspectRatio="none" className="w-full h-[60px] sm:h-[80px] md:h-[100px]">
+            <path d="M0 50C200 15 400 85 720 50C1040 15 1240 70 1440 40V100H0V50Z" fill="white" fillOpacity="0.5" />
+            <path d="M0 70C240 40 480 90 720 55C960 20 1200 75 1440 50V100H0V70Z" fill="white" fillOpacity="0.8" />
+          </svg>
+        </div>
 
-          {/* Experts Academy Top Label */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-3"
-          >
-            <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
-              {"// EXPERTS_ACADEMY_OF_EXCELLENCE"}
-            </span>
-          </motion.div>
+        {/* ── Mobile Background Illustration (visible only on < lg) ── */}
+        <div
+          className="absolute inset-0 z-[2] pointer-events-none lg:hidden"
+          style={{
+            backgroundImage: 'url(/images/hero-student.png)',
+            backgroundSize: '85% auto',
+            backgroundPosition: 'center 65%',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.08,
+            maskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 20%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 20%, transparent 75%)',
+          }}
+        />
 
-          {/* Badge Line — Classes • Subjects • Boards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#6095DB]/10 dark:bg-[#6095DB]/20 border border-[#6095DB]/30 dark:border-[#6095DB]/50 rounded-full mb-6"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <CheckCircle className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
-            </motion.div>
-            <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
-              Classes 5–10 • All Subjects • CBSE/ICSE Boards
-            </span>
-          </motion.div>
+        {/* ── Two-Column Content ── */}
+        <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 lg:px-12 pt-12 sm:pt-16 md:pt-20 lg:pt-8 pb-24 sm:pb-28 lg:pb-16">
+          <div className="flex flex-col lg:flex-row items-center lg:items-center gap-10 lg:gap-6 xl:gap-12 min-h-[calc(100vh-200px)] lg:min-h-[calc(100vh-160px)]">
 
-          {/* Main Headline — LARGER, dominant focal point */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-[#020218] dark:text-white mb-2 text-center"
-            style={{ lineHeight: 1.05 }}
-          >
-            <motion.span
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="typo-serif-display"
-            >
-              Master Your{' '}
-            </motion.span>
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
-            >
-              <span className="typo-display text-[#1650EB]">
-                Exams
-              </span>
-            </motion.span>
-          </motion.h1>
+            {/* ━━━━━━━━━━━ LEFT COLUMN — Text Content ━━━━━━━━━━━ */}
+            <div className="flex-1 max-w-2xl lg:max-w-[540px] text-center lg:text-left">
 
-          {/* Pen underline animation */}
-          <PenUnderline />
+              {/* Experts Academy Top Label */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="mb-3"
+              >
+                <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
+                  {"// EXPERTS_ACADEMY_OF_EXCELLENCE"}
+                </span>
+              </motion.div>
 
-          {/* Line 2: "with excellent tutors" */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="typo-serif-display text-xl sm:text-2xl lg:text-3xl text-[#6D6D6D] dark:text-gray-400 mb-2 text-center"
-          >
-            with excellent tutors
-          </motion.p>
+              {/* Badge Line — Classes • Subjects • Boards */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#6095DB]/10 dark:bg-[#6095DB]/20 border border-[#6095DB]/30 dark:border-[#6095DB]/50 rounded-full mb-6"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <CheckCircle className="w-4 h-4 text-[#1650EB] dark:text-[#6095DB]" />
+                </motion.div>
+                <span className="typo-arsenal text-[#1650EB] dark:text-[#6095DB]">
+                  Classes 5–10 • All Subjects • CBSE/ICSE Boards
+                </span>
+              </motion.div>
 
-          {/* Line 3: Typing animation */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="mb-6 h-7 sm:h-8 flex items-center justify-center"
-          >
-            <TypingAnimation />
-          </motion.div>
+              {/* Main Headline */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-[76px] xl:text-8xl text-[#020218] dark:text-white mb-2 text-center lg:text-left"
+                style={{ lineHeight: 1.05 }}
+              >
+                <motion.span
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="typo-serif-display"
+                >
+                  Master Your{' '}
+                </motion.span>
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6, type: "spring", stiffness: 150 }}
+                >
+                  <span className="typo-display text-[#1650EB]">
+                    Exams
+                  </span>
+                </motion.span>
+              </motion.h1>
 
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="typo-body text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-2xl mx-auto mb-8"
-          >
-            Practice smarter, not harder. Take interactive tests, track your progress,
-            and achieve academic excellence with our distraction-free platform.
-          </motion.p>
+              {/* Pen underline animation */}
+              <div className="flex justify-center lg:justify-start">
+                <PenUnderline />
+              </div>
 
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3"
-          >
-            <Link
-              href="/auth/register?role=student"
-              className="group relative flex items-center gap-2 px-7 py-3.5 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
-            >
-              <motion.span
-                className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
-              />
-              <span className="relative z-10 flex items-center gap-2">
-                Start Learning
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-            <Link
-              href="/auth/login?role=teacher"
-              className="group flex items-center gap-2 px-7 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
-            >
-              Teacher Portal
-              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-            </Link>
-          </motion.div>
+              {/* Line 2: "with excellent tutors" */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="typo-serif-display text-xl sm:text-2xl lg:text-3xl text-[#6D6D6D] dark:text-gray-400 mb-2 text-center lg:text-left"
+              >
+                with excellent tutors
+              </motion.p>
 
-          {/* Trust Badge */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-6 flex items-center justify-center gap-2 text-[#6D6D6D] dark:text-gray-400"
-          >
-            <Heart className="w-4 h-4 text-[#1650EB]" />
-            <span className="typo-accent text-[11px]">Trusted by students across India</span>
-          </motion.div>
+              {/* Line 3: Typing animation */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="mb-6 h-7 sm:h-8 flex items-center justify-center lg:justify-start"
+              >
+                <TypingAnimation />
+              </motion.div>
+
+              {/* Subtitle */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="typo-body text-lg sm:text-xl text-[#6D6D6D] dark:text-gray-400 max-w-lg mx-auto lg:mx-0 mb-8"
+              >
+                Practice smarter, not harder. Take interactive tests, track your progress,
+                and achieve academic excellence with our distraction-free platform.
+              </motion.p>
+
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3"
+              >
+                <Link
+                  href="/auth/register?role=student"
+                  className="group relative flex items-center gap-2 px-7 py-3.5 bg-[#1650EB] text-white rounded-xl text-base shadow-lg shadow-[#1650EB]/25 hover:shadow-xl hover:shadow-[#1650EB]/35 hover:bg-[#1243c7] transition-all duration-300 hover:-translate-y-1 overflow-hidden" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+                >
+                  <motion.span
+                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+                  />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Start Learning
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+                <Link
+                  href="/auth/login?role=teacher"
+                  className="group flex items-center gap-2 px-7 py-3.5 bg-white dark:bg-gray-800 text-[#020218] dark:text-gray-300 rounded-xl text-base border-2 border-gray-200 dark:border-gray-700 hover:border-[#1650EB] dark:hover:border-[#1650EB] hover:bg-[#1650EB]/5 dark:hover:bg-gray-700 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-0.01em' }}
+                >
+                  Teacher Portal
+                  <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                </Link>
+              </motion.div>
+
+              {/* Trust Badge */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="mt-6 flex items-center justify-center lg:justify-start gap-2 text-[#6D6D6D] dark:text-gray-400"
+              >
+                <Heart className="w-4 h-4 text-[#1650EB]" />
+                <span className="typo-accent text-[11px]">Trusted by students across India</span>
+              </motion.div>
+            </div>
+
+            {/* ━━━━━━━━━━━ RIGHT COLUMN — Illustration + Floating Cards (desktop only) ━━━━━━━━━━━ */}
+            <div className="flex-1 relative max-w-[600px] w-full hidden lg:block">
+              <div className="relative">
+
+                {/* ── Decorative Elements ── */}
+
+                {/* Cloud 1 — top left */}
+                <motion.svg
+                  className="absolute -top-6 left-[15%] w-16 opacity-50 z-0 pointer-events-none"
+                  viewBox="0 0 80 40" fill="none"
+                  animate={{ x: [0, 8, 0] }}
+                  transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <ellipse cx="40" cy="28" rx="30" ry="11" fill="white" fillOpacity="0.8" />
+                  <ellipse cx="28" cy="22" rx="14" ry="12" fill="white" fillOpacity="0.85" />
+                  <ellipse cx="50" cy="20" rx="16" ry="14" fill="white" fillOpacity="0.85" />
+                </motion.svg>
+
+                {/* Cloud 2 — top right */}
+                <motion.svg
+                  className="absolute top-[8%] right-[8%] w-14 opacity-40 z-0 pointer-events-none"
+                  viewBox="0 0 80 40" fill="none"
+                  animate={{ x: [0, -6, 0] }}
+                  transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <ellipse cx="40" cy="28" rx="28" ry="10" fill="white" fillOpacity="0.8" />
+                  <ellipse cx="30" cy="22" rx="12" ry="10" fill="white" fillOpacity="0.85" />
+                  <ellipse cx="48" cy="20" rx="14" ry="12" fill="white" fillOpacity="0.85" />
+                </motion.svg>
+
+                {/* Cloud 3 — small */}
+                <motion.svg
+                  className="absolute top-[2%] right-[35%] w-10 opacity-35 z-0 pointer-events-none"
+                  viewBox="0 0 80 40" fill="none"
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <ellipse cx="40" cy="28" rx="26" ry="10" fill="white" fillOpacity="0.75" />
+                  <ellipse cx="32" cy="22" rx="12" ry="10" fill="white" fillOpacity="0.8" />
+                  <ellipse cx="46" cy="20" rx="12" ry="10" fill="white" fillOpacity="0.8" />
+                </motion.svg>
+
+                {/* Paper Airplane — top right */}
+                <motion.svg
+                  className="absolute -top-2 right-[2%] w-10 sm:w-12 z-30 pointer-events-none"
+                  viewBox="0 0 48 48" fill="none"
+                  animate={{ x: [0, 12, 0], y: [0, -10, 0], rotate: [0, 8, 0] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <path d="M6 8L42 24L6 40V26L30 24L6 22V8Z" fill="url(#planeGr)" stroke="white" strokeWidth="0.5" strokeLinejoin="round" />
+                  <defs>
+                    <linearGradient id="planeGr" x1="6" y1="8" x2="42" y2="40">
+                      <stop stopColor="#93B8F8" />
+                      <stop offset="1" stopColor="#BFDBFE" />
+                    </linearGradient>
+                  </defs>
+                </motion.svg>
+
+                {/* Light Bulb Icon — left of illustration */}
+                <motion.div
+                  className="absolute top-[28%] -left-4 sm:left-0 z-30"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <div className="w-11 h-11 rounded-xl bg-white shadow-lg shadow-blue-100/60 flex items-center justify-center">
+                    <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+                      <path d="M16 4C11.6 4 8 7.6 8 12C8 15.2 10 17.8 12 19V22C12 23.1 12.9 24 14 24H18C19.1 24 20 23.1 20 22V19C22 17.8 24 15.2 24 12C24 7.6 20.4 4 16 4Z" fill="#FBBF24" />
+                      <path d="M13 26H19" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M14 28H18" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M16 1V3" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M25 5L23.5 6.5" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M7 5L8.5 6.5" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                </motion.div>
+
+                {/* Chat Bubble — right side */}
+                <motion.div
+                  className="absolute top-[20%] -right-2 sm:right-[3%] z-30"
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#3B82F6] flex items-center justify-center shadow-md shadow-blue-200/50">
+                    <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
+                      <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6l-4 3V5z" />
+                    </svg>
+                  </div>
+                </motion.div>
+
+                {/* Sparkles */}
+                <motion.svg className="absolute top-[5%] left-[45%] w-3 h-3 text-[#3B82F6]/50 z-0" viewBox="0 0 16 16" fill="currentColor"
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2L8 0Z" />
+                </motion.svg>
+                <motion.svg className="absolute bottom-[30%] -right-1 w-2.5 h-2.5 text-[#60A5FA]/50 z-0" viewBox="0 0 16 16" fill="currentColor"
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.9, 0.3] }}
+                  transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+                >
+                  <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2L8 0Z" />
+                </motion.svg>
+
+                {/* ── Student Illustration Image (blended into page) ── */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative z-10"
+                  style={{
+                    maskImage: 'radial-gradient(ellipse 85% 80% at 50% 45%, black 40%, transparent 72%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse 85% 80% at 50% 45%, black 40%, transparent 72%)',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/hero-student.png"
+                    alt="Student studying on Quizy platform"
+                    className="w-full h-auto max-w-[540px] mx-auto select-none"
+                    draggable={false}
+                  />
+                </motion.div>
+
+                {/* ── Floating Question Card ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute -top-2 sm:top-0 right-0 sm:-right-4 w-[200px] sm:w-[230px] z-20"
+                >
+                  <motion.div
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                  >
+                    <p className="text-[10px] sm:text-[11px] font-bold text-[#1650EB] mb-1.5 tracking-wide">Question 1</p>
+                    <p className="text-[11px] sm:text-[12px] font-semibold text-[#0F172A] mb-2.5 leading-snug">
+                      Which planet is known as the Red Planet?
+                    </p>
+                    <div className="space-y-1.5">
+                      {[
+                        { label: 'A', text: 'Earth', sel: false },
+                        { label: 'B', text: 'Mars', sel: true },
+                        { label: 'C', text: 'Jupiter', sel: false },
+                        { label: 'D', text: 'Venus', sel: false },
+                      ].map((o) => (
+                        <div key={o.label} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-medium ${o.sel ? 'bg-[#22C55E]/10 border border-[#22C55E]/30 text-[#15803D]' : 'bg-gray-50/80 border border-transparent text-[#64748B]'}`}>
+                          <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] sm:text-[9px] font-bold flex-shrink-0 ${o.sel ? 'bg-[#22C55E] text-white' : 'bg-gray-200 text-gray-500'}`}>{o.label}</span>
+                          <span>{o.text}</span>
+                          {o.sel && <CheckCircle className="w-3 h-3 text-[#22C55E] ml-auto flex-shrink-0" />}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                </motion.div>
+
+                {/* ── Floating Score Card ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute bottom-[22%] sm:bottom-[25%] -left-2 sm:left-0 w-[130px] sm:w-[140px] z-20"
+                >
+                  <motion.div
+                    animate={{ y: [0, -7, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                  >
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] mb-2">Score</p>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">85%</span>
+                      <svg width="36" height="36" viewBox="0 0 64 64" className="flex-shrink-0">
+                        <circle cx="32" cy="32" r="26" stroke="#E5E7EB" strokeWidth="5" fill="none" />
+                        <motion.circle
+                          cx="32" cy="32" r="26"
+                          stroke="#3B82F6" strokeWidth="5" fill="none" strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 26}
+                          strokeDashoffset={2 * Math.PI * 26}
+                          animate={{ strokeDashoffset: 2 * Math.PI * 26 * 0.15 }}
+                          transition={{ duration: 1.5, delay: 1.2, ease: 'easeOut' }}
+                          transform="rotate(-90 32 32)"
+                        />
+                      </svg>
+                    </div>
+                  </motion.div>
+                </motion.div>
+
+                {/* ── Floating Progress Card ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 1, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute bottom-[22%] sm:bottom-[25%] right-[5%] sm:right-[8%] w-[130px] sm:w-[148px] z-20"
+                >
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                  >
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] mb-2.5">Your Progress</p>
+                    <div className="flex items-end gap-[5px] h-[44px] sm:h-[50px]">
+                      {[0.45, 0.65, 0.85, 0.55, 0.78, 0.70].map((h, i) => (
+                        <motion.div
+                          key={i}
+                          className="flex-1 rounded-sm"
+                          style={{ background: 'linear-gradient(to top, #1650EB, #6095DB)' }}
+                          initial={{ height: 0 }}
+                          animate={{ height: `${h * 100}%` }}
+                          transition={{ duration: 0.7, delay: 1.3 + i * 0.08, ease: 'easeOut' }}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                </motion.div>
+
+              </div>
+            </div>
+
+          </div>
         </div>
       </main>
 
