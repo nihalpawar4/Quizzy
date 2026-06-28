@@ -101,8 +101,8 @@ export default function HelpCenterPage() {
     const router = useRouter();
     const { user } = useAuth();
     const { isPremium } = usePremium();
-    const { isDarkMode } = useTheme();
-    const p = getHelpTheme(isDarkMode);
+    const { resolvedTheme } = useTheme();
+    const p = getHelpTheme(resolvedTheme === 'dark');
 
     const [tooltipVisible, setTooltipVisible] = useState(false);
     const [clickTooltip, setClickTooltip] = useState(false);

@@ -848,8 +848,8 @@ function HomePageInner() {
 
       {/* Hero Section */}
       <main
-        className="relative min-h-screen overflow-hidden transition-[padding-top] duration-300 ease-in-out"
-        style={{ paddingTop: countdownHeight + 64, background: 'linear-gradient(180deg, #F8FBFF 0%, #EEF4FF 60%, #F0F6FF 100%)' }}
+        className="relative min-h-screen overflow-hidden transition-[padding-top] duration-300 ease-in-out bg-gradient-to-b from-[#F8FBFF] via-[#EEF4FF] to-[#F0F6FF] dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+        style={{ paddingTop: countdownHeight + 64 }}
       >
 
         {/* ── Background Decorations ── */}
@@ -892,20 +892,19 @@ function HomePageInner() {
         {/* ── Bottom Wave ── */}
         <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[1]">
           <svg viewBox="0 0 1440 100" fill="none" preserveAspectRatio="none" className="w-full h-[60px] sm:h-[80px] md:h-[100px]">
-            <path d="M0 50C200 15 400 85 720 50C1040 15 1240 70 1440 40V100H0V50Z" fill="white" fillOpacity="0.5" />
-            <path d="M0 70C240 40 480 90 720 55C960 20 1200 75 1440 50V100H0V70Z" fill="white" fillOpacity="0.8" />
+            <path d="M0 50C200 15 400 85 720 50C1040 15 1240 70 1440 40V100H0V50Z" className="fill-white/50 dark:fill-gray-950/50" />
+            <path d="M0 70C240 40 480 90 720 55C960 20 1200 75 1440 50V100H0V70Z" className="fill-white/80 dark:fill-gray-950/80" />
           </svg>
         </div>
 
         {/* ── Mobile Background Illustration (visible only on < lg) ── */}
         <div
-          className="absolute inset-0 z-[2] pointer-events-none lg:hidden"
+          className="absolute inset-0 z-[2] pointer-events-none lg:hidden opacity-[0.08] dark:opacity-[0.04]"
           style={{
             backgroundImage: 'url(/images/hero-student.png)',
             backgroundSize: '85% auto',
             backgroundPosition: 'center 65%',
             backgroundRepeat: 'no-repeat',
-            opacity: 0.08,
             maskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 20%, transparent 75%)',
             WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 20%, transparent 75%)',
           }}
@@ -1115,7 +1114,7 @@ function HomePageInner() {
                   animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <div className="w-11 h-11 rounded-xl bg-white shadow-lg shadow-blue-100/60 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 shadow-lg shadow-blue-100/60 dark:shadow-black/20 flex items-center justify-center">
                     <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
                       <path d="M16 4C11.6 4 8 7.6 8 12C8 15.2 10 17.8 12 19V22C12 23.1 12.9 24 14 24H18C19.1 24 20 23.1 20 22V19C22 17.8 24 15.2 24 12C24 7.6 20.4 4 16 4Z" fill="#FBBF24" />
                       <path d="M13 26H19" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
@@ -1159,7 +1158,7 @@ function HomePageInner() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative z-10"
+                  className="relative z-10 dark:opacity-85"
                   style={{
                     maskImage: 'radial-gradient(ellipse 85% 80% at 50% 45%, black 40%, transparent 72%)',
                     WebkitMaskImage: 'radial-gradient(ellipse 85% 80% at 50% 45%, black 40%, transparent 72%)',
@@ -1184,10 +1183,10 @@ function HomePageInner() {
                   <motion.div
                     animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                    className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] dark:shadow-black/20 border border-white/60 dark:border-gray-700/40 p-3.5 sm:p-4"
                   >
-                    <p className="text-[10px] sm:text-[11px] font-bold text-[#1650EB] mb-1.5 tracking-wide">Question 1</p>
-                    <p className="text-[11px] sm:text-[12px] font-semibold text-[#0F172A] mb-2.5 leading-snug">
+                    <p className="text-[10px] sm:text-[11px] font-bold text-[#1650EB] dark:text-[#6095DB] mb-1.5 tracking-wide">Question 1</p>
+                    <p className="text-[11px] sm:text-[12px] font-semibold text-[#0F172A] dark:text-white mb-2.5 leading-snug">
                       Which planet is known as the Red Planet?
                     </p>
                     <div className="space-y-1.5">
@@ -1217,11 +1216,11 @@ function HomePageInner() {
                   <motion.div
                     animate={{ y: [0, -7, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                    className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] dark:shadow-black/20 border border-white/60 dark:border-gray-700/40 p-3.5 sm:p-4"
                   >
-                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] mb-2">Score</p>
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] dark:text-gray-400 mb-2">Score</p>
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">85%</span>
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] dark:text-white tracking-tight">85%</span>
                       <svg width="36" height="36" viewBox="0 0 64 64" className="flex-shrink-0">
                         <circle cx="32" cy="32" r="26" stroke="#E5E7EB" strokeWidth="5" fill="none" />
                         <motion.circle
@@ -1248,9 +1247,9 @@ function HomePageInner() {
                   <motion.div
                     animate={{ y: [0, -6, 0] }}
                     transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] border border-white/60 p-3.5 sm:p-4"
+                    className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-900/[0.08] dark:shadow-black/20 border border-white/60 dark:border-gray-700/40 p-3.5 sm:p-4"
                   >
-                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] mb-2.5">Your Progress</p>
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-[#64748B] dark:text-gray-400 mb-2.5">Your Progress</p>
                     <div className="flex items-end gap-[5px] h-[44px] sm:h-[50px]">
                       {[0.45, 0.65, 0.85, 0.55, 0.78, 0.70].map((h, i) => (
                         <motion.div
