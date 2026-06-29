@@ -41,6 +41,12 @@ import {
     Mail,
     FileQuestion,
     Shield,
+    Flame,
+    Swords,
+    Brain,
+    LayoutGrid,
+    Repeat,
+    ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -105,7 +111,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -2343,6 +2349,16 @@ export default function StudentDashboard() {
                     <HelpCenterTab />
                 )}
 
+                {/* Premium Features Tab */}
+                {activeTab === 'premium-features' && (
+                    <PremiumFeaturesTab
+                        currentStreak={user.currentStreak || 0}
+                        longestStreak={user.longestStreak || 0}
+                        lastStreakDate={user.lastStreakDate || null}
+                        isPremium={isPremiumUser}
+                    />
+                )}
+
                 {/* Games Zone Tab (disabled)
                 {activeTab === 'games' && (
                     <GamesZone
@@ -3047,6 +3063,354 @@ export default function StudentDashboard() {
     );
 }
 
+// ==================== PREMIUM FEATURES TAB ====================
+const PREMIUM_FEATURES_DATA = [
+    {
+        icon: Timer,
+        title: 'Timed Challenges',
+        description: 'Beat the clock on practice questions',
+        color: '#EF4444',
+        gradient: 'from-red-500/15 to-orange-500/10',
+        borderColor: 'border-red-200/40 dark:border-red-800/30',
+        iconBg: 'bg-red-500',
+    },
+    {
+        icon: Target,
+        title: 'Weak Topic Analysis',
+        description: 'AI identifies your weakest subjects',
+        color: '#8B5CF6',
+        gradient: 'from-violet-500/15 to-purple-500/10',
+        borderColor: 'border-violet-200/40 dark:border-violet-800/30',
+        iconBg: 'bg-violet-500',
+    },
+    {
+        icon: Flame,
+        title: 'Practice Streaks',
+        description: 'Build daily practice habits',
+        color: '#F59E0B',
+        gradient: 'from-amber-500/15 to-yellow-500/10',
+        borderColor: 'border-amber-200/40 dark:border-amber-800/30',
+        iconBg: 'bg-amber-500',
+        isLive: true,
+    },
+    {
+        icon: Swords,
+        title: 'Quiz Battle',
+        description: 'Challenge classmates in real-time',
+        color: '#3B82F6',
+        gradient: 'from-blue-500/15 to-cyan-500/10',
+        borderColor: 'border-blue-200/40 dark:border-blue-800/30',
+        iconBg: 'bg-blue-500',
+    },
+    {
+        icon: Brain,
+        title: 'Spaced Repetition',
+        description: 'Smart scheduling for long-term memory',
+        color: '#10B981',
+        gradient: 'from-emerald-500/15 to-teal-500/10',
+        borderColor: 'border-emerald-200/40 dark:border-emerald-800/30',
+        iconBg: 'bg-emerald-500',
+    },
+    {
+        icon: LayoutGrid,
+        title: 'Custom Practice Sets',
+        description: 'Create your own practice quizzes',
+        color: '#EC4899',
+        gradient: 'from-pink-500/15 to-rose-500/10',
+        borderColor: 'border-pink-200/40 dark:border-pink-800/30',
+        iconBg: 'bg-pink-500',
+    },
+];
+
+const STREAK_MILESTONES = [
+    { days: 3, label: '3 Days', emoji: '🌱', color: '#22C55E' },
+    { days: 7, label: '1 Week', emoji: '🔥', color: '#F59E0B' },
+    { days: 14, label: '2 Weeks', emoji: '⚡', color: '#3B82F6' },
+    { days: 30, label: '1 Month', emoji: '🏆', color: '#8B5CF6' },
+    { days: 60, label: '2 Months', emoji: '💎', color: '#EC4899' },
+    { days: 100, label: '100 Days', emoji: '👑', color: '#F59E0B' },
+];
+
+interface PremiumFeaturesTabProps {
+    currentStreak: number;
+    longestStreak: number;
+    lastStreakDate: string | null;
+    isPremium: boolean;
+}
+
+function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPremium }: PremiumFeaturesTabProps) {
+    const [expandedFeature, setExpandedFeature] = useState<string | null>('Practice Streaks');
+    const router = useRouter();
+
+    // Generate last 7 days for streak calendar
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - (6 - i));
+        return {
+            date: d,
+            dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2),
+            dateLabel: d.getDate(),
+            dateStr: d.toISOString().split('T')[0],
+        };
+    });
+
+    // Determine which days had activity based on lastStreakDate and currentStreak
+    const getStreakDays = (): Set<string> => {
+        const days = new Set<string>();
+        if (!lastStreakDate || currentStreak === 0) return days;
+        const lastDate = new Date(lastStreakDate + 'T00:00:00');
+        for (let i = 0; i < currentStreak && i < 30; i++) {
+            const d = new Date(lastDate);
+            d.setDate(d.getDate() - i);
+            days.add(d.toISOString().split('T')[0]);
+        }
+        return days;
+    };
+    const streakDays = getStreakDays();
+    const hasCompletedToday = streakDays.has(todayStr);
+
+    // Next milestone
+    const nextMilestone = STREAK_MILESTONES.find(m => m.days > currentStreak);
+    const prevMilestone = [...STREAK_MILESTONES].reverse().find(m => m.days <= currentStreak);
+    const progressToNext = nextMilestone
+        ? Math.min(((currentStreak - (prevMilestone?.days || 0)) / (nextMilestone.days - (prevMilestone?.days || 0))) * 100, 100)
+        : 100;
+
+    if (!isPremium) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+            >
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 border border-violet-200/40 dark:border-violet-800/30 flex items-center justify-center mb-5">
+                        <Lock className="w-8 h-8 text-violet-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Premium Features</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">Unlock powerful learning tools including Practice Streaks, Timed Challenges, and more.</p>
+                    <button
+                        onClick={() => router.push('/premium')}
+                        className="px-6 py-3 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                    >
+                        <Crown className="w-4 h-4" />
+                        Upgrade to Premium
+                    </button>
+                </div>
+            </motion.div>
+        );
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mb-8"
+        >
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
+                    <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        Premium Features
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white tracking-wider">
+                            PRO
+                        </span>
+                    </h2>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        Exclusive tools for premium learners
+                    </p>
+                </div>
+            </div>
+
+            {/* ═══════ PRACTICE STREAKS — LIVE FEATURE ═══════ */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 }}
+                className="mb-6 rounded-3xl overflow-hidden border border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50 via-orange-50/50 to-yellow-50/30 dark:from-amber-950/40 dark:via-orange-950/20 dark:to-yellow-950/10 shadow-sm"
+            >
+                {/* Streak Hero */}
+                <div className="p-5 sm:p-6">
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                            <motion.div
+                                className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25"
+                                animate={{ scale: [1, 1.08, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <Flame className="w-6 h-6 text-white" />
+                            </motion.div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    Practice Streaks
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">LIVE</span>
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Build daily practice habits</p>
+                            </div>
+                        </div>
+                        {hasCompletedToday && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40">
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Done today</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Streak Stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                        <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20">
+                            <p className="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mb-1">Current Streak</p>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl font-black text-amber-600 dark:text-amber-400 tabular-nums">{currentStreak}</span>
+                                <span className="text-sm font-bold text-amber-500/60">day{currentStreak !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                                {currentStreak > 0 && <Flame className="w-3 h-3 text-amber-500" />}
+                                <span className="text-[10px] text-amber-600/50 dark:text-amber-400/50">
+                                    {currentStreak === 0 ? 'Start today!' : currentStreak >= 7 ? 'Amazing! 🔥' : 'Keep going!'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20">
+                            <p className="text-[10px] font-bold text-violet-600/70 dark:text-violet-400/70 uppercase tracking-wider mb-1">Longest Streak</p>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl font-black text-violet-600 dark:text-violet-400 tabular-nums">{longestStreak}</span>
+                                <span className="text-sm font-bold text-violet-500/60">day{longestStreak !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                                <Trophy className="w-3 h-3 text-violet-500" />
+                                <span className="text-[10px] text-violet-600/50 dark:text-violet-400/50">Personal best</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Weekly Calendar */}
+                    <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20 mb-5">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">This Week</p>
+                        <div className="flex items-center justify-between gap-1.5">
+                            {last7Days.map((day) => {
+                                const isActive = streakDays.has(day.dateStr);
+                                const isToday = day.dateStr === todayStr;
+                                return (
+                                    <div key={day.dateStr} className="flex flex-col items-center gap-1.5 flex-1">
+                                        <span className={`text-[10px] font-semibold ${
+                                            isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'
+                                        }`}>{day.dayLabel}</span>
+                                        <motion.div
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${
+                                                isActive
+                                                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/25'
+                                                    : isToday
+                                                        ? 'bg-amber-100/80 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-2 border-amber-300 dark:border-amber-700 border-dashed'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                                            }`}
+                                        >
+                                            {isActive ? (
+                                                <Flame className="w-4 h-4" />
+                                            ) : (
+                                                <span className="text-[12px]">{day.dateLabel}</span>
+                                            )}
+                                        </motion.div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Next Milestone Progress */}
+                    {nextMilestone && (
+                        <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Milestone</p>
+                                <span className="text-sm">{nextMilestone.emoji} {nextMilestone.label}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-gray-200/80 dark:bg-gray-700/50 overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progressToNext}%` }}
+                                    transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+                                    style={{ boxShadow: '0 0 8px rgba(245,158,11,0.4)' }}
+                                />
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
+                                {nextMilestone.days - currentStreak} more day{nextMilestone.days - currentStreak !== 1 ? 's' : ''} to reach {nextMilestone.label}!
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Milestones achieved */}
+                    {prevMilestone && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {STREAK_MILESTONES.filter(m => m.days <= currentStreak).map(m => (
+                                <span
+                                    key={m.days}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                                    style={{
+                                        background: `${m.color}10`,
+                                        borderColor: `${m.color}30`,
+                                        color: m.color,
+                                    }}
+                                >
+                                    {m.emoji} {m.label}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+
+            {/* ═══════ OTHER FEATURES GRID (Coming Soon) ═══════ */}
+            <div className="mb-2">
+                <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em] mb-3 px-0.5">More Premium Features</h4>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    {PREMIUM_FEATURES_DATA.filter(f => f.title !== 'Practice Streaks').map((feature, index) => {
+                        const Icon = feature.icon;
+                        return (
+                            <motion.div
+                                key={feature.title}
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
+                                className={`relative p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} border ${feature.borderColor} group cursor-default overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 hover:-translate-y-0.5`}
+                            >
+                                <div className={`w-9 h-9 rounded-xl ${feature.iconBg} flex items-center justify-center mb-3 shadow-md`}
+                                    style={{ boxShadow: `0 4px 12px ${feature.color}30` }}
+                                >
+                                    <Icon className="text-white" style={{ width: 18, height: 18 }} />
+                                </div>
+                                <p className="text-[13px] font-bold text-gray-900 dark:text-white mb-1 leading-tight">
+                                    {feature.title}
+                                </p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                                    {feature.description}
+                                </p>
+                                <div className="absolute top-3 right-3">
+                                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border border-gray-200/60 dark:border-gray-700/60 uppercase tracking-wider backdrop-blur-sm">
+                                        Soon
+                                    </span>
+                                </div>
+                                <div
+                                    className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-2xl"
+                                    style={{ background: feature.color }}
+                                />
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 // ==================== PRACTICE MODE TAB ====================
 interface PracticeModeTabProps {
     mistakeItems: MistakeBucketItem[];
@@ -3437,77 +3801,6 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
         };
     };
 
-    // Coming soon feature config with SVG icons
-    const comingSoonFeatures = [
-        {
-            title: 'Timed Challenges', desc: 'Beat the clock on practice questions',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#eff6ff"/>
-                    <circle cx="20" cy="22" r="10" stroke="#3b82f6" strokeWidth="1.5" fill="#3b82f6" fillOpacity="0.06"/>
-                    <path d="M20 16v6l4 3" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M17 10h6" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-            ), color: '#3b82f6'
-        },
-        {
-            title: 'Weak Topic Analysis', desc: 'AI identifies your weakest subjects',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#f0fdf4"/>
-                    <rect x="10" y="24" width="4" height="6" rx="1" fill="#22c55e" opacity="0.4"/>
-                    <rect x="16" y="18" width="4" height="12" rx="1" fill="#22c55e" opacity="0.6"/>
-                    <rect x="22" y="14" width="4" height="16" rx="1" fill="#22c55e" opacity="0.8"/>
-                    <rect x="28" y="10" width="4" height="20" rx="1" fill="#22c55e"/>
-                </svg>
-            ), color: '#22c55e'
-        },
-        {
-            title: 'Practice Streaks', desc: 'Build daily practice habits',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#fef3c7"/>
-                    <path d="M20 8c0 4-4 6-4 10a6 6 0 0012 0c0-4-4-6-4-10" fill="#f59e0b" fillOpacity="0.15" stroke="#f59e0b" strokeWidth="1.5"/>
-                    <path d="M20 15c0 2-2 3-2 5a3 3 0 006 0c0-2-2-3-2-5" fill="#f59e0b" opacity="0.4"/>
-                </svg>
-            ), color: '#f59e0b'
-        },
-        {
-            title: 'Quiz Battle', desc: 'Challenge classmates in real-time',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#faf5ff"/>
-                    <rect x="12" y="14" width="16" height="12" rx="3" stroke="#8b5cf6" strokeWidth="1.5" fill="#8b5cf6" fillOpacity="0.06"/>
-                    <circle cx="17" cy="20" r="1.5" fill="#8b5cf6" opacity="0.5"/>
-                    <circle cx="23" cy="20" r="1.5" fill="#8b5cf6" opacity="0.5"/>
-                    <path d="M14 28l-2-2M26 28l2-2" stroke="#8b5cf6" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-            ), color: '#8b5cf6'
-        },
-        {
-            title: 'Spaced Repetition', desc: 'Smart scheduling for long-term memory',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#fef2f2"/>
-                    <circle cx="20" cy="20" r="10" stroke="#ef4444" strokeWidth="1.5" fill="#ef4444" fillOpacity="0.06"/>
-                    <circle cx="20" cy="20" r="5" stroke="#ef4444" strokeWidth="1" opacity="0.4"/>
-                    <circle cx="20" cy="20" r="2" fill="#ef4444" opacity="0.5"/>
-                    <path d="M20 10v3M20 27v3M10 20h3M27 20h3" stroke="#ef4444" strokeWidth="1" strokeLinecap="round" opacity="0.3"/>
-                </svg>
-            ), color: '#ef4444'
-        },
-        {
-            title: 'Custom Practice Sets', desc: 'Create your own practice quizzes',
-            icon: (
-                <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                    <rect width="40" height="40" rx="12" fill="#ecfdf5"/>
-                    <rect x="11" y="10" width="18" height="20" rx="3" stroke="#10b981" strokeWidth="1.5" fill="#10b981" fillOpacity="0.06"/>
-                    <path d="M15 16h10M15 20h6M15 24h8" stroke="#10b981" strokeWidth="1.2" strokeLinecap="round"/>
-                    <path d="M26 13l3-3 3 3-3 3-3-3z" fill="#10b981" opacity="0.3" stroke="#10b981" strokeWidth="0.8"/>
-                </svg>
-            ), color: '#10b981'
-        },
-    ];
 
     // Main Practice Mode view
     return (
@@ -3731,34 +4024,6 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                     </p>
                 </div>
             )}
-
-            {/* Coming Soon Features */}
-            <div className="mb-2">
-                <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em] mb-4 flex items-center gap-1.5">
-                    COMING SOON <Sparkles className="w-3 h-3 text-gray-300" />
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {comingSoonFeatures.map((feature) => (
-                        <div
-                            key={feature.title}
-                            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all group"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 flex-shrink-0">
-                                        {feature.icon}
-                                    </div>
-                                    <div>
-                                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white">{feature.title}</h5>
-                                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">{feature.desc}</p>
-                                    </div>
-                                </div>
-                                <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 -rotate-90 flex-shrink-0 group-hover:text-gray-500 transition-colors" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
         </motion.div>
     );
 }

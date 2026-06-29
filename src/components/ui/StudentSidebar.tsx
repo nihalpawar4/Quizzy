@@ -22,6 +22,8 @@ import {
     Bot,
     Diamond,
     Star,
+    Lock,
+    BookOpen as BookOpenIcon,
 } from 'lucide-react';
 import { usePremium } from '@/contexts/PremiumContext';
 import ProfileFrame from '@/components/ui/ProfileFrame';
@@ -29,8 +31,8 @@ import PremiumBadge from '@/components/ui/PremiumBadge';
 import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 
 interface SidebarProps {
-    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help';
-    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help') => void;
+    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features';
+    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features') => void;
     userName: string;
     userClass: number;
     userPhotoURL?: string | null;
@@ -51,13 +53,14 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help';
+    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features';
     href?: string;
     badge?: number;
     comingSoon?: boolean;
     activeColor: string;
     iconBg?: string;
     iconColor?: string;
+    locked?: boolean;
 }
 
 export default function StudentSidebar({
@@ -78,7 +81,7 @@ export default function StudentSidebar({
     streak = 0,
 }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const { activeProfileFrame, activeBadge } = usePremium();
+    const { isPremium, activeProfileFrame, activeBadge } = usePremium();
 
     const studyItems: NavItem[] = [
         {
@@ -134,6 +137,17 @@ export default function StudentSidebar({
             activeColor: 'bg-purple-500',
             iconBg: 'bg-purple-50 dark:bg-purple-900/20',
             iconColor: 'text-purple-500',
+        },
+        {
+            id: 'premium-features',
+            label: 'Premium Features',
+            shortLabel: 'Premium',
+            icon: Crown,
+            tab: 'premium-features',
+            activeColor: 'bg-violet-500',
+            iconBg: 'bg-violet-50 dark:bg-violet-900/20',
+            iconColor: 'text-violet-500',
+            locked: !isPremium,
         },
     ];
 
@@ -198,6 +212,11 @@ export default function StudentSidebar({
     }, [showProfileDropdown]);
 
     const handleNavClick = (item: NavItem) => {
+        if (item.locked) {
+            // Redirect locked items to premium page
+            window.location.href = '/premium';
+            return;
+        }
         if (item.comingSoon) {
             onComingSoon(item.label);
             return;
@@ -256,6 +275,13 @@ export default function StudentSidebar({
                             </span>
                         ) : null}
 
+                        {/* Locked indicator */}
+                        {item.locked && (
+                            <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+                                <Lock className="w-2.5 h-2.5 text-gray-400 dark:text-gray-500" />
+                            </span>
+                        )}
+
                         {/* Coming soon tag */}
                         {item.comingSoon && (
                             <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-400 font-bold flex-shrink-0 border border-amber-100 dark:border-amber-900/40">
@@ -289,7 +315,7 @@ export default function StudentSidebar({
         );
     };
 
-    // Mobile bottom tab items: Tests, Practice, Notes, Homework
+    // Mobile bottom tab items: Tests, Practice, Notes, Premium Features
     const mobileBottomItems: NavItem[] = [
         studyItems.find(i => i.id === 'tests')!,
         {
@@ -302,7 +328,15 @@ export default function StudentSidebar({
             activeColor: 'bg-green-500',
         },
         studyItems.find(i => i.id === 'notes')!,
-        studyItems.find(i => i.id === 'homework')!,
+        {
+            id: 'premium-features-mobile',
+            label: 'Premium Features',
+            shortLabel: 'Premium',
+            icon: Crown,
+            tab: 'premium-features',
+            activeColor: 'bg-violet-500',
+            locked: !isPremium,
+        },
     ];
 
     // Profile dropdown content (reused for mobile & desktop)
@@ -437,35 +471,62 @@ export default function StudentSidebar({
                 </div>
             </nav>
 
-            {/* Go Premium Banner */}
+            {/* Premium Banner — Dynamic based on premium status */}
             {!isCollapsed && (
                 <div className="px-3 pb-4 pt-2">
-                    <Link
-                        href="/premium"
-                        className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-50/80 via-violet-50/60 to-purple-50/80 dark:from-blue-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border border-blue-100/60 dark:border-blue-900/30 hover:shadow-md hover:shadow-blue-500/5 transition-all group cursor-pointer"
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 relative">
-                            <Diamond className="w-5 h-5 text-white" />
-                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
-                                <Star className="w-2.5 h-2.5 text-white fill-white" />
+                    {isPremium ? (
+                        <Link
+                            href="/premium"
+                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-green-50/60 to-teal-50/80 dark:from-emerald-950/40 dark:via-green-950/30 dark:to-teal-950/40 border border-emerald-200/60 dark:border-emerald-800/30 hover:shadow-md hover:shadow-emerald-500/5 transition-all group cursor-pointer"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 flex-shrink-0 relative">
+                                <Crown className="w-5 h-5 text-white" />
+                                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 flex items-center justify-center shadow-sm">
+                                    <Star className="w-2.5 h-2.5 text-white fill-white" />
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-gray-900 dark:text-white">Go Premium</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Unlock unlimited tests, detailed analytics & more.</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                    </Link>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">Premium User ✓</p>
+                                <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 leading-tight">All premium features unlocked</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-emerald-300 dark:text-emerald-600 group-hover:text-emerald-500 transition-colors flex-shrink-0" />
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/premium"
+                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-50/80 via-violet-50/60 to-purple-50/80 dark:from-blue-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border border-blue-100/60 dark:border-blue-900/30 hover:shadow-md hover:shadow-blue-500/5 transition-all group cursor-pointer"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 relative">
+                                <Diamond className="w-5 h-5 text-white" />
+                                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
+                                    <Star className="w-2.5 h-2.5 text-white fill-white" />
+                                </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold text-gray-900 dark:text-white">Go Premium</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Unlock unlimited tests, detailed analytics & more.</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                        </Link>
+                    )}
                 </div>
             )}
             {isCollapsed && (
                 <div className="px-2 pb-4 pt-2">
                     <Link
                         href="/premium"
-                        className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all"
-                        title="Go Premium"
+                        className={`flex items-center justify-center w-12 h-12 mx-auto rounded-xl shadow-md hover:shadow-lg transition-all ${
+                            isPremium
+                                ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/20 hover:shadow-emerald-500/30'
+                                : 'bg-gradient-to-br from-blue-500 to-violet-500 shadow-blue-500/20 hover:shadow-blue-500/30'
+                        }`}
+                        title={isPremium ? 'Premium User' : 'Go Premium'}
                     >
-                        <Diamond className="w-5 h-5 text-white" />
+                        {isPremium ? (
+                            <Crown className="w-5 h-5 text-white" />
+                        ) : (
+                            <Diamond className="w-5 h-5 text-white" />
+                        )}
                     </Link>
                 </div>
             )}
@@ -564,16 +625,20 @@ export default function StudentSidebar({
                         >
                             {/* Menu items */}
                             <div className="p-1.5">
-                                {/* Help Center */}
+                                {/* Homework */}
                                 <button
-                                    onClick={() => { setShowMoreMenu(false); onTabChange('help'); }}
+                                    onClick={() => { setShowMoreMenu(false); onTabChange('homework'); }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
                                 >
-                                    <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
-                                        <HelpCircle className="w-3.5 h-3.5 text-orange-500" />
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                                        <BookOpenIcon className="w-3.5 h-3.5 text-indigo-500" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Help Center</span>
-                                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/40">Soon</span>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Homework</span>
+                                    {pendingHomeworkCount > 0 && (
+                                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
+                                            {pendingHomeworkCount}
+                                        </span>
+                                    )}
                                 </button>
 
                                 {/* My Reports */}
@@ -603,6 +668,18 @@ export default function StudentSidebar({
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Companion</span>
                                     <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/40">Soon</span>
                                 </button>
+
+                                {/* Help Center */}
+                                <button
+                                    onClick={() => { setShowMoreMenu(false); onTabChange('help'); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <HelpCircle className="w-3.5 h-3.5 text-orange-500" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Help Center</span>
+                                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/40">Soon</span>
+                                </button>
                             </div>
                         </motion.div>
                     </>
@@ -618,7 +695,14 @@ export default function StudentSidebar({
                             return (
                                 <button
                                     key={item.id}
-                                    onClick={() => { setShowMoreMenu(false); item.tab && onTabChange(item.tab); }}
+                                    onClick={() => {
+                                        setShowMoreMenu(false);
+                                        if (item.locked) {
+                                            window.location.href = '/premium';
+                                            return;
+                                        }
+                                        item.tab && onTabChange(item.tab);
+                                    }}
                                     className={`relative flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all duration-200 min-w-[56px]
                                         ${isActive
                                             ? ''
@@ -650,6 +734,12 @@ export default function StudentSidebar({
                                                 {item.badge > 9 ? '9+' : item.badge}
                                             </span>
                                         ) : null}
+                                        {/* Lock indicator for non-premium */}
+                                        {item.locked && !isActive && (
+                                            <span className="absolute -top-1 -right-1.5 w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center shadow-sm border border-white dark:border-gray-900">
+                                                <Lock className="w-2 h-2 text-gray-500 dark:text-gray-400" />
+                                            </span>
+                                        )}
                                     </div>
                                     <span className={`relative z-10 text-[10px] font-semibold transition-colors ${
                                         isActive ? 'text-[#1650EB] dark:text-[#6095DB]' : ''
