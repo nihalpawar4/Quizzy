@@ -40,6 +40,11 @@ export interface User {
     xpBoostActive?: boolean;
     xpBoostExpiresAt?: Date;
     xpBoostMultiplier?: number;
+    // Extended profile fields
+    username?: string;
+    board?: string;
+    schoolName?: string;
+    aboutBio?: string;
 }
 
 // Class change request (requires teacher approval)

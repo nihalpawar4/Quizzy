@@ -81,6 +81,7 @@ import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import StudentSidebar from '@/components/ui/StudentSidebar';
+import ProfileSettingsTab from '@/components/ui/ProfileSettingsTab';
 import DailySurpriseReward from '@/components/DailySurpriseReward';
 import WeeklyTestCard from '@/components/WeeklyTestCard';
 import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
@@ -111,7 +112,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -2357,6 +2358,11 @@ export default function StudentDashboard() {
                         lastStreakDate={user.lastStreakDate || null}
                         isPremium={isPremiumUser}
                     />
+                )}
+
+                {/* Profile Settings Tab */}
+                {activeTab === 'profile-settings' && (
+                    <ProfileSettingsTab onBack={() => setActiveTab('tests')} />
                 )}
 
                 {/* Games Zone Tab (disabled)

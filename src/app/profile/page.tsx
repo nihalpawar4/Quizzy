@@ -85,15 +85,27 @@ export default function ProfilePage() {
     const [showPasswordChange, setShowPasswordChange] = useState(false);
     const [showSecurity, setShowSecurity] = useState(false);
     const [showActiveSessions, setShowActiveSessions] = useState(false);
+    const [showEditProfile, setShowEditProfile] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Edit Profile form states
+    const [editFirstName, setEditFirstName] = useState('');
+    const [editLastName, setEditLastName] = useState('');
+    const [editUsername, setEditUsername] = useState('');
+    const [editBoard, setEditBoard] = useState('');
+    const [editSchoolName, setEditSchoolName] = useState('');
+    const [editAboutBio, setEditAboutBio] = useState('');
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+    const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
 
     // Stats
     const [averageScore, setAverageScore] = useState(0);
     const [xpPoints, setXpPoints] = useState(0);
 
     // Lock body scroll when a modal is open
-    const isAnyModalOpen = showAppearance || showNotifications || showClassSelection || showPasswordChange || showSecurity || showActiveSessions || showDeleteModal;
+    const isAnyModalOpen = showAppearance || showNotifications || showClassSelection || showPasswordChange || showSecurity || showActiveSessions || showDeleteModal || showEditProfile;
     useEffect(() => {
         if (isAnyModalOpen) {
             document.body.style.overflow = 'hidden';
@@ -269,6 +281,53 @@ export default function ProfilePage() {
     const handleSignOut = async () => {
         await signOut();
         router.push('/');
+    };
+
+    // Open edit profile modal & populate fields
+    const handleOpenEditProfile = () => {
+        const nameParts = (user?.name || '').trim().split(/\s+/);
+        setEditFirstName(nameParts[0] || '');
+        setEditLastName(nameParts.slice(1).join(' ') || '');
+        setEditUsername(user?.username || '');
+        setEditBoard(user?.board || '');
+        setEditSchoolName(user?.schoolName || '');
+        setEditAboutBio(user?.aboutBio || '');
+        setProfileSaveSuccess(false);
+        setProfileSaveError(null);
+        setShowEditProfile(true);
+    };
+
+    // Save profile changes to Firestore
+    const handleSaveProfile = async () => {
+        if (!user) return;
+        setIsSavingProfile(true);
+        setProfileSaveError(null);
+        setProfileSaveSuccess(false);
+        try {
+            const fullName = [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(' ');
+            if (!fullName) {
+                setProfileSaveError('First name is required.');
+                setIsSavingProfile(false);
+                return;
+            }
+            await updateDoc(doc(db, 'users', user.uid), {
+                name: fullName,
+                username: editUsername.trim(),
+                board: editBoard.trim(),
+                schoolName: editSchoolName.trim(),
+                aboutBio: editAboutBio.trim(),
+            });
+            await refreshUser();
+            setProfileSaveSuccess(true);
+            setTimeout(() => {
+                setProfileSaveSuccess(false);
+                setShowEditProfile(false);
+            }, 1500);
+        } catch {
+            setProfileSaveError('Failed to save changes. Please try again.');
+        } finally {
+            setIsSavingProfile(false);
+        }
     };
 
     if (authLoading || !user) {
@@ -480,7 +539,7 @@ export default function ProfilePage() {
 
                             {/* Edit Profile button */}
                             <button
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={handleOpenEditProfile}
                                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white transition-colors border border-gray-200/50 dark:border-gray-700/50 shadow-sm"
                             >
                                 <Edit3 className="w-3.5 h-3.5" />
@@ -965,6 +1024,212 @@ export default function ProfilePage() {
                                     {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                                     {isDeleting ? 'Deleting...' : 'Delete'}
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ===== EDIT PROFILE MODAL ===== */}
+            <AnimatePresence>
+                {showEditProfile && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[70] flex items-end sm:items-center justify-center"
+                        onClick={() => setShowEditProfile(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 60, opacity: 0, scale: 0.97 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            exit={{ y: 60, opacity: 0, scale: 0.97 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                            className="bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-200/60 dark:border-gray-800/60"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Drag handle (mobile) */}
+                            <div className="flex justify-center pt-3 sm:hidden">
+                                <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                            </div>
+
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1650EB]/10 to-blue-100 dark:from-[#1650EB]/20 dark:to-blue-900/30 flex items-center justify-center">
+                                        <Edit3 className="w-5 h-5 text-[#1650EB]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit Profile</h3>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500">Update your personal information</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowEditProfile(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="px-6 py-5 space-y-5">
+                                {/* Avatar section */}
+                                <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30 rounded-2xl border border-gray-100 dark:border-gray-800">
+                                    <div className="relative flex-shrink-0">
+                                        <ProfileFrame
+                                            frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
+                                            photoURL={user.photoURL}
+                                            userName={user.name}
+                                            size={56}
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</p>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isUploadingPhoto}
+                                        className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-700 rounded-xl text-xs font-medium text-[#1650EB] hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-600 shadow-sm"
+                                    >
+                                        {isUploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                                        Change Photo
+                                    </button>
+                                </div>
+
+                                {/* Success / Error messages */}
+                                {profileSaveSuccess && (
+                                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                        <p className="text-sm text-green-700 dark:text-green-400 font-medium">Profile updated successfully!</p>
+                                    </motion.div>
+                                )}
+                                {profileSaveError && (
+                                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                        <p className="text-sm text-red-700 dark:text-red-400">{profileSaveError}</p>
+                                    </motion.div>
+                                )}
+
+                                {/* Name Row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">First Name</label>
+                                        <input
+                                            type="text"
+                                            value={editFirstName}
+                                            onChange={(e) => setEditFirstName(e.target.value)}
+                                            placeholder="First name"
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Last Name</label>
+                                        <input
+                                            type="text"
+                                            value={editLastName}
+                                            onChange={(e) => setEditLastName(e.target.value)}
+                                            placeholder="Last name"
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Email (read-only) */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Email Address</label>
+                                    <div className="relative">
+                                        <input
+                                            type="email"
+                                            value={user.email}
+                                            readOnly
+                                            className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Lock className="w-3.5 h-3.5 text-gray-400" />
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-1">Email cannot be changed for security reasons</p>
+                                </div>
+
+                                {/* Username */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Username</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">@</span>
+                                        <input
+                                            type="text"
+                                            value={editUsername}
+                                            onChange={(e) => setEditUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
+                                            placeholder="username"
+                                            className="w-full pl-8 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Board & School in a row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Board</label>
+                                        <select
+                                            value={editBoard}
+                                            onChange={(e) => setEditBoard(e.target.value)}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all appearance-none"
+                                        >
+                                            <option value="">Select board</option>
+                                            <option value="CBSE">CBSE</option>
+                                            <option value="ICSE">ICSE</option>
+                                            <option value="State Board">State Board</option>
+                                            <option value="IB">IB</option>
+                                            <option value="IGCSE">IGCSE</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">School Name</label>
+                                        <input
+                                            type="text"
+                                            value={editSchoolName}
+                                            onChange={(e) => setEditSchoolName(e.target.value)}
+                                            placeholder="Your school"
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* About / Bio */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">About / Bio</label>
+                                    <textarea
+                                        value={editAboutBio}
+                                        onChange={(e) => setEditAboutBio(e.target.value.slice(0, 200))}
+                                        placeholder="Tell us something about yourself..."
+                                        rows={3}
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1650EB] focus:border-transparent outline-none transition-all resize-none"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 text-right">{editAboutBio.length}/200</p>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-2xl">
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowEditProfile(false)}
+                                        className="flex-1 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={isSavingProfile || !editFirstName.trim()}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#1650EB] to-[#4F7BF7] text-white rounded-xl font-semibold text-sm hover:from-[#1243c7] hover:to-[#3d6ae5] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#1650EB]/20 hover:shadow-[#1650EB]/30"
+                                    >
+                                        {isSavingProfile ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                                        ) : (
+                                            <><Save className="w-4 h-4" /> Save Changes</>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

@@ -31,8 +31,8 @@ import PremiumBadge from '@/components/ui/PremiumBadge';
 import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 
 interface SidebarProps {
-    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features';
-    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features') => void;
+    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings';
+    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings') => void;
     userName: string;
     userClass: number;
     userPhotoURL?: string | null;
@@ -53,7 +53,7 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features';
+    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings';
     href?: string;
     badge?: number;
     comingSoon?: boolean;
@@ -354,7 +354,28 @@ export default function StudentSidebar({
                 <p className="text-[11px] text-gray-400 dark:text-gray-500">Class {userClass} • Student</p>
             </div>
             <div className="p-1.5">
-                {/* My Reports — visible in dropdown */}
+                {/* Profile Settings */}
+                <button
+                    onClick={() => { setShowProfileDropdown(false); onTabChange('profile-settings'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group"
+                >
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                        <Settings className="w-3.5 h-3.5 text-[#1650EB]" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Settings</span>
+                </button>
+                {/* Quizy Premium */}
+                <Link
+                    href="/premium"
+                    onClick={() => setShowProfileDropdown(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50/80 dark:hover:bg-amber-900/10 transition-colors group"
+                >
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                        <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quizy Premium</span>
+                </Link>
+                {/* My Reports */}
                 <button
                     onClick={() => { setShowProfileDropdown(false); onTabChange('reports'); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group"
@@ -369,26 +390,7 @@ export default function StudentSidebar({
                         </span>
                     )}
                 </button>
-                <Link
-                    href="/profile"
-                    onClick={() => setShowProfileDropdown(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group"
-                >
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                        <Settings className="w-3.5 h-3.5 text-[#1650EB]" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Settings</span>
-                </Link>
-                <Link
-                    href="/premium"
-                    onClick={() => setShowProfileDropdown(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50/80 dark:hover:bg-amber-900/10 transition-colors group"
-                >
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                        <Crown className="w-3.5 h-3.5 text-amber-500" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quizy Premium</span>
-                </Link>
+                {/* Sign Out */}
                 <button
                     onClick={() => { setShowProfileDropdown(false); onSignOut(); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50/80 dark:hover:bg-red-900/10 transition-colors group"
@@ -462,6 +464,27 @@ export default function StudentSidebar({
                         {quickItems.map((item) =>
                             renderNavItem(item, activeTab === item.tab)
                         )}
+                    </div>
+                </div>
+
+                {/* Account Section */}
+                <div>
+                    {!isCollapsed && (
+                        <p className="px-3 mb-2.5 text-[10px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-[0.12em]">
+                            Account
+                        </p>
+                    )}
+                    <div className="space-y-0.5">
+                        {renderNavItem({
+                            id: 'profile-settings',
+                            label: 'Profile Settings',
+                            shortLabel: 'Profile',
+                            icon: Settings,
+                            tab: 'profile-settings',
+                            activeColor: 'bg-slate-500',
+                            iconBg: 'bg-slate-50 dark:bg-slate-900/20',
+                            iconColor: 'text-slate-500',
+                        }, activeTab === 'profile-settings')}
                     </div>
                 </div>
             </nav>
