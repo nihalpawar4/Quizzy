@@ -212,11 +212,6 @@ export default function StudentSidebar({
     }, [showProfileDropdown]);
 
     const handleNavClick = (item: NavItem) => {
-        if (item.locked) {
-            // Redirect locked items to premium page
-            window.location.href = '/premium';
-            return;
-        }
         if (item.comingSoon) {
             onComingSoon(item.label);
             return;
@@ -697,10 +692,6 @@ export default function StudentSidebar({
                                     key={item.id}
                                     onClick={() => {
                                         setShowMoreMenu(false);
-                                        if (item.locked) {
-                                            window.location.href = '/premium';
-                                            return;
-                                        }
                                         item.tab && onTabChange(item.tab);
                                     }}
                                     className={`relative flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all duration-200 min-w-[56px]
