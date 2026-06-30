@@ -859,6 +859,188 @@ body.modal-open {
   }
 }
 
+/* ==================== 2026 SAAS INSTRUCTION SCREEN ==================== */
+
+/* Animated gradient mesh background */
+.instr-2026-bg {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf8 25%, #f5f0ff 50%, #eef2ff 75%, #f0f7ff 100%);
+}
+
+.dark .instr-2026-bg {
+  background: linear-gradient(135deg, #030712 0%, #0a0f1f 25%, #0d0520 50%, #070b1a 75%, #030712 100%);
+}
+
+/* Floating gradient mesh blobs */
+.instr-mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .instr-mesh-blob {
+  opacity: 0.25;
+}
+
+.instr-mesh-blob-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.15) 50%, transparent 70%);
+  top: -100px;
+  right: -80px;
+  animation: instrBlobFloat1 12s ease-in-out infinite;
+}
+
+.instr-mesh-blob-2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0.1) 50%, transparent 70%);
+  bottom: -60px;
+  left: -80px;
+  animation: instrBlobFloat2 15s ease-in-out infinite;
+}
+
+.instr-mesh-blob-3 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, rgba(192, 132, 252, 0.1) 50%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  animation: instrBlobFloat3 10s ease-in-out infinite;
+}
+
+@keyframes instrBlobFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-30px, 20px) scale(1.05); }
+  66% { transform: translate(20px, -15px) scale(0.95); }
+}
+
+@keyframes instrBlobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(25px, -20px) scale(1.08); }
+  66% { transform: translate(-15px, 15px) scale(0.92); }
+}
+
+@keyframes instrBlobFloat3 {
+  0%, 100% { transform: translate(-50%, 0) scale(1); }
+  50% { transform: translate(-50%, -30px) scale(1.1); }
+}
+
+/* Glassmorphism card */
+.instr-glass-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+
+.dark .instr-glass-card {
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+@media (min-width: 640px) {
+  .instr-glass-card {
+    border-radius: 28px;
+  }
+}
+
+/* Header gradient — deeper, more vibrant */
+.instr-header-gradient {
+  background: linear-gradient(135deg, #1a3fd4 0%, #1650EB 30%, #4f46e5 65%, #7c3aed 100%);
+}
+
+/* Proctor card */
+.instr-proctor-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(124, 58, 237, 0.04) 100%);
+}
+
+.dark .instr-proctor-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(124, 58, 237, 0.08) 100%);
+}
+
+/* Shield glow pulse */
+.instr-shield-glow {
+  animation: shieldPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes shieldPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  50% { box-shadow: 0 0 16px 4px rgba(139, 92, 246, 0.3); }
+}
+
+/* Agreement card */
+.instr-agree-card {
+  background: rgba(243, 244, 246, 0.6);
+  border: 1.5px solid rgba(209, 213, 219, 0.5);
+}
+
+.instr-agree-card:hover {
+  background: rgba(238, 242, 255, 0.7);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.dark .instr-agree-card {
+  background: rgba(31, 41, 55, 0.5);
+  border-color: rgba(55, 65, 81, 0.5);
+}
+
+.dark .instr-agree-card:hover {
+  background: rgba(49, 46, 129, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Start button glow when active */
+.instr-start-btn:not(:disabled) {
+  animation: startBtnGlow 3s ease-in-out infinite;
+}
+
+@keyframes startBtnGlow {
+  0%, 100% { box-shadow: 0 4px 24px rgba(22, 80, 235, 0.35); }
+  50% { box-shadow: 0 4px 32px rgba(22, 80, 235, 0.5), 0 0 60px rgba(99, 102, 241, 0.15); }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .instr-mesh-blob,
+  .instr-shield-glow,
+  .instr-start-btn {
+    animation: none !important;
+  }
+}
+
+/* Mobile adjustments for blobs */
+@media (max-width: 640px) {
+  .instr-mesh-blob-1 {
+    width: 250px;
+    height: 250px;
+  }
+  .instr-mesh-blob-2 {
+    width: 200px;
+    height: 200px;
+  }
+  .instr-mesh-blob-3 {
+    width: 150px;
+    height: 150px;
+  }
+}
+
 /* ==================== TEST WINDOW MOBILE FIXES ==================== */
 
 /* Test page container - mobile friendly */

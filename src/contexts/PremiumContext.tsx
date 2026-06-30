@@ -77,6 +77,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const launchTrialChecked = useRef(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const expiryRefreshDone = useRef(false);
 
     // Subscribe to real-time premium status
     useEffect(() => {
@@ -106,10 +107,16 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         const msUntilExpiry = expiresAt - now;
 
         if (msUntilExpiry <= 0) {
-            // Trial already expired — force re-evaluation now
-            setRefreshKey(k => k + 1);
+            // Trial already expired — force re-evaluation once only
+            if (!expiryRefreshDone.current) {
+                expiryRefreshDone.current = true;
+                setRefreshKey(k => k + 1);
+            }
             return;
         }
+
+        // Reset guard since trial hasn't expired yet
+        expiryRefreshDone.current = false;
 
         // Schedule re-evaluation when trial expires
         const timer = setTimeout(() => {
@@ -128,10 +135,16 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         const msUntilExpiry = expiresAt - now;
 
         if (msUntilExpiry <= 0) {
-            // Already expired — force re-evaluation
-            setRefreshKey(k => k + 1);
+            // Already expired — force re-evaluation once only
+            if (!expiryRefreshDone.current) {
+                expiryRefreshDone.current = true;
+                setRefreshKey(k => k + 1);
+            }
             return;
         }
+
+        // Reset guard since premium hasn't expired yet
+        expiryRefreshDone.current = false;
 
         // Schedule re-evaluation when premium expires
         const timer = setTimeout(() => {

@@ -459,20 +459,19 @@ export default function StudentDashboard() {
             if (testsData) {
                 setTests(testsData);
             }
-            const resultsData = await getResultsByStudent(user.uid, user.studentClass);
+
+            // Run results + active sessions in parallel for faster load
+            const [resultsData, activeIds] = await Promise.all([
+                getResultsByStudent(user.uid, user.studentClass),
+                getActiveTestSessionIds(user.uid).catch(() => new Set<string>()),
+            ]);
+
             setResults(resultsData);
+            setResumableTests(activeIds);
 
             // Derive taken tests directly from results - no extra API calls!
             const taken = new Set<string>(resultsData.map(r => r.testId));
             setTakenTests(taken);
-
-            // Load active (in-progress) test sessions to show "Resume" buttons
-            try {
-                const activeIds = await getActiveTestSessionIds(user.uid);
-                setResumableTests(activeIds);
-            } catch (err) {
-                console.error('[Quizy] Failed to load active sessions:', err);
-            }
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {

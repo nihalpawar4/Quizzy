@@ -3,6 +3,8 @@
  * Parse CSV and JSON formats into question objects for Firestore
  */
 
+import { cleanQuestionText, cleanOptionText } from './cleanText';
+
 // Question types supported
 export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'one_word' | 'short_answer';
 
@@ -197,7 +199,9 @@ export function parseJSON(jsonText: string): ParseResult {
         const q = item as Record<string, unknown>;
 
         // Extract question text (support multiple field names)
-        const text = (q.question || q.text || q.questionText || '') as string;
+        const rawText = (q.question || q.text || q.questionText || '') as string;
+        // Clean AI annotation artifacts like [span_0](start_span)
+        const text = cleanQuestionText(rawText);
         if (!text) {
             errors.push(`Question ${questionNum}: Missing question text`);
             return;
@@ -206,18 +210,18 @@ export function parseJSON(jsonText: string): ParseResult {
         // Extract options (support multiple formats)
         let options: string[] = [];
         if (Array.isArray(q.options)) {
-            options = q.options.map(o => String(o));
+            options = q.options.map(o => cleanOptionText(String(o)));
         } else if (Array.isArray(q.answers)) {
-            options = q.answers.map(o => String(o));
+            options = q.answers.map(o => cleanOptionText(String(o)));
         } else if (Array.isArray(q.choices)) {
-            options = q.choices.map(o => String(o));
+            options = q.choices.map(o => cleanOptionText(String(o)));
         } else if (q.optionA !== undefined) {
             // Support individual option fields
             options = [
-                String(q.optionA || q.option_a || q.a || ''),
-                String(q.optionB || q.option_b || q.b || ''),
-                String(q.optionC || q.option_c || q.c || ''),
-                String(q.optionD || q.option_d || q.d || '')
+                cleanOptionText(String(q.optionA || q.option_a || q.a || '')),
+                cleanOptionText(String(q.optionB || q.option_b || q.b || '')),
+                cleanOptionText(String(q.optionC || q.option_c || q.c || '')),
+                cleanOptionText(String(q.optionD || q.option_d || q.d || ''))
             ];
         }
 

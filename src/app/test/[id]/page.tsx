@@ -41,6 +41,7 @@ import {
     completeSession,
 } from '@/services/testSessionService';
 import { awardActivityXp } from '@/services/coinService';
+import { cleanQuestionText } from '@/lib/utils/cleanText';
 
 // Circular Progress Component
 function CircularProgress({
@@ -573,14 +574,21 @@ export default function TestPage() {
             setLoading(true);
             setError(null);
 
-            const hasTaken = await hasStudentTakenTest(user!.uid, testId);
+            // ── Parallel fetch: run ALL queries simultaneously for instant load ──
+            // Include session check in the parallel batch to eliminate sequential delay
+            const [hasTaken, testData, questionsData, existingSession] = await Promise.all([
+                hasStudentTakenTest(user!.uid, testId),
+                getTestById(testId),
+                getQuestionsByTestId(testId),
+                getActiveTestSession(user!.uid, testId).catch(() => null), // non-blocking
+            ]);
+
             if (hasTaken) {
                 setError('You have already completed this test.');
                 setLoading(false);
                 return;
             }
 
-            const testData = await getTestById(testId);
             if (!testData) {
                 setError('Test not found');
                 setLoading(false);
@@ -600,40 +608,34 @@ export default function TestPage() {
                 return;
             }
 
-            setTest(testData);
-            setAntiCheatEnabled(testData.enableAntiCheat || false);
-
-            const questionsData = await getQuestionsByTestId(testId);
             if (questionsData.length === 0) {
                 setError('This test has no questions yet');
                 setLoading(false);
                 return;
             }
 
+            setTest(testData);
+            setAntiCheatEnabled(testData.enableAntiCheat || false);
             setQuestions(questionsData);
 
             // Calculate total marks
             const marksPerQ = testData.marksPerQuestion || 1;
             setTotalMarks(questionsData.length * marksPerQ);
 
-            // ── Anti-cheat: Check for existing active session ──
-            try {
-                const existingSession = await getActiveTestSession(user!.uid, testId);
-                if (existingSession && existingSession.status === 'in_progress') {
-                    // Resume from saved session
-                    console.log('[Quizy] Resuming test from session:', existingSession.id, 'question:', existingSession.currentQuestion);
-                    setActiveSession(existingSession);
-                    setAnswers(existingSession.answers as AnswerValue[]);
-                    setCurrentIndex(existingSession.currentQuestion);
-                    setIsResuming(true);
+            // ── Check for existing active session to enable Resume ──
+            if (existingSession && existingSession.status === 'in_progress') {
+                // Resume from saved session
+                console.log('[Quizy] Resuming test from session:', existingSession.id, 'question:', existingSession.currentQuestion);
+                setActiveSession(existingSession);
+                setAnswers(existingSession.answers as AnswerValue[]);
+                setCurrentIndex(existingSession.currentQuestion);
+                setIsResuming(true);
 
-                    // Show instructions screen with "Resume" button
-                    setHasAgreed(true); // Auto-agree since they already started
-                    setShowInstructionsScreen(true);
-                    return;
-                }
-            } catch (sessionErr) {
-                console.error('[Quizy] Session check failed (non-blocking):', sessionErr);
+                // Show instructions screen with "Resume" button
+                setHasAgreed(true); // Auto-agree since they already started
+                setShowInstructionsScreen(true);
+                setLoading(false);
+                return;
             }
 
             // No active session — fresh start
@@ -643,10 +645,14 @@ export default function TestPage() {
             if (testData.showInstructions !== false) {
                 setShowInstructionsScreen(true);
             } else {
-                await startTestWithSession(testData, questionsData.length);
+                // Start timer immediately, session creation in background
+                startTimer(testData);
                 if (testData.enableAntiCheat) {
-                    setTimeout(() => enterFullscreen(), 500);
+                    setTimeout(() => enterFullscreen(), 100);
                 }
+                startTestWithSession(testData, questionsData.length).catch(err => {
+                    console.error('[Quizy] Background session creation failed:', err);
+                });
             }
         } catch (err) {
             console.error('Error loading test:', err);
@@ -711,24 +717,29 @@ export default function TestPage() {
         }
     };
 
-    // Start test after agreeing to instructions
-    const startTestAfterInstructions = async () => {
+    // Start test after agreeing to instructions — instant render, no await blocking
+    const startTestAfterInstructions = () => {
         if (!hasAgreed || !test) return;
 
+        // Immediately hide instructions — test renders instantly
         setShowInstructionsScreen(false);
 
         if (isResuming && activeSession) {
             // Resuming — restore timer from session, don't create new session
             resumeTimerFromSession(test, activeSession);
             if (test.enableAntiCheat) {
-                setTimeout(() => enterFullscreen(), 500);
+                setTimeout(() => enterFullscreen(), 100);
             }
         } else {
-            // Fresh start — create new session
-            await startTestWithSession(test, questions.length);
+            // Fresh start — start timer immediately, session creation in background
+            startTimer(test);
             if (test.enableAntiCheat) {
-                setTimeout(() => enterFullscreen(), 500);
+                setTimeout(() => enterFullscreen(), 100);
             }
+            // Fire-and-forget: create Firestore session in background
+            startTestWithSession(test, questions.length).catch(err => {
+                console.error('[Quizy] Background session creation failed (non-blocking):', err);
+            });
         }
     };
 
@@ -968,42 +979,37 @@ export default function TestPage() {
             // Clear persisted deadline from sessionStorage
             clearPersistedDeadline();
 
-            // Award XP: 10 XP for test completion + 15 bonus if >80%
-            try {
-                await awardActivityXp(
-                    currentUser.uid,
-                    'test',
-                    correctCount,
-                    currentQuestions.length
-                );
-            } catch (xpErr) {
-                console.error('[Quizy] Test XP award failed (non-blocking):', xpErr);
-            }
+            // ── Show results INSTANTLY — fire background tasks without awaiting ──
+            setIsSubmitted(true);
 
-            // Save wrong answers to Mistake Bucket for Practice Mode
-            try {
-                await addMistakesFromResult(
-                    currentUser.uid,
-                    currentUser.studentClass || 0,
-                    {
-                        id: '',
-                        studentId: currentUser.uid,
-                        studentName: currentUser.name,
-                        studentEmail: currentUser.email,
-                        studentClass: currentUser.studentClass || 0,
-                        testId: currentTest.id,
-                        testTitle: currentTest.title,
-                        subject: currentTest.subject,
-                        score: correctCount,
-                        totalQuestions: currentQuestions.length,
-                        answers: currentAnswers.map(a => typeof a === 'number' ? a : -1),
-                        detailedAnswers,
-                        timestamp: endTime,
-                    }
-                );
-            } catch (mbErr) {
-                console.error('[Quizy] Mistake Bucket save failed (non-blocking):', mbErr);
-            }
+            // Fire-and-forget: XP award, mistake bucket, session completion
+            // These run in background and don't block the results screen
+            awardActivityXp(
+                currentUser.uid,
+                'test',
+                correctCount,
+                currentQuestions.length
+            ).catch(err => console.error('[Quizy] Test XP award failed (non-blocking):', err));
+
+            addMistakesFromResult(
+                currentUser.uid,
+                currentUser.studentClass || 0,
+                {
+                    id: '',
+                    studentId: currentUser.uid,
+                    studentName: currentUser.name,
+                    studentEmail: currentUser.email,
+                    studentClass: currentUser.studentClass || 0,
+                    testId: currentTest.id,
+                    testTitle: currentTest.title,
+                    subject: currentTest.subject,
+                    score: correctCount,
+                    totalQuestions: currentQuestions.length,
+                    answers: currentAnswers.map(a => typeof a === 'number' ? a : -1),
+                    detailedAnswers,
+                    timestamp: endTime,
+                }
+            ).catch(err => console.error('[Quizy] Mistake Bucket save failed (non-blocking):', err));
 
             // Mark session as completed in Firestore
             const currentSession = activeSessionRef.current;
@@ -1012,8 +1018,6 @@ export default function TestPage() {
                     console.error('[Quizy] Session complete failed:', err)
                 );
             }
-
-            setIsSubmitted(true);
         } catch (err) {
             console.error('Error submitting test:', err);
             // Auto-retry up to 3 times with exponential backoff
@@ -1079,159 +1083,192 @@ export default function TestPage() {
 
 
 
-    // Instructions Screen
+    // Instructions Screen — 2026 SaaS Style
     if (showInstructionsScreen && test) {
+        const stagger = {
+            container: { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.15 } } },
+            item: { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } },
+        };
+
         return (
-            <div className="instructions-screen min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-3 sm:p-4">
+            <div className="instr-2026-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
+                {/* Animated gradient mesh blobs */}
+                <div className="instr-mesh-blob instr-mesh-blob-1" />
+                <div className="instr-mesh-blob instr-mesh-blob-2" />
+                <div className="instr-mesh-blob instr-mesh-blob-3" />
+
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="instructions-card max-w-2xl w-full bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] max-h-[95dvh]"
+                    initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    className="instr-glass-card max-w-2xl w-full flex flex-col max-h-[95vh] max-h-[95dvh]"
                 >
-                    {/* Header */}
-                    <div className="flex-shrink-0 bg-gradient-to-r from-[#1650EB] to-indigo-600 p-4 sm:p-6 text-white">
-                        <h1 className="text-xl sm:text-2xl font-bold mb-1">{test.title}</h1>
-                        <p className="text-sm sm:text-base text-indigo-100">{test.subject} • Class {test.targetClass}</p>
+                    {/* ── Header ── */}
+                    <div className="flex-shrink-0 instr-header-gradient p-5 sm:p-7 relative overflow-hidden">
+                        {/* Subtle noise overlay */}
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")' }} />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/15 text-white/90 backdrop-blur-sm">
+                                    {antiCheatEnabled ? <><Shield className="w-3 h-3" /> Proctored</> : '📝 Test'}
+                                </span>
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/80">
+                                    Class {test.targetClass}
+                                </span>
+                            </div>
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">{test.title}</h1>
+                            <p className="text-sm text-white/60 mt-1 font-medium">{test.subject}</p>
+                        </div>
                     </div>
 
-                    {/* Content - Scrollable */}
-                    <div className="instructions-content flex-1 overflow-y-auto -webkit-overflow-scrolling-touch p-4 sm:p-6 space-y-4 sm:space-y-6">
-                        {/* Test Info */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
-                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{questions.length}</p>
-                                <p className="text-xs text-blue-600 dark:text-blue-400">Questions</p>
-                            </div>
-                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
-                                <p className="text-2xl font-bold text-green-700 dark:text-green-400">{test.duration || '∞'}</p>
-                                <p className="text-xs text-green-600 dark:text-green-400">Minutes</p>
-                            </div>
-                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
-                                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">{test.marksPerQuestion || 1}</p>
-                                <p className="text-xs text-purple-600 dark:text-purple-400">Marks/Q</p>
-                            </div>
-                            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 text-center">
-                                <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{totalMarks}</p>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">Total Marks</p>
-                            </div>
-                        </div>
+                    {/* ── Content - Scrollable ── */}
+                    <motion.div
+                        className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch p-4 sm:p-6 space-y-4 sm:space-y-5"
+                        variants={stagger.container}
+                        initial="hidden"
+                        animate="show"
+                    >
+                        {/* ── Bento Grid Stats ── */}
+                        <motion.div variants={stagger.item} className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+                            {[
+                                { value: questions.length, label: 'Questions', icon: '📋', color: 'from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20', border: 'border-blue-200/60 dark:border-blue-700/40', text: 'text-blue-700 dark:text-blue-300' },
+                                { value: test.duration || '∞', label: 'Minutes', icon: '⏱️', color: 'from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20', border: 'border-emerald-200/60 dark:border-emerald-700/40', text: 'text-emerald-700 dark:text-emerald-300' },
+                                { value: test.marksPerQuestion || 1, label: 'Marks / Q', icon: '✨', color: 'from-violet-500/10 to-purple-500/10 dark:from-violet-500/20 dark:to-purple-500/20', border: 'border-violet-200/60 dark:border-violet-700/40', text: 'text-violet-700 dark:text-violet-300' },
+                                { value: totalMarks, label: 'Total Marks', icon: '🏆', color: 'from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20', border: 'border-amber-200/60 dark:border-amber-700/40', text: 'text-amber-700 dark:text-amber-300' },
+                            ].map((stat) => (
+                                <div key={stat.label} className={`relative bg-gradient-to-br ${stat.color} rounded-2xl p-3.5 sm:p-4 text-center border ${stat.border} backdrop-blur-sm overflow-hidden group`}>
+                                    <span className="absolute top-2 right-2.5 text-lg opacity-60 group-hover:scale-125 transition-transform duration-300">{stat.icon}</span>
+                                    <p className={`text-2xl sm:text-3xl font-extrabold ${stat.text} tracking-tight`}>{stat.value}</p>
+                                    <p className={`text-[11px] font-semibold ${stat.text} opacity-70 uppercase tracking-wider mt-0.5`}>{stat.label}</p>
+                                </div>
+                            ))}
+                        </motion.div>
 
-                        {/* Rules */}
-                        <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                📋 Test Rules & Guidelines
+                        {/* ── Rules ── */}
+                        <motion.div variants={stagger.item}>
+                            <h3 className="text-[13px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                                <span className="w-5 h-0.5 rounded-full bg-gradient-to-r from-[#1650EB] to-indigo-400" />
+                                Guidelines
                             </h3>
-                            <div className="space-y-2">
-                                <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                    <span className="text-green-500 mt-0.5">✓</span>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">Read each question carefully before answering</p>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                    <span className="text-green-500 mt-0.5">✓</span>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">You can navigate between questions using Next/Previous buttons</p>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                    <span className="text-green-500 mt-0.5">✓</span>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">Your progress is automatically saved</p>
-                                </div>
+                            <div className="space-y-1.5">
+                                {[
+                                    { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />, text: 'Read each question carefully before answering' },
+                                    { icon: <ArrowRight className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />, text: 'Navigate between questions using Next / Previous' },
+                                    { icon: <RefreshCw className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />, text: 'Progress is auto-saved — you can resume anytime' },
+                                ].map((rule, i) => (
+                                    <motion.div
+                                        key={i}
+                                        variants={stagger.item}
+                                        className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-gray-800/60"
+                                    >
+                                        {rule.icon}
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-snug">{rule.text}</p>
+                                    </motion.div>
+                                ))}
                                 {test.duration && (
-                                    <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                                        <Clock className="w-4 h-4 text-amber-600 mt-0.5" />
-                                        <p className="text-sm text-amber-700 dark:text-amber-400">Test will auto-submit when time runs out</p>
-                                    </div>
+                                    <motion.div variants={stagger.item} className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-900/15 border border-amber-200/50 dark:border-amber-800/30">
+                                        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                        <p className="text-sm text-amber-800 dark:text-amber-300 leading-snug">Auto-submit when time runs out</p>
+                                    </motion.div>
                                 )}
                                 {test.negativeMarking && (
-                                    <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                        <AlertCircle className="w-4 h-4 text-red-600 mt-0.5" />
-                                        <p className="text-sm text-red-700 dark:text-red-400">
-                                            <strong>Negative Marking:</strong> -{test.negativeMarksPerQuestion || 0.25} marks for each wrong answer
+                                    <motion.div variants={stagger.item} className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-red-50/80 dark:bg-red-900/15 border border-red-200/50 dark:border-red-800/30">
+                                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                        <p className="text-sm text-red-700 dark:text-red-400 leading-snug">
+                                            <strong>Negative Marking:</strong> &minus;{test.negativeMarksPerQuestion || 0.25} per wrong answer
                                         </p>
-                                    </div>
+                                    </motion.div>
                                 )}
                             </div>
-                        </div>
+                        </motion.div>
 
-                        {/* Anti-Cheat Warning */}
+                        {/* ── Proctored Test Alert ── */}
                         {antiCheatEnabled && (
-                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                    <h4 className="font-semibold text-purple-700 dark:text-purple-400">Proctored Test - Important!</h4>
+                            <motion.div variants={stagger.item} className="instr-proctor-card rounded-2xl p-4 sm:p-5 border border-violet-200/50 dark:border-violet-700/30 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-violet-400/20 to-transparent rounded-bl-full" />
+                                <div className="flex items-center gap-2.5 mb-3 relative z-10">
+                                    <div className="instr-shield-glow w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                                        <Shield className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h4 className="font-bold text-violet-800 dark:text-violet-300 text-sm">Proctored Mode Active</h4>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
-                                        <span>🖥️</span> Fullscreen mode required
-                                    </div>
-                                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
-                                        <span>🚫</span> Copy/Paste disabled
-                                    </div>
-                                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
-                                        <span>👁️</span> Tab switches monitored
-                                    </div>
-                                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
-                                        <span>📊</span> Activity reported to teacher
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2 text-[13px] relative z-10">
+                                    {[
+                                        { icon: '🖥️', label: 'Fullscreen required' },
+                                        { icon: '🚫', label: 'Copy / Paste blocked' },
+                                        { icon: '👁️', label: 'Tab switches tracked' },
+                                        { icon: '📊', label: 'Report sent to teacher' },
+                                    ].map((item) => (
+                                        <div key={item.label} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-violet-50/50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300">
+                                            <span className="text-base">{item.icon}</span>
+                                            <span className="font-medium">{item.label}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* Auto-Submit Warning — applies to ALL devices */}
+                        {/* ── Auto-Submit Warning ── */}
                         {antiCheatEnabled && (
-                            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                                    <h4 className="font-semibold text-red-700 dark:text-red-400">⚠️ Auto-Submit Rule (All Devices)</h4>
-                                </div>
-                                <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
-                                    <p>On <strong>all devices (including mobile)</strong>, the following rules apply:</p>
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-bold">1st &amp; 2nd violation:</span>
-                                        <span>If you <strong>switch tabs</strong>, <strong>minimize the app</strong>, or <strong>exit fullscreen</strong>, you will receive a <strong>warning</strong>.</span>
+                            <motion.div variants={stagger.item} className="rounded-2xl p-4 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/20 border border-red-200/60 dark:border-red-800/30">
+                                <div className="flex items-center gap-2 mb-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                                        <AlertTriangle className="w-3.5 h-3.5 text-white" />
                                     </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-bold">3rd violation:</span>
-                                        <span>Your test will be <strong>automatically submitted</strong> with whatever answers you have completed.</span>
-                                    </div>
-                                    <p className="mt-2 font-medium text-red-800 dark:text-red-300">⚠️ Stay focused! Do not switch apps, lock your phone, or switch tabs during the test!</p>
+                                    <h4 className="font-bold text-red-800 dark:text-red-300 text-sm">Auto-Submit Warning</h4>
                                 </div>
-                            </div>
+                                <div className="space-y-1.5 text-[13px] text-red-700 dark:text-red-400 leading-relaxed">
+                                    <p><strong>1st &amp; 2nd violation:</strong> Warning shown for tab switches, minimizing, or exiting fullscreen.</p>
+                                    <p><strong>3rd violation:</strong> Test is <strong>automatically submitted</strong> with your current answers.</p>
+                                    <p className="font-semibold text-red-800 dark:text-red-300 mt-2">⚠️ Stay focused — don&apos;t switch apps, lock your phone, or switch tabs!</p>
+                                </div>
+                            </motion.div>
                         )}
 
-                        {/* Test Expiry Info */}
+                        {/* ── Test Expiry ── */}
                         {test.expiresAt && (
-                            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                            <motion.div variants={stagger.item} className="rounded-2xl p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/10 border border-amber-200/50 dark:border-amber-800/30">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                                    <h4 className="font-semibold text-amber-700 dark:text-amber-400">⏰ Test Expiry</h4>
+                                    <Clock className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
+                                    <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm">Test Expiry</h4>
                                 </div>
-                                <p className="text-sm text-amber-700 dark:text-amber-400">
-                                    This test expires on <strong>{new Date(test.expiresAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
-                                    If the test expires while you are taking it, it will be automatically submitted.
+                                <p className="text-[13px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                                    Expires on <strong>{new Date(test.expiresAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
+                                    Test will auto-submit if it expires while you&apos;re taking it.
                                 </p>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* Agreement Checkbox */}
-                        <div className="flex items-start gap-3 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl">
-                            <input
-                                type="checkbox"
-                                id="agree"
-                                checked={hasAgreed}
-                                onChange={(e) => setHasAgreed(e.target.checked)}
-                                className="w-5 h-5 mt-0.5 rounded border-gray-300 text-[#1650EB] focus:ring-[#1650EB]"
-                            />
-                            <label htmlFor="agree" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                                I have read and understood all the rules. I agree to take this test honestly and will not use any unfair means.
-                                {antiCheatEnabled && ' I understand that my activity will be monitored.'}
+                        {/* ── Agreement ── */}
+                        <motion.div variants={stagger.item}>
+                            <label htmlFor="agree" className="instr-agree-card flex items-start gap-3.5 p-4 rounded-2xl cursor-pointer select-none transition-all duration-200">
+                                <div className="relative flex-shrink-0 mt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        id="agree"
+                                        checked={hasAgreed}
+                                        onChange={(e) => setHasAgreed(e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${hasAgreed ? 'bg-[#1650EB] border-[#1650EB] shadow-[0_0_12px_rgba(22,80,235,0.4)]' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
+                                        {hasAgreed && (
+                                            <motion.svg initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }} className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></motion.svg>
+                                        )}
+                                    </div>
+                                </div>
+                                <span className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                                    I have read and understood all the rules. I agree to take this test honestly and will not use any unfair means.
+                                    {antiCheatEnabled && ' I understand that my activity will be monitored.'}
+                                </span>
                             </label>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
 
-                    {/* Footer */}
-                    <div className="instructions-footer flex-shrink-0 p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    {/* ── Footer ── */}
+                    <div className="flex-shrink-0 p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
                         <button
                             onClick={() => router.push('/dashboard/student')}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-xl bg-gray-200 dark:bg-gray-700 sm:bg-transparent sm:dark:bg-transparent"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all duration-200 rounded-xl font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
                             <ArrowLeft className="w-4 h-4" />
                             Cancel
@@ -1239,20 +1276,21 @@ export default function TestPage() {
                         <button
                             onClick={startTestAfterInstructions}
                             disabled={!hasAgreed}
-                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl font-semibold text-white transition-all ${hasAgreed
-                                ? 'bg-gradient-to-r from-[#1650EB] to-indigo-600 hover:from-[#1243c7] hover:to-indigo-700 shadow-lg hover:shadow-xl'
-                                : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
+                            className={`instr-start-btn w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 sm:px-10 py-3 sm:py-3.5 rounded-2xl font-bold text-[15px] transition-all duration-300 ${hasAgreed
+                                ? 'bg-gradient-to-r from-[#1650EB] via-indigo-500 to-violet-600 text-white shadow-[0_4px_24px_rgba(22,80,235,0.35)] hover:shadow-[0_8px_40px_rgba(22,80,235,0.45)] hover:scale-[1.02] active:scale-[0.98]'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                                 }`}
                         >
                             {isResuming
-                                ? '🔄 Resume Test Now'
-                                : hasAgreed ? '🚀 Start Test Now' : '☑️ Please agree to start'}
+                                ? <><RefreshCw className="w-4.5 h-4.5" /> Resume Test</>
+                                : hasAgreed ? <><ArrowRight className="w-4.5 h-4.5" /> Start Test</> : <><CheckCircle2 className="w-4.5 h-4.5" /> Agree to Start</>}
                         </button>
                     </div>
                 </motion.div>
             </div>
         );
     }
+
 
     if (isSubmitted) {
         const percentage = Math.round((score / questions.length) * 100);
@@ -1815,7 +1853,7 @@ export default function TestPage() {
                                     {String(currentIndex + 1).padStart(2, '0')}
                                 </span>
                                 <h2 className="question-text text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-relaxed select-none pt-1.5">
-                                    {currentQuestion.text}
+                                    {cleanQuestionText(currentQuestion.text)}
                                 </h2>
                             </div>
 
@@ -1827,8 +1865,16 @@ export default function TestPage() {
                                         onChange={(e) => handleTextAnswer(e.target.value)}
                                         placeholder="Type your answer here..."
                                         rows={4}
+                                        inputMode="text"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        spellCheck={false}
+                                        data-gramm="false"
+                                        data-gramm_editor="false"
+                                        data-enable-grammarly="false"
+                                        x-webkit-speech="false"
                                         className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg focus:ring-2 focus:ring-[#1650EB] focus:border-[#1650EB] outline-none transition-all resize-none"
-                                        style={{ userSelect: antiCheatEnabled ? 'none' : 'auto' }}
+                                        style={{ userSelect: antiCheatEnabled ? 'none' : 'auto', WebkitUserModify: 'read-write-plaintext-only' as never }}
                                     />
                                 </div>
                             ) : (
