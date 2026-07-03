@@ -70,7 +70,7 @@ const FEATURED_GAMES = [
         name: 'Quiz Arena',
         subtitle: 'Real-time Quiz',
         description: 'Compete in real-time quizzes against other students',
-        image: '/images/games/quiz-arena.png',
+        image: '/images/games/quiz-arena.webp',
         icon: Trophy,
         gradient: 'from-orange-500 via-amber-500 to-yellow-400',
         shadowColor: 'shadow-orange-500/20',
@@ -83,7 +83,7 @@ const FEATURED_GAMES = [
         name: 'Word Hunt',
         subtitle: 'Find & Learn',
         description: 'Find hidden words in the puzzle grid',
-        image: '/images/games/word-hunt.png',
+        image: '/images/games/word-hunt.webp',
         icon: Search,
         gradient: 'from-blue-600 via-blue-500 to-cyan-400',
         shadowColor: 'shadow-blue-500/20',
@@ -96,7 +96,7 @@ const FEATURED_GAMES = [
         name: 'Math Dash',
         subtitle: 'Speed Math',
         description: 'Solve math problems at lightning speed',
-        image: '/images/games/math-dash.png',
+        image: '/images/games/math-dash.webp',
         icon: Calculator,
         gradient: 'from-emerald-600 via-green-500 to-teal-400',
         shadowColor: 'shadow-emerald-500/20',
@@ -109,7 +109,7 @@ const FEATURED_GAMES = [
         name: 'Brain Boost',
         subtitle: 'Quick Puzzles',
         description: 'Challenge your brain with mini puzzles',
-        image: '/images/games/brain-boost.png',
+        image: '/images/games/brain-boost.webp',
         icon: Brain,
         gradient: 'from-purple-600 via-violet-500 to-fuchsia-400',
         shadowColor: 'shadow-purple-500/20',
@@ -122,7 +122,7 @@ const FEATURED_GAMES = [
         name: 'Battle Friends',
         subtitle: 'PvP Challenge',
         description: 'Challenge your friends to a knowledge duel',
-        image: '/images/games/battle-friends.png',
+        image: '/images/games/battle-friends.webp',
         icon: Swords,
         gradient: 'from-rose-600 via-pink-500 to-red-400',
         shadowColor: 'shadow-rose-500/20',
@@ -325,7 +325,7 @@ export default function GamesZone({ userId, userName, coins, gameStats, onCoinsC
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src="/images/games/hero-mascot.png"
+                                src="/images/games/hero-mascot.webp"
                                 alt="Student mascot"
                                 className="w-full max-w-[280px] h-auto drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)] select-none mix-blend-multiply"
                                 draggable={false}

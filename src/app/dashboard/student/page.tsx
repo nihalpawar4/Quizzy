@@ -51,11 +51,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
 import { subscribeToMistakes, subscribeToMasteredMistakes, recordAttempt } from '@/services/mistakeBucketService';
-import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
+// PDF generation is dynamically imported at call site to save ~700KB from initial bundle
+// import { generateStudentReportPDF } from '@/lib/utils/generatePDF';
 
 import type { Test, TestResult, SubjectNote, Notification, MistakeBucketItem, Question, User as AppUser, GameStats, WeeklyTestResult } from '@/types';
 import type { Homework } from '@/types/homework';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, Timestamp, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import { subscribeToHomework, getStudentHomeworkCompletions } from '@/services/homeworkService';
@@ -76,14 +77,18 @@ import type { TestSession } from '@/types';
 import { useChat } from '@/contexts/ChatContext';
 import { usePremium } from '@/contexts/PremiumContext';
 import { saveLastRoute } from '@/lib/routePersistence';
-import { generatePDFWithCover } from '@/lib/utils/generatePDFCover';
+// PDF cover generation is dynamically imported at call site to save ~300KB from initial bundle
+// import { generatePDFWithCover } from '@/lib/utils/generatePDFCover';
 import { getUserProfile } from '@/lib/services';
 
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 import StudentSidebar from '@/components/ui/StudentSidebar';
-import ProfileSettingsTab from '@/components/ui/ProfileSettingsTab';
-import DailySurpriseReward from '@/components/DailySurpriseReward';
-import WeeklyTestCard from '@/components/WeeklyTestCard';
+// Tab-specific components: dynamically imported to reduce initial bundle
+import dynamic from 'next/dynamic';
+const ProfileSettingsTab = dynamic(() => import('@/components/ui/ProfileSettingsTab'), { ssr: false });
+// Three.js reward scene dynamically imported to save ~800KB from initial bundle
+const DailySurpriseReward = dynamic(() => import('@/components/DailySurpriseReward'), { ssr: false });
+const WeeklyTestCard = dynamic(() => import('@/components/WeeklyTestCard'), { ssr: false });
 import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
 // import GamesZone from '@/components/games/GamesZone';
 // import { subscribeToCoins } from '@/services/coinService';
@@ -377,8 +382,9 @@ export default function StudentDashboard() {
     };
 
     // Download report as PDF file
-    const downloadReport = (result: TestResult) => {
+    const downloadReport = async (result: TestResult) => {
         if (!result.detailedAnswers) return;
+        const { generateStudentReportPDF } = await import('@/lib/utils/generatePDF');
         generateStudentReportPDF(result);
     };
 
@@ -397,6 +403,7 @@ export default function StudentDashboard() {
             }
 
             // Generate PDF with cover page
+            const { generatePDFWithCover } = await import('@/lib/utils/generatePDFCover');
             const blob = await generatePDFWithCover(test.pdfUrl, {
                 testTitle: test.title,
                 subject: test.subject,
@@ -623,32 +630,35 @@ export default function StudentDashboard() {
         return () => unsubscribe();
     }, [user?.uid]);
 
-    // Real-time listener for notes (filtered by student's class)
+    // One-time fetch for notes (static content — no need for realtime listener)
     useEffect(() => {
         if (!user?.studentClass) return;
 
-        const notesRef = collection(db, COLLECTIONS.NOTES);
-        const q = query(
-            notesRef,
-            where('targetClass', '==', user.studentClass),
-            where('isActive', '==', true),
-            orderBy('createdAt', 'desc')
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const allNotes: SubjectNote[] = [];
-            snapshot.docs.forEach((doc) => {
-                const data = doc.data();
-                allNotes.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate() || new Date()
-                } as SubjectNote);
-            });
-            setNotes(allNotes);
-        });
-
-        return () => unsubscribe();
+        const fetchNotes = async () => {
+            try {
+                const notesRef = collection(db, COLLECTIONS.NOTES);
+                const q = query(
+                    notesRef,
+                    where('targetClass', '==', user.studentClass),
+                    where('isActive', '==', true),
+                    orderBy('createdAt', 'desc')
+                );
+                const snapshot = await getDocs(q);
+                const allNotes: SubjectNote[] = [];
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    allNotes.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate() || new Date()
+                    } as SubjectNote);
+                });
+                setNotes(allNotes);
+            } catch (error) {
+                console.error('Error fetching notes:', error);
+            }
+        };
+        fetchNotes();
     }, [user?.studentClass]);
 
     // Real-time listener for homework (filtered by student's class)
@@ -674,12 +684,19 @@ export default function StudentDashboard() {
         }
     }, [user?.uid]);
 
-    // Real-time listener for Mistake Bucket
+    // One-time fetch for Mistake Bucket (only changes when student takes a test)
     useEffect(() => {
         if (!user?.uid) return;
-        const unsub1 = subscribeToMistakes(user.uid, setMistakeBucketItems);
-        const unsub2 = subscribeToMasteredMistakes(user.uid, setMasteredCount);
-        return () => { unsub1(); unsub2(); };
+        // Import and call the one-time fetch variants
+        import('@/services/mistakeBucketService').then(({ getMistakes, getMasteredCount }) => {
+            if (getMistakes) getMistakes(user.uid).then(setMistakeBucketItems).catch(console.error);
+            if (getMasteredCount) getMasteredCount(user.uid).then(setMasteredCount).catch(console.error);
+        }).catch(() => {
+            // Fallback: use subscriptions if one-time fetches not available
+            const unsub1 = subscribeToMistakes(user.uid, setMistakeBucketItems);
+            const unsub2 = subscribeToMasteredMistakes(user.uid, setMasteredCount);
+            return () => { unsub1(); unsub2(); };
+        });
     }, [user?.uid]);
 
     // Real-time listener for coins (disabled)
@@ -1198,7 +1215,7 @@ export default function StudentDashboard() {
                             {/* Right: Student Mascot */}
                             <div className="shrink-0 relative hidden sm:block" style={{ marginRight: '-32px', marginBottom: '-48px', marginTop: '-40px' }}>
                                 <img 
-                                    src="/images/student-mascot.png" 
+                                    src="/images/student-mascot.webp" 
                                     alt="Student mascot" 
                                     className="w-64 h-64 sm:w-80 sm:h-80 object-contain relative z-10"
                                     style={{ filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.35))' }}
@@ -1207,7 +1224,7 @@ export default function StudentDashboard() {
                             {/* Mobile mascot — smaller, overlapping right */}
                             <div className="shrink-0 relative sm:hidden" style={{ marginRight: '-24px', marginBottom: '-40px', marginTop: '-32px' }}>
                                 <img 
-                                    src="/images/student-mascot.png" 
+                                    src="/images/student-mascot.webp" 
                                     alt="Student mascot" 
                                     className="w-48 h-48 object-contain relative z-10"
                                     style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.3))' }}

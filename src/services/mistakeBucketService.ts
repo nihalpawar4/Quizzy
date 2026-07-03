@@ -163,3 +163,42 @@ export async function recordAttempt(
 
     return { newStreak, isMastered };
 }
+
+/**
+ * One-time fetch for active mistakes (non-realtime alternative to subscribeToMistakes).
+ * Used for initial dashboard load to avoid persistent Firestore listener.
+ */
+export async function getMistakes(studentId: string): Promise<MistakeBucketItem[]> {
+    const bucketRef = collection(db, COLLECTIONS.MISTAKE_BUCKET);
+    const q = query(
+        bucketRef,
+        where('studentId', '==', studentId),
+        where('isMastered', '==', false),
+        orderBy('addedAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            addedAt: data.addedAt?.toDate() || new Date(),
+            lastAttemptedAt: data.lastAttemptedAt?.toDate() || undefined,
+            masteredAt: data.masteredAt?.toDate() || undefined,
+        } as MistakeBucketItem;
+    });
+}
+
+/**
+ * One-time fetch for mastered mistake count (non-realtime alternative).
+ */
+export async function getMasteredCount(studentId: string): Promise<number> {
+    const bucketRef = collection(db, COLLECTIONS.MISTAKE_BUCKET);
+    const q = query(
+        bucketRef,
+        where('studentId', '==', studentId),
+        where('isMastered', '==', true)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+}

@@ -5,41 +5,43 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { CallProvider } from "@/contexts/CallContext";
-import { PWARegistration } from "@/components/PWAProvider";
-import { InstallPrompt } from "@/components/InstallPrompt";
-import { PushNotificationProvider } from "@/components/PushNotificationProvider";
-import { IncomingCallModal, CallScreen } from "@/components/call";
 import { PremiumProvider } from "@/contexts/PremiumContext";
-import TouchBubbles from "@/components/ui/TouchBubbles";
+import { PushNotificationProvider } from "@/components/PushNotificationProvider";
+import GlobalOverlays from "@/components/GlobalOverlays";
 
+// Font optimization: reduced weights to only those actually used in the design
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
 });
 
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-manrope",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  weight: ["400", "500"],
+  weight: ["400"],
+  display: "swap",
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-serif",
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
+  weight: ["600", "700"],
+  display: "swap",
 });
 
 const cookieFont = Cookie({
   subsets: ["latin"],
   variable: "--font-script",
   weight: ["400"],
+  display: "swap",
 });
 
 // PWA Viewport Configuration
@@ -118,9 +120,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
-        {/* Preconnect to important origins */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preconnect to Firebase (actual data source) — removed fonts.googleapis.com preconnect since next/font self-hosts */}
+        <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+        <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com" />
         {/* Splash screen for iOS */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -137,15 +139,9 @@ export default function RootLayout({
                 <CallProvider>
                   <PushNotificationProvider>
                     {children}
-                    {/* PWA Components */}
-                    <PWARegistration />
-                    <InstallPrompt />
-                    {/* Call Components (global) */}
-                    <IncomingCallModal />
-                    <CallScreen />
-                    {/* Touch Bubbles (global interaction) */}
-                    <TouchBubbles />
                   </PushNotificationProvider>
+                  {/* Lazy-loaded global overlays — deferred to after first paint */}
+                  <GlobalOverlays />
                 </CallProvider>
               </ChatProvider>
             </PremiumProvider>

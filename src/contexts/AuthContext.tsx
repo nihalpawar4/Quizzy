@@ -44,9 +44,43 @@ interface ExtendedAuthContextType {
 
 const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined);
 
+// Cache key for user profile
+const USER_PROFILE_CACHE_KEY = 'quizy_user_profile_cache';
+
+// Load cached user profile from sessionStorage for instant hydration
+function getCachedUserProfile(): User | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const cached = sessionStorage.getItem(USER_PROFILE_CACHE_KEY);
+        if (cached) {
+            const data = JSON.parse(cached);
+            return {
+                ...data,
+                createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+            } as User;
+        }
+    } catch { /* ignore parse errors */ }
+    return null;
+}
+
+function cacheUserProfile(profile: User | null) {
+    if (typeof window === 'undefined') return;
+    try {
+        if (profile) {
+            sessionStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(profile));
+        } else {
+            sessionStorage.removeItem(USER_PROFILE_CACHE_KEY);
+        }
+    } catch { /* ignore quota errors */ }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Initialize from cache for instant hydration — no loading screen on refresh
+    const [user, setUser] = useState<User | null>(() => getCachedUserProfile());
+    const [loading, setLoading] = useState(() => {
+        // If we have cached data, skip the blocking loading state
+        return !getCachedUserProfile();
+    });
     const [rememberedUser, setRememberedUser] = useState<RememberedUser | null>(null);
 
     // Check if email is admin
@@ -95,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const profile = await getUserProfile(firebaseUser.uid);
                     if (profile) {
                         setUser(profile);
+                        cacheUserProfile(profile); // Cache for instant hydration
                         setRememberedUser(null); // Clear remembered user since we're logged in
                         console.log('[Quizy Auth] ✅ Profile loaded:', profile.name);
 
@@ -110,10 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         // User exists in Auth but not in Firestore
                         console.log('[Quizy Auth] ⚠️ User in Auth but no Firestore profile');
                         setUser(null);
+                        cacheUserProfile(null);
                     }
                 } else {
                     console.log('[Quizy Auth] ❌ No authenticated user');
                     setUser(null);
+                    cacheUserProfile(null);
                 }
                 setLoading(false);
             });
@@ -145,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     throw new Error('Your account has been restricted by your teacher. Please contact them to enable your account.');
                 }
                 setUser(profile);
+                cacheUserProfile(profile);
             }
         } finally {
             setLoading(false);
@@ -296,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearSessionBackup(); // Clear stored session data
         deleteUserSessionCookie(); // Clear cookie
         clearLastRoute(); // Clear saved route
+        cacheUserProfile(null); // Clear user profile cache
         setRememberedUser(null); // Clear remembered user
         setUser(null); // Clear user state first
         await firebaseSignOut(auth);

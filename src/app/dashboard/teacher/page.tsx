@@ -86,8 +86,9 @@ import {
     approveClassChange,
     rejectClassChange
 } from '@/lib/services';
-import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
-import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
+// Heavy libraries dynamically imported at call site to save ~1MB from initial bundle
+// import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
+// import { generateTeacherResponsesPDF, generateAnalyticsResultsPDF } from '@/lib/utils/generatePDF';
 import { parseCSV, parseJSON, type ParsedQuestion } from '@/lib/utils/parseQuestions';
 import type { Test, TestResult, User, SubjectNote, Notification, ClassChangeRequest } from '@/types';
 import { CLASS_OPTIONS, SUBJECTS, COLLECTIONS, DIFFICULTY_LEVELS, COMBINED_SUBJECT_OPTIONS, EVALUATION_MODES } from '@/lib/constants';
@@ -875,14 +876,16 @@ export default function TeacherDashboard() {
     };
 
     // Download results
-    const handleDownloadResults = () => {
+    const handleDownloadResults = async () => {
         const filteredResults = getFilteredResults();
+        const { downloadAnalyticsCSV } = await import('@/lib/utils/downloadCSV');
         downloadAnalyticsCSV(filteredResults, `quizy-results-${new Date().toISOString().split('T')[0]}`);
     };
 
     // Download results as PDF
-    const handleDownloadResultsPDF = () => {
+    const handleDownloadResultsPDF = async () => {
         const filteredResults = getFilteredResults();
+        const { generateAnalyticsResultsPDF } = await import('@/lib/utils/generatePDF');
         generateAnalyticsResultsPDF(filteredResults);
     };
 
@@ -3205,12 +3208,15 @@ export default function TeacherDashboard() {
                             {/* Footer */}
                             <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <button
-                                    onClick={() => generateTeacherResponsesPDF(
-                                        selectedTest.title,
-                                        selectedTest.subject,
-                                        selectedTest.targetClass,
-                                        detailedResults
-                                    )}
+                                    onClick={async () => {
+                                        const { generateTeacherResponsesPDF } = await import('@/lib/utils/generatePDF');
+                                        generateTeacherResponsesPDF(
+                                            selectedTest.title,
+                                            selectedTest.subject,
+                                            selectedTest.targetClass,
+                                            detailedResults
+                                        );
+                                    }}
                                     className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
                                 >
                                     <Download className="w-4 h-4" />

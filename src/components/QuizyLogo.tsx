@@ -15,7 +15,7 @@ interface QuizyLogoIconProps {
 export function QuizyLogoIcon({ className = 'w-8 h-8', size }: QuizyLogoIconProps) {
   return (
     <Image
-      src="/images/logo-icon.png"
+      src="/images/logo-icon.webp"
       alt="Quizy"
       width={size || 48}
       height={size || 48}

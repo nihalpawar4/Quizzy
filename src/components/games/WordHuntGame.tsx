@@ -288,7 +288,7 @@ export default function WordHuntGame({ userId, userName, coins, gameStats, onBac
                 </div>
                 <div className="relative flex items-center gap-4">
                     <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-sm">
-                        <Image src="/images/games/word-hunt.png" alt="Word Hunt" width={40} height={40} className="rounded-lg" />
+                        <Image src="/images/games/word-hunt.webp" alt="Word Hunt" width={40} height={40} className="rounded-lg" />
                     </div>
                     <div className="flex-1">
                         <h3 className="text-lg font-bold text-white">Word Hunt</h3>

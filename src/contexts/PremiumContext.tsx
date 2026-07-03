@@ -71,10 +71,48 @@ const defaultStatus: PremiumContextType = {
 
 const PremiumContext = createContext<PremiumContextType>(defaultStatus);
 
+// Cache key for premium status
+const PREMIUM_CACHE_KEY = 'quizy_premium_cache';
+
+// Load cached premium status from sessionStorage for instant hydration
+function getCachedPremiumStatus(uid: string): PremiumStatus | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const cached = sessionStorage.getItem(`${PREMIUM_CACHE_KEY}_${uid}`);
+        if (cached) {
+            const data = JSON.parse(cached);
+            // Revive Date objects
+            return {
+                ...data,
+                trialExpiresAt: data.trialExpiresAt ? new Date(data.trialExpiresAt) : null,
+                premiumExpiresAt: data.premiumExpiresAt ? new Date(data.premiumExpiresAt) : null,
+                purchasedAt: data.purchasedAt ? new Date(data.purchasedAt) : null,
+                xpBoostExpiresAt: data.xpBoostExpiresAt ? new Date(data.xpBoostExpiresAt) : null,
+            } as PremiumStatus;
+        }
+    } catch { /* ignore parse errors */ }
+    return null;
+}
+
+function cachePremiumStatus(uid: string, status: PremiumStatus) {
+    if (typeof window === 'undefined') return;
+    try {
+        sessionStorage.setItem(`${PREMIUM_CACHE_KEY}_${uid}`, JSON.stringify(status));
+    } catch { /* ignore quota errors */ }
+}
+
 export function PremiumProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
-    const [status, setStatus] = useState<PremiumStatus | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [status, setStatus] = useState<PremiumStatus | null>(() => {
+        // Hydrate immediately from cache if available
+        if (user?.uid) return getCachedPremiumStatus(user.uid);
+        return null;
+    });
+    const [loading, setLoading] = useState(() => {
+        // If we have cached data, skip loading state
+        if (user?.uid && getCachedPremiumStatus(user.uid)) return false;
+        return true;
+    });
     const launchTrialChecked = useRef(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const expiryRefreshDone = useRef(false);
@@ -87,10 +125,16 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        setLoading(true);
+        // If no cache, show loading
+        if (!getCachedPremiumStatus(user.uid)) {
+            setLoading(true);
+        }
+
         const unsub = subscribeToPremiumStatus(user.uid, (newStatus) => {
             setStatus(newStatus);
             setLoading(false);
+            // Cache for instant hydration on next visit
+            cachePremiumStatus(user.uid, newStatus);
         });
 
         return () => unsub();

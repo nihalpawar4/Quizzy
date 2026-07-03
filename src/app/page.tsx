@@ -37,11 +37,14 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWA } from '@/components/PWAProvider';
-import { PostQuestionModal, QuestionList } from '@/components/qa';
-import FloatingActions from '@/components/ui/FloatingActions';
 import MotivationalLoader from '@/components/ui/MotivationalLoader';
 
-import FeatureShowcase from '@/components/landing/FeatureShowcase';
+// Below-the-fold components: dynamically imported to improve FCP/LCP
+import dynamic from 'next/dynamic';
+const PostQuestionModal = dynamic(() => import('@/components/qa').then(m => ({ default: m.PostQuestionModal })), { ssr: false });
+const QuestionList = dynamic(() => import('@/components/qa').then(m => ({ default: m.QuestionList })), { ssr: false });
+const FloatingActions = dynamic(() => import('@/components/ui/FloatingActions'), { ssr: false });
+const FeatureShowcase = dynamic(() => import('@/components/landing/FeatureShowcase'), { ssr: false });
 
 
 // FAQ Data - Updated with all features
@@ -1166,7 +1169,7 @@ function HomePageInner() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/images/hero-student.png"
+                    src="/images/hero-student.webp"
                     alt="Student studying on Quizy platform"
                     className="w-full h-auto max-w-[540px] mx-auto select-none"
                     draggable={false}
