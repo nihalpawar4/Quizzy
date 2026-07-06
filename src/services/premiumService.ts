@@ -86,6 +86,39 @@ export function resolvePremiumStatus(userData: Record<string, unknown>): Premium
             : ((userData.premiumTier as string) || 'basic')
         : 'none';
 
+    // ── Tier-aware cosmetic validation ──────────────────────────
+    // Only allow cosmetics that belong to the user's current tier
+    const allowedThemes: Record<string, string[]> = {
+        basic: ['default', 'sparkle', 'neon'],
+        pro: ['default', 'sparkle', 'neon', 'fire', 'water'],
+        promax: ['default', 'sparkle', 'neon', 'fire', 'water'],
+    };
+    const allowedFrames: Record<string, string[]> = {
+        basic: ['none', 'gold'],
+        pro: ['none', 'gold', 'diamond', 'fire', 'aurora'],
+        promax: ['none', 'gold', 'diamond', 'fire', 'aurora'],
+    };
+    const allowedBadges: Record<string, string[]> = {
+        basic: ['none', 'pro'],
+        pro: ['none', 'pro', 'elite', 'scholar'],
+        promax: ['none', 'pro', 'elite', 'diamond', 'scholar'],
+    };
+
+    const storedTheme = (userData.activeBubbleTheme as string) || 'default';
+    const storedFrame = (userData.activeProfileFrame as string) || 'none';
+    const storedBadge = (userData.activeBadge as string) || 'none';
+
+    // Validate against tier — reset to default if cosmetic isn't allowed for their tier
+    const validatedTheme = isActive && resolvedTier !== 'none'
+        ? (allowedThemes[resolvedTier]?.includes(storedTheme) ? storedTheme : 'default')
+        : 'default';
+    const validatedFrame = isActive && resolvedTier !== 'none'
+        ? (allowedFrames[resolvedTier]?.includes(storedFrame) ? storedFrame : 'none')
+        : 'none';
+    const validatedBadge = isActive && resolvedTier !== 'none'
+        ? (allowedBadges[resolvedTier]?.includes(storedBadge) ? storedBadge : 'none')
+        : 'none';
+
     return {
         isPremium: isActive,
         isTrial: !isPermanent && isTrial,
@@ -96,10 +129,10 @@ export function resolvePremiumStatus(userData: Record<string, unknown>): Premium
         purchasedAt: userData.premiumPurchasedAt
             ? (userData.premiumPurchasedAt as { toDate?: () => Date }).toDate?.() || new Date(userData.premiumPurchasedAt as string)
             : null,
-        // Reset cosmetics to defaults when premium is expired
-        activeBubbleTheme: isActive ? ((userData.activeBubbleTheme as string) || 'default') : 'default',
-        activeProfileFrame: isActive ? ((userData.activeProfileFrame as string) || 'none') : 'none',
-        activeBadge: isActive ? ((userData.activeBadge as string) || 'none') : 'none',
+        // Cosmetics are validated against tier — higher-tier cosmetics reset to defaults
+        activeBubbleTheme: validatedTheme,
+        activeProfileFrame: validatedFrame,
+        activeBadge: validatedBadge,
         streakShieldsRemaining: isActive ? ((userData.streakShieldsRemaining as number) || 0) : 0,
         xpBoostActive: isActive ? xpBoostActive : false,
         xpBoostExpiresAt: boostExpiry,
