@@ -27,12 +27,21 @@ import {
     Timer,
     Check,
     Flame,
+    Lock,
+    ArrowUpRight,
     type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePremium } from '@/contexts/PremiumContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { PREMIUM_XP_COST, PREMIUM_TIERS, type PremiumTier } from '@/lib/constants';
+import {
+    PREMIUM_XP_COST,
+    PREMIUM_TIERS,
+    TIER_ALLOWED_THEMES,
+    TIER_ALLOWED_FRAMES,
+    TIER_ALLOWED_BADGES,
+    type PremiumTier,
+} from '@/lib/constants';
 import {
     BUBBLE_THEMES,
     PROFILE_FRAMES,
@@ -611,9 +620,11 @@ function useCountdown() {
 export default function PremiumPage() {
     const { resolvedTheme } = useTheme();
     const p = useMemo(() => getPremiumTheme(resolvedTheme === 'dark'), [resolvedTheme]);
+    const isDark = p.isDark;
     const { user, loading: authLoading, refreshUser } = useAuth();
     const {
         isPremium,
+        premiumTier,
         isTrial,
         trialExpiresAt,
         hasClaimedTrial,
@@ -647,6 +658,41 @@ export default function PremiumPage() {
 
     // Fetch real analytics from user's test results
     const { analyticsStats, socialStats } = useRealAnalytics(user?.uid, currentXP);
+
+    // ─── Tier-aware computed values ─────────────────────────────────
+    const tierOrder: PremiumTier[] = ['basic', 'pro', 'promax'];
+    const currentTierIndex = premiumTier !== 'none' ? tierOrder.indexOf(premiumTier as PremiumTier) : -1;
+
+    // Tiers available for upgrade (only tiers higher than current)
+    const upgradeTiers = useMemo(() => {
+        if (!isPremium || premiumTier === 'none') return [];
+        return PREMIUM_TIERS.filter(t => tierOrder.indexOf(t.id) > currentTierIndex);
+    }, [isPremium, premiumTier, currentTierIndex]);
+
+    // Current tier config for display
+    const currentTierConfig = useMemo(() => {
+        if (premiumTier === 'none') return null;
+        return PREMIUM_TIERS.find(t => t.id === premiumTier) ?? null;
+    }, [premiumTier]);
+
+    // Filter cosmetics by tier
+    const allowedThemes = useMemo(() => {
+        if (premiumTier === 'none') return BUBBLE_THEMES;
+        const allowed = TIER_ALLOWED_THEMES[premiumTier as PremiumTier] || [];
+        return BUBBLE_THEMES.map(t => ({ ...t, locked: !allowed.includes(t.id) }));
+    }, [premiumTier]);
+
+    const allowedFrames = useMemo(() => {
+        if (premiumTier === 'none') return PROFILE_FRAMES;
+        const allowed = TIER_ALLOWED_FRAMES[premiumTier as PremiumTier] || [];
+        return PROFILE_FRAMES.map(f => ({ ...f, locked: !allowed.includes(f.id) }));
+    }, [premiumTier]);
+
+    const allowedBadges = useMemo(() => {
+        if (premiumTier === 'none') return PREMIUM_BADGES;
+        const allowed = TIER_ALLOWED_BADGES[premiumTier as PremiumTier] || [];
+        return PREMIUM_BADGES.map(b => ({ ...b, locked: !allowed.includes(b.id) }));
+    }, [premiumTier]);
 
     useEffect(() => {
         if (!authLoading && !user) router.push('/auth/login');
@@ -1075,6 +1121,66 @@ export default function PremiumPage() {
                     </motion.div>
                 )}
 
+                {/* ═══ CURRENT PLAN CARD (premium users) ═══ */}
+                {isPremium && currentTierConfig && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="mt-4 p-4 relative overflow-hidden"
+                        style={{
+                            ...p.bannerStyle,
+                            border: `1.5px solid ${currentTierConfig.color}40`,
+                            boxShadow: `0 4px 20px ${currentTierConfig.glow}`,
+                        }}
+                    >
+                        <div className="flex items-start gap-3 mb-3">
+                            <motion.div
+                                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                                style={{ background: `${currentTierConfig.color}12`, border: `1px solid ${currentTierConfig.color}25` }}
+                                animate={{ scale: [1, 1.04, 1] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <TierIcon type={currentTierConfig.iconType} size={30} color={currentTierConfig.color} />
+                            </motion.div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-[15px] font-extrabold" style={{ color: p.text }}>
+                                        {currentTierConfig.name}
+                                    </h4>
+                                    <span
+                                        className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white"
+                                        style={{ background: currentTierConfig.gradient }}
+                                    >
+                                        {isTrial ? 'TRIAL' : 'ACTIVE'}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] mt-0.5" style={{ color: p.textMuted }}>
+                                    {isTrial ? `Trial · ${Math.max(0, Math.ceil((trialExpiresAt!.getTime() - Date.now()) / (1000 * 60 * 60)))}h remaining` : currentTierConfig.tagline}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Current tier features */}
+                        <div
+                            className="rounded-xl p-3"
+                            style={{ background: p.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)', border: `1px solid ${p.borderSubtle}` }}
+                        >
+                            <p className="text-[10px] font-bold uppercase mb-2" style={{ color: currentTierConfig.color, letterSpacing: '0.06em' }}>
+                                Your Features
+                            </p>
+                            <div className={`grid gap-1.5 ${currentTierConfig.features.length > 8 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                                {currentTierConfig.features.map((feature, fi) => (
+                                    <div key={fi} className="flex items-center gap-2">
+                                        <Check className="w-3 h-3 flex-shrink-0" style={{ color: currentTierConfig.color }} />
+                                        <span className="text-[11px] font-medium" style={{ color: p.text, opacity: 0.85 }}>{feature}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* ═══ TABS (premium users) ═══ */}
                 {isPremium && (
                     <div className="mt-4 flex gap-1 p-1 rounded-2xl" style={p.bannerStyle}>
@@ -1095,39 +1201,59 @@ export default function PremiumPage() {
                     </div>
                 )}
 
-                {/* ═══ FEATURES (only visible to premium users) ═══ */}
+                {/* ═══ FEATURES — tier-gated previews ═══ */}
                 {isPremium && activeSection === 'features' && (
                     <div className="mt-5 space-y-3">
                         <div className="flex items-center justify-between px-0.5">
-                            <h3 className="typo-subheading text-[13px]" style={{ color: p.textMuted }}>Your Premium Features</h3>
-                            <span className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: p.accentText }}>
-                                See all <ChevronRight className="w-3 h-3" />
-                            </span>
+                            <h3 className="typo-subheading text-[13px]" style={{ color: p.textMuted }}>
+                                {currentTierConfig?.name ?? 'Premium'} Features
+                            </h3>
                         </div>
 
-                        <FeatureSection p={p} title="Bubble Themes" subtitle="5 interactive touch effects" icon={Sparkles} iconColor={p.violet} delay={0.12}>
+                        {/* Bubble Themes — filtered by tier */}
+                        <FeatureSection p={p} title="Bubble Themes" subtitle={`${allowedThemes.filter(t => !('locked' in t && (t as { locked?: boolean }).locked)).length} interactive touch effects`} icon={Sparkles} iconColor={p.violet} delay={0.12}>
                             <div className="flex items-end justify-between gap-1 px-1 py-3">
-                                {Object.entries(THEME_META).map(([id, meta], i) => (
-                                    <div key={id} className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                                        <AnimBubble color={meta.color} glow={meta.glow} size={40} delay={i * 0.15} />
-                                        <span className="text-[10px] font-semibold text-center" style={{ color: meta.color }}>{meta.name}</span>
-                                    </div>
-                                ))}
+                                {Object.entries(THEME_META).map(([id, meta], i) => {
+                                    const isLocked = allowedThemes.find(t => t.id === id && 'locked' in t && (t as { locked?: boolean }).locked === true);
+                                    return (
+                                        <div key={id} className="flex flex-col items-center gap-2 flex-1 min-w-0 relative">
+                                            <div className={isLocked ? 'opacity-30 grayscale' : ''}>
+                                                <AnimBubble color={meta.color} glow={meta.glow} size={40} delay={i * 0.15} />
+                                            </div>
+                                            <span className="text-[10px] font-semibold text-center" style={{ color: isLocked ? p.textMuted : meta.color }}>
+                                                {meta.name}
+                                            </span>
+                                            {isLocked && (
+                                                <Lock className="w-3 h-3 absolute top-0 right-1/2 translate-x-1/2 -translate-y-1" style={{ color: p.textMuted }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </FeatureSection>
 
+                        {/* Profile Frames — filtered by tier */}
                         <FeatureSection p={p} title="Profile Frames" subtitle="Animated avatar borders" icon={Award} iconColor={p.amber} delay={0.16}>
                             <div className="flex items-center justify-between gap-2 px-1 py-3">
-                                {FRAME_DISPLAY.map((frame) => (
-                                    <div key={`${frame.id}-${frame.label}`} className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                                        <StaticFramePreview frameType={frame.id} size={36} p={p} />
-                                        <span className="text-[10px] font-medium text-center" style={{ color: p.textMuted }}>{frame.label}</span>
-                                    </div>
-                                ))}
+                                {FRAME_DISPLAY.map((frame) => {
+                                    const isLocked = allowedFrames.find(f => f.id === frame.id && 'locked' in f && (f as { locked?: boolean }).locked === true);
+                                    return (
+                                        <div key={`${frame.id}-${frame.label}`} className="flex flex-col items-center gap-2 flex-1 min-w-0 relative">
+                                            <div className={isLocked ? 'opacity-30 grayscale' : ''}>
+                                                <StaticFramePreview frameType={frame.id} size={36} p={p} />
+                                            </div>
+                                            <span className="text-[10px] font-medium text-center" style={{ color: p.textMuted }}>{frame.label}</span>
+                                            {isLocked && (
+                                                <Lock className="w-3 h-3 absolute top-0 right-1/2 translate-x-1/2 -translate-y-1" style={{ color: p.textMuted }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </FeatureSection>
 
-                        <FeatureBanner p={p} title="Advanced Analytics" subtitle="Track · Improve · Rank up" icon={BarChart3} iconColor={p.emerald} delay={0.2}>
+                        {/* Analytics — show based on tier level */}
+                        <FeatureBanner p={p} title={premiumTier === 'promax' ? 'Full Analytics Suite' : premiumTier === 'pro' ? 'Advanced Analytics & Insights' : 'Basic Analytics'} subtitle="Track · Improve · Rank up" icon={BarChart3} iconColor={p.emerald} delay={0.2}>
                             <div className="grid grid-cols-4 gap-2">
                                 {analyticsStats.map((stat) => (
                                     <div key={stat.label} className="p-2 rounded-xl text-center" style={{ background: `${stat.color}10`, border: `1px solid ${stat.color}18` }}>
@@ -1139,14 +1265,25 @@ export default function PremiumPage() {
                             </div>
                         </FeatureBanner>
 
+                        {/* Premium Badges — filtered by tier */}
                         <FeatureBanner p={p} title="Premium Badges" subtitle="Exclusive status badges" icon={Star} iconColor={p.rose} delay={0.24}>
                             <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar">
-                                {PREMIUM_BADGES.filter((b) => b.id !== 'none').map((badge) => (
-                                    <div key={badge.id} className="flex flex-col items-center gap-1.5 flex-shrink-0 px-2 py-1.5 rounded-xl" style={{ background: p.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${p.borderSubtle}` }}>
-                                        <PremiumBadge badgeType={badge.id as BadgeType} size="lg" className="!bg-transparent !px-0 !py-0" />
-                                        <span className="text-[10px] font-medium" style={{ color: p.textMuted }}>{badge.label}</span>
-                                    </div>
-                                ))}
+                                {PREMIUM_BADGES.filter((b) => b.id !== 'none').map((badge) => {
+                                    const isLocked = allowedBadges.find(b => b.id === badge.id && 'locked' in b && (b as { locked?: boolean }).locked === true);
+                                    return (
+                                        <div
+                                            key={badge.id}
+                                            className={`flex flex-col items-center gap-1.5 flex-shrink-0 px-2 py-1.5 rounded-xl relative ${isLocked ? 'opacity-40' : ''}`}
+                                            style={{ background: p.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${p.borderSubtle}` }}
+                                        >
+                                            <PremiumBadge badgeType={badge.id as BadgeType} size="lg" className="!bg-transparent !px-0 !py-0" />
+                                            <span className="text-[10px] font-medium" style={{ color: p.textMuted }}>{badge.label}</span>
+                                            {isLocked && (
+                                                <Lock className="w-3 h-3 absolute top-1 right-1" style={{ color: p.textMuted }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </FeatureBanner>
 
@@ -1167,7 +1304,7 @@ export default function PremiumPage() {
                                 <p className="text-[13px] font-bold" style={{ color: p.text }}>XP Boost & More</p>
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                                     {[
-                                        { label: '1.2x XP', color: p.blue },
+                                        { label: premiumTier === 'promax' ? '2x XP' : premiumTier === 'pro' ? '1.5x XP' : '1x XP', color: p.blue },
                                         { label: 'Weekly Challenges', color: p.violet },
                                         { label: 'Bonus Rewards', color: p.emerald },
                                         { label: 'Exclusive Events', color: p.amber },
@@ -1204,10 +1341,160 @@ export default function PremiumPage() {
                                 ))}
                             </div>
                         </motion.div>
+
+                        {/* ═══ UPGRADE SECTION — show higher tiers ═══ */}
+                        {upgradeTiers.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.36 }}
+                                className="mt-2"
+                            >
+                                <div className="flex items-center gap-2 px-0.5 mb-3">
+                                    <ArrowUpRight className="w-4 h-4" style={{ color: p.accentText }} />
+                                    <h3 className="typo-subheading text-[13px]" style={{ color: p.text }}>
+                                        Upgrade Your Plan
+                                    </h3>
+                                </div>
+                                <div className="space-y-3">
+                                    {upgradeTiers.map((tier, index) => {
+                                        const canAffordTier = currentXP >= tier.discountedPrice;
+                                        return (
+                                            <motion.div
+                                                key={tier.id}
+                                                initial={{ opacity: 0, y: 14 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.4 + index * 0.08, duration: 0.4 }}
+                                                className="relative overflow-hidden"
+                                                style={{
+                                                    ...p.bannerStyle,
+                                                    border: tier.highlighted
+                                                        ? `1.5px solid ${tier.color}55`
+                                                        : p.bannerStyle.border,
+                                                    boxShadow: tier.highlighted
+                                                        ? `0 4px 24px ${tier.glow}, ${p.bannerStyle.boxShadow || 'none'}`
+                                                        : p.bannerStyle.boxShadow,
+                                                }}
+                                            >
+                                                {tier.highlighted && (
+                                                    <div
+                                                        className="absolute top-0 right-0 text-[9px] font-extrabold text-white px-3 py-1 rounded-bl-xl"
+                                                        style={{ background: tier.gradient, letterSpacing: '0.06em' }}
+                                                    >
+                                                        ⭐ RECOMMENDED
+                                                    </div>
+                                                )}
+
+                                                <div className="p-4">
+                                                    <div className="flex items-start gap-3 mb-3">
+                                                        <motion.div
+                                                            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                                                            style={{ background: `${tier.color}12`, border: `1px solid ${tier.color}25` }}
+                                                            animate={{ scale: [1, 1.04, 1] }}
+                                                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: index * 0.3 }}
+                                                        >
+                                                            <TierIcon type={tier.iconType} size={30} color={tier.color} />
+                                                        </motion.div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="text-[15px] font-extrabold" style={{ color: p.text }}>{tier.name}</h4>
+                                                                {tier.discount > 0 && (
+                                                                    <span
+                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                                                                        style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}
+                                                                    >
+                                                                        SAVE {tier.discount} XP
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[11px] mt-0.5" style={{ color: p.textMuted }}>{tier.tagline}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Pricing */}
+                                                    <div className="flex items-baseline gap-2 mb-3 px-0.5">
+                                                        <span className="text-[24px] font-black tabular-nums" style={{ color: tier.color }}>
+                                                            {tier.discountedPrice}
+                                                        </span>
+                                                        <span className="text-[12px] font-bold" style={{ color: tier.color, opacity: 0.7 }}>XP</span>
+                                                        <span className="text-[10px] font-medium" style={{ color: p.textMuted }}>/ {tier.duration}</span>
+                                                        <span className="text-[13px] font-semibold tabular-nums line-through ml-1" style={{ color: p.textMuted, opacity: 0.5 }}>
+                                                            {tier.price} XP
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Features */}
+                                                    <div
+                                                        className="rounded-xl p-3 mb-3"
+                                                        style={{ background: p.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)', border: `1px solid ${p.borderSubtle}` }}
+                                                    >
+                                                        <div className={`grid gap-1.5 ${tier.features.length > 8 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                                                            {tier.features.map((feature, fi) => (
+                                                                <div key={fi} className="flex items-center gap-2">
+                                                                    <Check className="w-3 h-3 flex-shrink-0" style={{ color: tier.color }} />
+                                                                    <span className="text-[11px] font-medium" style={{ color: p.text, opacity: 0.85 }}>{feature}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* CTA */}
+                                                    <button
+                                                        onClick={() => handleSelectTier(tier)}
+                                                        disabled={!canAffordTier}
+                                                        className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white transition-all flex items-center justify-center gap-2"
+                                                        style={{
+                                                            background: canAffordTier ? tier.gradient : (p.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
+                                                            color: canAffordTier ? '#ffffff' : p.textMuted,
+                                                            boxShadow: canAffordTier ? `0 4px 16px ${tier.glow}` : 'none',
+                                                            opacity: canAffordTier ? 1 : 0.5,
+                                                            cursor: canAffordTier ? 'pointer' : 'not-allowed',
+                                                        }}
+                                                    >
+                                                        {canAffordTier ? (
+                                                            <>
+                                                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                                                Upgrade to {tier.name} — {tier.discountedPrice} XP
+                                                                <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                Need {tier.discountedPrice - currentXP} more XP
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+
+                                                {/* XP progress for this tier */}
+                                                {!canAffordTier && (
+                                                    <div className="px-4 pb-3">
+                                                        <div className="h-2 rounded-full overflow-hidden relative" style={{ background: p.progressTrack }}>
+                                                            <motion.div
+                                                                className="h-full rounded-full relative"
+                                                                style={{
+                                                                    background: tier.gradient,
+                                                                    boxShadow: `0 0 8px ${tier.glow}, 0 0 16px ${tier.glow}`,
+                                                                }}
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${Math.min((currentXP / tier.discountedPrice) * 100, 100)}%` }}
+                                                                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + index * 0.1 }}
+                                                            />
+                                                        </div>
+                                                        <p className="text-[10px] text-center mt-1.5 tabular-nums" style={{ color: p.textMuted }}>
+                                                            {Math.round((currentXP / tier.discountedPrice) * 100)}% — {currentXP}/{tier.discountedPrice} XP
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                 )}
 
-                {/* ═══ CUSTOMIZE ═══ */}
+                {/* ═══ CUSTOMIZE — tier-gated cosmetic options ═══ */}
                 {isPremium && activeSection === 'customize' && (
                     <div className="mt-5 space-y-6">
                         <section>
@@ -1216,26 +1503,34 @@ export default function PremiumPage() {
                                 Bubble Theme
                             </h3>
                             <div className="grid grid-cols-2 gap-2.5">
-                                {BUBBLE_THEMES.map((theme) => {
+                                {allowedThemes.map((theme) => {
                                     const meta = THEME_META[theme.id] || { name: theme.label, color: p.blue, glow: 'rgba(22,80,235,0.5)' };
                                     const isActive = activeBubbleTheme === theme.id;
+                                    const isLocked = 'locked' in theme && (theme as { locked?: boolean }).locked === true;
                                     return (
                                         <button
                                             key={theme.id}
-                                            onClick={() => setBubbleTheme(theme.id as BubbleTheme)}
-                                            className="p-3.5 rounded-2xl text-left transition-all"
+                                            onClick={() => !isLocked && setBubbleTheme(theme.id as BubbleTheme)}
+                                            disabled={isLocked}
+                                            className={`p-3.5 rounded-2xl text-left transition-all relative ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             style={{
                                                 ...p.bannerStyle,
-                                                border: `1.5px solid ${isActive ? meta.color : p.border}`,
-                                                background: isActive ? `${meta.color}10` : p.surface,
+                                                border: `1.5px solid ${isActive && !isLocked ? meta.color : p.border}`,
+                                                background: isActive && !isLocked ? `${meta.color}10` : p.surface,
                                             }}
                                         >
                                             <div className="flex items-center gap-2.5 mb-1.5">
                                                 <AnimBubble color={meta.color} glow={meta.glow} size={24} />
                                                 <p className="text-[12px] font-bold" style={{ color: p.text }}>{meta.name}</p>
+                                                {isLocked && <Lock className="w-3 h-3 ml-auto" style={{ color: p.textMuted }} />}
                                             </div>
                                             <p className="text-[10px]" style={{ color: p.textMuted }}>{theme.description}</p>
-                                            {isActive && <CheckCircle className="w-3.5 h-3.5 mt-1.5" style={{ color: meta.color }} />}
+                                            {isActive && !isLocked && <CheckCircle className="w-3.5 h-3.5 mt-1.5" style={{ color: meta.color }} />}
+                                            {isLocked && (
+                                                <p className="text-[9px] mt-1.5 font-semibold" style={{ color: p.accentText }}>
+                                                    Upgrade to unlock
+                                                </p>
+                                            )}
                                         </button>
                                     );
                                 })}
@@ -1248,17 +1543,19 @@ export default function PremiumPage() {
                                 Profile Frame
                             </h3>
                             <div className="grid grid-cols-3 gap-2.5">
-                                {PROFILE_FRAMES.map((frame) => {
+                                {allowedFrames.map((frame) => {
                                     const isActive = activeProfileFrame === frame.id;
+                                    const isLocked = 'locked' in frame && (frame as { locked?: boolean }).locked === true;
                                     return (
                                         <button
                                             key={frame.id}
-                                            onClick={() => setProfileFrame(frame.id as ProfileFrameType)}
-                                            className="flex flex-col items-center p-3 rounded-2xl transition-all"
+                                            onClick={() => !isLocked && setProfileFrame(frame.id as ProfileFrameType)}
+                                            disabled={isLocked}
+                                            className={`flex flex-col items-center p-3 rounded-2xl transition-all relative ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             style={{
                                                 ...p.bannerStyle,
-                                                border: `1.5px solid ${isActive ? p.blue : p.border}`,
-                                                background: isActive ? 'rgba(22,80,235,0.1)' : p.surface,
+                                                border: `1.5px solid ${isActive && !isLocked ? p.blue : p.border}`,
+                                                background: isActive && !isLocked ? 'rgba(22,80,235,0.1)' : p.surface,
                                             }}
                                         >
                                             <ProfileFrame
@@ -1268,7 +1565,13 @@ export default function PremiumPage() {
                                                 size={40}
                                             />
                                             <p className="text-[10px] font-bold mt-2" style={{ color: p.text }}>{frame.label}</p>
-                                            {isActive && <CheckCircle className="w-3 h-3 mt-1" style={{ color: p.blue }} />}
+                                            {isActive && !isLocked && <CheckCircle className="w-3 h-3 mt-1" style={{ color: p.blue }} />}
+                                            {isLocked && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <Lock className="w-2.5 h-2.5" style={{ color: p.textMuted }} />
+                                                    <span className="text-[8px] font-semibold" style={{ color: p.accentText }}>Upgrade</span>
+                                                </div>
+                                            )}
                                         </button>
                                     );
                                 })}
@@ -1281,17 +1584,19 @@ export default function PremiumPage() {
                                 Badge
                             </h3>
                             <div className="grid grid-cols-2 gap-2.5">
-                                {PREMIUM_BADGES.map((badge) => {
+                                {allowedBadges.map((badge) => {
                                     const isActive = activeBadge === badge.id;
+                                    const isLocked = 'locked' in badge && (badge as { locked?: boolean }).locked === true;
                                     return (
                                         <button
                                             key={badge.id}
-                                            onClick={() => setBadge(badge.id as BadgeType)}
-                                            className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all"
+                                            onClick={() => !isLocked && setBadge(badge.id as BadgeType)}
+                                            disabled={isLocked}
+                                            className={`flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all relative ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             style={{
                                                 ...p.bannerStyle,
-                                                border: `1.5px solid ${isActive ? p.blue : p.border}`,
-                                                background: isActive ? 'rgba(22,80,235,0.1)' : p.surface,
+                                                border: `1.5px solid ${isActive && !isLocked ? p.blue : p.border}`,
+                                                background: isActive && !isLocked ? 'rgba(22,80,235,0.1)' : p.surface,
                                             }}
                                         >
                                             {badge.id === 'none' ? (
@@ -1299,11 +1604,17 @@ export default function PremiumPage() {
                                             ) : (
                                                 <PremiumBadge badgeType={badge.id as BadgeType} size="lg" className="!bg-transparent !px-0" />
                                             )}
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-[12px] font-bold" style={{ color: p.text }}>{badge.label}</p>
                                                 <p className="text-[10px]" style={{ color: p.textMuted }}>{badge.description}</p>
                                             </div>
-                                            {isActive && <CheckCircle className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: p.blue }} />}
+                                            {isActive && !isLocked && <CheckCircle className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: p.blue }} />}
+                                            {isLocked && (
+                                                <div className="flex flex-col items-center ml-auto flex-shrink-0">
+                                                    <Lock className="w-3.5 h-3.5" style={{ color: p.textMuted }} />
+                                                    <span className="text-[8px] font-semibold mt-0.5" style={{ color: p.accentText }}>Upgrade</span>
+                                                </div>
+                                            )}
                                         </button>
                                     );
                                 })}
@@ -1356,6 +1667,35 @@ export default function PremiumPage() {
                                 </div>
                             </div>
                         </section>
+
+                        {/* Upgrade prompt within customize tab */}
+                        {upgradeTiers.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="p-4 rounded-2xl text-center"
+                                style={{
+                                    background: p.isDark ? 'rgba(22,80,235,0.06)' : 'rgba(22,80,235,0.04)',
+                                    border: `1px solid ${p.isDark ? 'rgba(22,80,235,0.15)' : 'rgba(22,80,235,0.1)'}`,
+                                }}
+                            >
+                                <Lock className="w-5 h-5 mx-auto mb-2" style={{ color: p.accentText }} />
+                                <p className="text-[12px] font-bold" style={{ color: p.text }}>
+                                    Want more customization options?
+                                </p>
+                                <p className="text-[11px] mt-0.5 mb-3" style={{ color: p.textMuted }}>
+                                    Upgrade to {upgradeTiers[0].name} to unlock all {upgradeTiers[0].name === 'Pro' ? '5 themes, all frames & badges' : 'exclusive content'}
+                                </p>
+                                <button
+                                    onClick={() => setActiveSection('features')}
+                                    className="text-[12px] font-bold px-4 py-2 rounded-xl text-white"
+                                    style={{ background: 'linear-gradient(135deg, #1650EB, #8B5CF6)', boxShadow: '0 4px 14px rgba(22,80,235,0.25)' }}
+                                >
+                                    View Upgrade Options
+                                </button>
+                            </motion.div>
+                        )}
                     </div>
                 )}
             </main>

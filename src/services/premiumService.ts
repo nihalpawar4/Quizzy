@@ -12,6 +12,7 @@ import { COLLECTIONS, PREMIUM_XP_COST } from '@/lib/constants';
 export interface PremiumStatus {
     isPremium: boolean;
     isTrial: boolean;
+    premiumTier: string; // 'basic' | 'pro' | 'promax' | 'none'
     trialExpiresAt: Date | null;
     premiumExpiresAt: Date | null;
     hasClaimedTrial: boolean;
@@ -78,9 +79,17 @@ export function resolvePremiumStatus(userData: Record<string, unknown>): Premium
 
     const isActive = isPermanent || isTrial;
 
+    // Resolve tier — during a trial, treat as 'promax' (full access); otherwise read stored tier
+    const resolvedTier = isActive
+        ? (isTrial && !isPermanent)
+            ? 'promax'
+            : ((userData.premiumTier as string) || 'basic')
+        : 'none';
+
     return {
         isPremium: isActive,
         isTrial: !isPermanent && isTrial,
+        premiumTier: resolvedTier,
         trialExpiresAt: trialExpiry,
         premiumExpiresAt: premiumExpiry,
         hasClaimedTrial: !!userData.premiumTrialClaimedAt,
@@ -103,7 +112,7 @@ export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
     const snap = await getDoc(userRef);
     if (!snap.exists()) {
         return {
-            isPremium: false, isTrial: false, trialExpiresAt: null, premiumExpiresAt: null, hasClaimedTrial: false, purchasedAt: null,
+            isPremium: false, isTrial: false, premiumTier: 'none', trialExpiresAt: null, premiumExpiresAt: null, hasClaimedTrial: false, purchasedAt: null,
             activeBubbleTheme: 'default', activeProfileFrame: 'none', activeBadge: 'none',
             streakShieldsRemaining: 0, xpBoostActive: false, xpBoostExpiresAt: null, xpBoostMultiplier: 1,
         };
@@ -179,8 +188,14 @@ export async function purchasePremiumTier(
     }
 
     const data = snap.data();
-    if (data.isPremium === true) {
-        return { success: false, error: 'Already a premium member!' };
+    const tierOrder = ['basic', 'pro', 'promax'];
+    const currentTier = (data.premiumTier as string) || 'basic';
+    const currentTierIndex = tierOrder.indexOf(currentTier);
+    const newTierIndex = tierOrder.indexOf(tier);
+
+    // Block if already on the same or higher tier (no downgrades either)
+    if (data.isPremium === true && newTierIndex <= currentTierIndex) {
+        return { success: false, error: newTierIndex === currentTierIndex ? 'You already have this plan!' : 'Cannot downgrade your plan.' };
     }
 
     const currentXP = (data.xp as number) || 0;

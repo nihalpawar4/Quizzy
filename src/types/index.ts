@@ -45,6 +45,8 @@ export interface User {
     board?: string;
     schoolName?: string;
     aboutBio?: string;
+    // Exclusive test tickets (earned from daily rewards)
+    exclusiveTickets?: number;
 }
 
 // Class change request (requires teacher approval)
@@ -118,6 +120,8 @@ export interface Test {
     // Weekly Test (teacher-uploaded override for auto-generated weekly tests)
     isWeeklyTest?: boolean; // If true, this test is a weekly test
     weeklyTestNumber?: number; // Weekly Test 1, 2, 3...
+    // Exclusive Test (premium-only, ticket-based access)
+    isExclusiveTest?: boolean; // If true, this is an exclusive premium test
 }
 
 // Question Types - supports multiple formats
@@ -538,3 +542,24 @@ export const CALL_CONSTANTS = {
     ICE_GATHERING_TIMEOUT_MS: 5000, // Wait 5 seconds for ICE gathering
 } as const;
 
+// Exclusive Test Result
+export interface ExclusiveTestResult {
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentClass: number;
+    testId: string;
+    testTitle: string;
+    subject: string;
+    score: number;
+    totalQuestions: number;
+    timeTakenSeconds: number;
+    xpAwarded: number;
+    completedAt: Date;
+    detailedAnswers?: {
+        questionText: string;
+        userAnswer: string;
+        correctAnswer: string;
+        isCorrect: boolean;
+    }[];
+}

@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import type { PremiumTier } from '@/lib/constants';
 import {
     subscribeToPremiumStatus,
     purchasePremium as purchasePremiumService,
@@ -25,6 +26,7 @@ import { activatePremiumTrial } from '@/services/premiumService';
 interface PremiumContextType {
     // Status
     isPremium: boolean;
+    premiumTier: PremiumTier | 'none';
     isTrial: boolean;
     trialExpiresAt: Date | null;
     premiumExpiresAt: Date | null;
@@ -50,6 +52,7 @@ interface PremiumContextType {
 
 const defaultStatus: PremiumContextType = {
     isPremium: false,
+    premiumTier: 'none',
     isTrial: false,
     trialExpiresAt: null,
     premiumExpiresAt: null,
@@ -258,6 +261,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
 
     const value: PremiumContextType = {
         isPremium: status?.isPremium ?? false,
+        premiumTier: (status?.premiumTier as PremiumTier | 'none') ?? 'none',
         isTrial: status?.isTrial ?? false,
         trialExpiresAt: status?.trialExpiresAt ?? null,
         premiumExpiresAt: status?.premiumExpiresAt ?? null,

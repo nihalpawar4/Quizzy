@@ -187,6 +187,7 @@ export default function TeacherDashboard() {
         expectedResultDays: number;
         isWeeklyTest: boolean;
         weeklyTestNumber: number;
+        isExclusiveTest: boolean;
     }>({
         title: '',
         subject: SUBJECTS[0],
@@ -209,6 +210,7 @@ export default function TeacherDashboard() {
         expectedResultDays: 5,
         isWeeklyTest: false,
         weeklyTestNumber: 1,
+        isExclusiveTest: false,
     });
 
     // Proctoring report modal state
@@ -762,6 +764,7 @@ export default function TeacherDashboard() {
                 evaluationMode: newTest.evaluationMode,
                 expectedResultDays: newTest.expectedResultDays,
                 ...(newTest.isWeeklyTest ? { isWeeklyTest: true, weeklyTestNumber: newTest.weeklyTestNumber } : {}),
+                ...(newTest.isExclusiveTest ? { isExclusiveTest: true } : {}),
                 ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
                 ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
             });
@@ -813,6 +816,7 @@ export default function TeacherDashboard() {
             expectedResultDays: 5,
             isWeeklyTest: false,
             weeklyTestNumber: 1,
+            isExclusiveTest: false,
         });
         setCsvFile(null);
         setJsonInput('');
@@ -2431,6 +2435,30 @@ export default function TeacherDashboard() {
                                                                 <p className="text-xs text-gray-400 mt-1">Weekly Test 1, 2, 3... — this overrides the auto-generated test for that week</p>
                                                             </div>
                                                         </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Exclusive Test Toggle */}
+                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                                                            <span className="text-lg">🎟️</span>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">Exclusive Test</h4>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Premium students use tickets to access this test</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setNewTest({ ...newTest, isExclusiveTest: !newTest.isExclusiveTest })}
+                                                            className={`w-12 h-6 rounded-full transition-colors flex-shrink-0 ${newTest.isExclusiveTest ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                        >
+                                                            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newTest.isExclusiveTest ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                                        </button>
+                                                    </div>
+                                                    {newTest.isExclusiveTest && (
+                                                        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg mt-2">
+                                                            ✨ This test will appear in the Exclusive Tests section for premium students. Students need 2 tickets to attempt it.
+                                                        </p>
                                                     )}
                                                 </div>
 

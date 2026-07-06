@@ -100,10 +100,16 @@ export const COLLECTIONS = {
     DAILY_REWARDS: 'dailyRewards',
     // Premium Purchases
     PREMIUM_PURCHASES: 'premiumPurchases',
+    // Exclusive Test Results
+    EXCLUSIVE_TEST_RESULTS: 'exclusiveTestResults',
 } as const;
 
 // Premium XP cost (default / Basic tier)
 export const PREMIUM_XP_COST = 499;
+
+// Exclusive Test constants
+export const EXCLUSIVE_TICKETS_PER_TEST = 2;
+export const EXCLUSIVE_TEST_XP_REWARD = 30;
 
 // Premium tier types
 export type PremiumTier = 'basic' | 'pro' | 'promax';
@@ -201,6 +207,44 @@ export const PREMIUM_TIERS: {
         ],
     },
 ];
+
+// ─── Tier-specific feature gates ──────────────────────────────────────
+// These map each tier to the cosmetic items and multipliers it unlocks.
+// Types inlined to avoid circular dependency with premiumService.
+
+type _BubbleTheme = 'default' | 'sparkle' | 'neon' | 'fire' | 'water';
+type _ProfileFrameType = 'none' | 'gold' | 'diamond' | 'fire' | 'aurora';
+type _BadgeType = 'none' | 'pro' | 'elite' | 'diamond' | 'scholar';
+
+export const TIER_ALLOWED_THEMES: Record<PremiumTier, _BubbleTheme[]> = {
+    basic: ['default', 'sparkle', 'neon'],
+    pro: ['default', 'sparkle', 'neon', 'fire', 'water'],
+    promax: ['default', 'sparkle', 'neon', 'fire', 'water'], // + exclusive (same set, UI marks them exclusive)
+};
+
+export const TIER_ALLOWED_FRAMES: Record<PremiumTier, _ProfileFrameType[]> = {
+    basic: ['none', 'gold'],
+    pro: ['none', 'gold', 'diamond', 'fire', 'aurora'],
+    promax: ['none', 'gold', 'diamond', 'fire', 'aurora'], // + animated variants
+};
+
+export const TIER_ALLOWED_BADGES: Record<PremiumTier, _BadgeType[]> = {
+    basic: ['none', 'pro'],
+    pro: ['none', 'pro', 'elite', 'scholar'],
+    promax: ['none', 'pro', 'elite', 'diamond', 'scholar'],
+};
+
+export const TIER_XP_MULTIPLIER: Record<PremiumTier, number> = {
+    basic: 1,
+    pro: 1.5,
+    promax: 2,
+};
+
+export const TIER_STREAK_SHIELDS: Record<PremiumTier, number> = {
+    basic: 0,
+    pro: 3,
+    promax: 999, // unlimited
+};
 
 // Evaluation mode options for test creation
 export const EVALUATION_MODES = [

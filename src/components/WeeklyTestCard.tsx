@@ -604,7 +604,7 @@ export default function WeeklyTestCard({ user, onComplete }: WeeklyTestCardProps
                     </div>
 
                     {/* ── Question Area ── */}
-                    <div className="flex-1 overflow-y-auto px-4 py-5">
+                    <div className="flex-1 overflow-y-auto px-4 py-5 pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <div className="max-w-2xl mx-auto">
                             {/* Question number */}
                             <div className="flex items-center justify-between mb-4">
@@ -665,15 +665,28 @@ export default function WeeklyTestCard({ user, onComplete }: WeeklyTestCardProps
                     </div>
 
                     {/* ── Bottom Navigation ── */}
-                    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
                         <div className="max-w-2xl mx-auto">
-                            {/* Question dots */}
-                            <div className="flex flex-wrap gap-1.5 mb-3 justify-center">
+                            {/* Question number strip — horizontally scrollable */}
+                            <div
+                                className="flex gap-1.5 mb-3 overflow-x-auto hide-scrollbar pb-1"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+                                ref={(el) => {
+                                    // Auto-scroll to keep current question visible
+                                    if (el) {
+                                        const btn = el.children[currentQ] as HTMLElement;
+                                        if (btn) {
+                                            const scrollLeft = btn.offsetLeft - el.clientWidth / 2 + btn.clientWidth / 2;
+                                            el.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+                                        }
+                                    }
+                                }}
+                            >
                                 {questions.map((_, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => goToQuestion(idx)}
-                                        className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
+                                        className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 ${
                                             idx === currentQ
                                                 ? 'bg-violet-500 text-white scale-110 shadow-md shadow-violet-500/30'
                                                 : answers[idx] !== null

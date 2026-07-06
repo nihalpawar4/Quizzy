@@ -113,12 +113,36 @@ export async function getCompletedTestQuestions(
         return { questions: [] };
     }
 
-    // 2) Fetch questions for those tests
+    // 2) Filter tests by the student's CURRENT class
+    //    This ensures students who changed class only get questions
+    //    from tests matching their new class.
     const testIdArray = Array.from(completedTestIds);
-    const allQuestions: (Question & { subject: string; testTitle: string })[] = [];
+    const filteredTestIds: string[] = [];
 
     for (let i = 0; i < testIdArray.length; i += 30) {
         const chunk = testIdArray.slice(i, i + 30);
+        const testsRef = collection(db, COLLECTIONS.TESTS);
+        const testsQuery = query(testsRef, where('__name__', 'in', chunk));
+        const testsSnap = await getDocs(testsQuery);
+
+        testsSnap.docs.forEach(doc => {
+            const data = doc.data();
+            // Only include tests that match the student's CURRENT class
+            if ((data.targetClass as number) === studentClass) {
+                filteredTestIds.push(doc.id);
+            }
+        });
+    }
+
+    if (filteredTestIds.length === 0) {
+        return { questions: [] };
+    }
+
+    // 3) Fetch questions for those class-matching tests
+    const allQuestions: (Question & { subject: string; testTitle: string })[] = [];
+
+    for (let i = 0; i < filteredTestIds.length; i += 30) {
+        const chunk = filteredTestIds.slice(i, i + 30);
         const qRef = collection(db, COLLECTIONS.QUESTIONS);
         const qQuery = query(qRef, where('testId', 'in', chunk));
         const qSnap = await getDocs(qQuery);

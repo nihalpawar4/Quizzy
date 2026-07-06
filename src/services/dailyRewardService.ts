@@ -7,6 +7,7 @@ import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, ge
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import { activatePremiumTrial, addStreakShields } from '@/services/premiumService';
+import { awardTickets } from '@/services/exclusiveTestService';
 
 // ─── Reward Type Definitions ───────────────────────────────────────────
 
@@ -65,8 +66,8 @@ const REWARD_WEIGHTS: WeightedReward[] = [
     { type: 'bonus_xp',           weight: 10 },
     { type: 'xp_boost',           weight: 8  },
     { type: 'streak_protection',  weight: 5  },
-    { type: 'challenge_ticket',   weight: 3  },
-    { type: 'premium_trial',      weight: 3  },
+    { type: 'challenge_ticket',   weight: 8  },
+    { type: 'premium_trial',      weight: 2  },
     { type: 'legendary',          weight: 1  },
 ];
 
@@ -694,9 +695,9 @@ function generateRewardData(type: RewardType): RewardData {
         case 'challenge_ticket': {
             return {
                 type: 'challenge_ticket',
-                title: 'Challenge Ticket',
-                description: 'Unlock a special challenge!',
-                content: 'You can use this ticket to access an exclusive challenge.',
+                title: 'Exclusive Test Ticket',
+                description: 'Use 2 tickets to attempt an exclusive premium test!',
+                content: 'You earned an Exclusive Test Ticket! Collect 2 tickets to unlock a premium test worth 30 XP.',
                 xp: 5,
                 coins: 0,
                 icon: 'ticket',
@@ -807,6 +808,9 @@ export async function claimDailyReward(
     }
     if (reward.type === 'streak_protection') {
         await addStreakShields(userId, 1);
+    }
+    if (reward.type === 'challenge_ticket') {
+        await awardTickets(userId, 1);
     }
 
     // Update localStorage
