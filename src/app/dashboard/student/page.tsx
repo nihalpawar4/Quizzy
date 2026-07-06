@@ -1394,31 +1394,29 @@ export default function StudentDashboard() {
                                             transition={{ duration: 0.15 }}
                                             className="absolute left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[28px] border border-gray-200/80 dark:border-gray-800/80 p-5 space-y-4 shadow-2xl shadow-black/5"
                                         >
-                                            {/* Subject Filter */}
+                                            {/* Subject Filter — Dropdown */}
                                             <div>
                                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Subject</label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {['All', ...Array.from(new Set(tests.map(t => t.subject)))].map(subject => (
-                                                        <button
-                                                            key={subject}
-                                                            onClick={() => {
-                                                                setFilterSubject(subject);
-                                                                setFilterTouched(prev => {
-                                                                    const next = new Set(prev);
-                                                                    next.add('subject');
-                                                                    return next;
-                                                                });
-                                                                setTimeout(() => setShowFilters(false), 200);
-                                                            }}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                                filterSubject === subject
-                                                                    ? 'bg-[#1650EB] text-white shadow-sm'
-                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                                            }`}
-                                                        >
-                                                            {subject}
-                                                        </button>
-                                                    ))}
+                                                <div className="relative">
+                                                    <select
+                                                        value={filterSubject}
+                                                        onChange={e => {
+                                                            setFilterSubject(e.target.value);
+                                                            setFilterTouched(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add('subject');
+                                                                return next;
+                                                            });
+                                                            setTimeout(() => setShowFilters(false), 200);
+                                                        }}
+                                                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-[#1650EB] focus:ring-2 focus:ring-[#1650EB]/20 outline-none"
+                                                    >
+                                                        <option value="All">📚 All Subjects</option>
+                                                        {Array.from(new Set(tests.map(t => t.subject))).map(subject => (
+                                                            <option key={subject} value={subject}>{subject}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
                                                 </div>
                                             </div>
 
@@ -1611,6 +1609,8 @@ export default function StudentDashboard() {
                         {(() => {
                             // Apply filters
                             const filteredTests = tests.filter(test => {
+                                // Hide exclusive tests from Available Tests
+                                if (test.isExclusiveTest) return false;
                                 // Subject filter
                                 if (filterSubject !== 'All' && test.subject !== filterSubject) return false;
                                 // Type filter
