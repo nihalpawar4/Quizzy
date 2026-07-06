@@ -3220,6 +3220,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
     const [completedExclusiveIds, setCompletedExclusiveIds] = useState<Set<string>>(new Set());
     const [exclusiveConfirm, setExclusiveConfirm] = useState<Test | null>(null);
     const [ticketSpending, setTicketSpending] = useState(false);
+    const [exclusiveExpanded, setExclusiveExpanded] = useState(false);
 
     // Load exclusive tests data
     useEffect(() => {
@@ -3481,20 +3482,26 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                 </div>
             </motion.div>
 
-            {/* ═══════ EXCLUSIVE TESTS SECTION ═══════ */}
+            {/* ═══════ EXCLUSIVE TESTS — Collapsible Banner ═══════ */}
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.45 }}
-                className="mb-6 relative"
+                className="mb-6"
             >
-                {/* Outer glow container */}
-                <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400/30 dark:border-amber-500/25 shadow-lg shadow-amber-500/5 dark:shadow-amber-500/10 bg-white dark:bg-gray-900/80">
-                    {/* Animated top border glow */}
+                <div className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+                    exclusiveExpanded
+                        ? 'border-amber-400/40 dark:border-amber-500/30 shadow-xl shadow-amber-500/10'
+                        : 'border-amber-400/25 dark:border-amber-500/20 shadow-md shadow-amber-500/5'
+                }`}>
+                    {/* Gold top bar */}
                     <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500" />
 
-                    {/* ── Header ── */}
-                    <div className="relative p-4 pb-3 bg-gradient-to-br from-amber-50 via-yellow-50/50 to-orange-50/30 dark:from-amber-900/15 dark:via-yellow-900/10 dark:to-orange-900/8">
+                    {/* ── Clickable Banner ── */}
+                    <button
+                        onClick={() => setExclusiveExpanded(!exclusiveExpanded)}
+                        className="relative w-full p-4 bg-gradient-to-br from-amber-50 via-yellow-50/50 to-orange-50/30 dark:from-amber-900/15 dark:via-yellow-900/10 dark:to-orange-900/8 text-left group"
+                    >
                         {/* Shimmer */}
                         <motion.div
                             className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/8 to-transparent"
@@ -3503,164 +3510,179 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                         />
 
                         <div className="relative flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/30 flex items-center justify-center flex-shrink-0">
-                                    <Crown className="w-5.5 h-5.5 text-white" />
+                                    <Crown className="w-5 h-5 text-white" />
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white tracking-tight">
+                                        <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white tracking-tight truncate">
                                             Exclusive Tests
                                         </h3>
-                                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-white uppercase tracking-wider">
+                                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-white uppercase tracking-wider flex-shrink-0">
                                             Premium
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                        Curated tests by your teachers · +{EXCLUSIVE_TEST_XP_REWARD} XP each
+                                        Premium tests by your teachers · {EXCLUSIVE_TEST_XP_REWARD} XP each
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Ticket count badge */}
-                            <div className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl bg-white dark:bg-gray-800 border border-amber-300/40 dark:border-amber-500/25 shadow-sm flex-shrink-0">
-                                <span className="text-lg leading-none">🎟️</span>
-                                <span className="text-[14px] font-black text-amber-600 dark:text-amber-400 leading-none">{exclusiveTickets}</span>
-                                <span className="text-[8px] text-gray-400 dark:text-gray-500 font-medium">tickets</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                {/* Ticket badge */}
+                                <div className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-300/40 dark:border-amber-500/25 shadow-sm">
+                                    <span className="text-base leading-none">🎟️</span>
+                                    <span className="text-[13px] font-black text-amber-600 dark:text-amber-400 leading-none">{exclusiveTickets}</span>
+                                </div>
+                                {/* Chevron */}
+                                <ChevronDown className={`w-5 h-5 text-amber-500 transition-transform duration-300 ${exclusiveExpanded ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
-                    </div>
+                    </button>
 
-                    {/* ── Subject selector + content ── */}
-                    <div className="p-4 pt-3">
-                        {/* Subject dropdown */}
-                        <div className="relative mb-3">
-                            <select
-                                value={exclusiveSubject}
-                                onChange={e => setExclusiveSubject(e.target.value)}
-                                className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
+                    {/* ── Expanded Content ── */}
+                    <AnimatePresence>
+                        {exclusiveExpanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                className="overflow-hidden bg-white dark:bg-gray-900/80"
                             >
-                                {['All Subjects', ...SUBJECTS.filter(s => s !== 'Combined')].map(subj => (
-                                    <option key={subj} value={subj === 'All Subjects' ? 'All' : subj}>
-                                        {subj === 'All Subjects' ? '📚 All Subjects' : subj}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-                        </div>
-
-                        {/* Test cards or loading/empty */}
-                        {exclusiveLoading ? (
-                            <div className="flex items-center justify-center py-10">
-                                <div className="flex flex-col items-center gap-2">
-                                    <Loader2 className="w-7 h-7 animate-spin text-amber-500" />
-                                    <span className="text-[11px] text-gray-400 dark:text-gray-500">Loading tests...</span>
-                                </div>
-                            </div>
-                        ) : exclusiveTests.length === 0 ? (
-                            <div className="text-center py-10 px-4">
-                                <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-amber-500/8 border border-amber-500/15 flex items-center justify-center">
-                                    <Crown className="w-8 h-8 text-amber-400/30" />
-                                </div>
-                                <p className="text-[14px] font-semibold text-gray-500 dark:text-gray-400">
-                                    No exclusive tests available
-                                </p>
-                                <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">
-                                    {exclusiveSubject !== 'All'
-                                        ? `No ${exclusiveSubject} tests right now. Try "All Subjects"!`
-                                        : "Your teachers haven't created any exclusive tests for your class yet."}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-2.5">
-                                {exclusiveTests.map((test, idx) => {
-                                    const isCompleted = completedExclusiveIds.has(test.id);
-                                    const canAttempt = exclusiveTickets >= EXCLUSIVE_TICKETS_PER_TEST && !isCompleted;
-
-                                    return (
-                                        <motion.div
-                                            key={test.id}
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.05 * idx }}
-                                            className={`relative overflow-hidden rounded-xl border p-4 pl-5 transition-all ${
-                                                isCompleted
-                                                    ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-300/30 dark:border-emerald-600/25'
-                                                    : 'bg-white dark:bg-gray-800/50 border-gray-200/60 dark:border-gray-700/60 hover:border-amber-300/40 dark:hover:border-amber-500/30'
-                                            }`}
+                                <div className="p-4 pt-3 border-t border-amber-200/30 dark:border-amber-500/10">
+                                    {/* Subject dropdown */}
+                                    <div className="relative mb-3">
+                                        <select
+                                            value={exclusiveSubject}
+                                            onChange={e => setExclusiveSubject(e.target.value)}
+                                            className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
                                         >
-                                            {/* Gold/green accent strip */}
-                                            <div
-                                                className="absolute top-0 left-0 w-1 h-full"
-                                                style={{ background: isCompleted ? '#10b981' : 'linear-gradient(to bottom, #f59e0b, #d97706)' }}
-                                            />
+                                            {['All Subjects', ...SUBJECTS.filter(s => s !== 'Combined')].map(subj => (
+                                                <option key={subj} value={subj === 'All Subjects' ? 'All' : subj}>
+                                                    {subj === 'All Subjects' ? '📚 All Subjects' : subj}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                                    </div>
 
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h4 className="text-[13px] font-bold text-gray-900 dark:text-white truncate">
-                                                            {test.title}
-                                                        </h4>
-                                                        {isCompleted && (
-                                                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-full flex-shrink-0">
-                                                                <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                                                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Done</span>
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                                                            {test.subject}
-                                                        </span>
-                                                        {test.questionCount && (
-                                                            <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                                {test.questionCount} Q
-                                                            </span>
-                                                        )}
-                                                        {test.duration && (
-                                                            <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                                {test.duration} min
-                                                            </span>
-                                                        )}
-                                                        <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                                                            <Zap className="w-3 h-3" /> +{EXCLUSIVE_TEST_XP_REWARD} XP
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                    {/* Test cards or loading/empty */}
+                                    {exclusiveLoading ? (
+                                        <div className="flex items-center justify-center py-10">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Loader2 className="w-7 h-7 animate-spin text-amber-500" />
+                                                <span className="text-[11px] text-gray-400 dark:text-gray-500">Loading tests...</span>
+                                            </div>
+                                        </div>
+                                    ) : exclusiveTests.length === 0 ? (
+                                        <div className="text-center py-10 px-4">
+                                            <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-amber-500/8 border border-amber-500/15 flex items-center justify-center">
+                                                <Crown className="w-8 h-8 text-amber-400/30" />
+                                            </div>
+                                            <p className="text-[14px] font-semibold text-gray-500 dark:text-gray-400">
+                                                No exclusive tests available
+                                            </p>
+                                            <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">
+                                                {exclusiveSubject !== 'All'
+                                                    ? `No ${exclusiveSubject} tests right now. Try "All Subjects"!`
+                                                    : "Your teachers haven't created any exclusive tests for your class yet."}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2.5">
+                                            {exclusiveTests.map((test, idx) => {
+                                                const isCompleted = completedExclusiveIds.has(test.id);
+                                                const canAttempt = exclusiveTickets >= EXCLUSIVE_TICKETS_PER_TEST && !isCompleted;
 
-                                                {isCompleted ? (
-                                                    <div className="px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold flex-shrink-0">
-                                                        Completed ✓
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => canAttempt ? setExclusiveConfirm(test) : undefined}
-                                                        disabled={!canAttempt}
-                                                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40 ${
-                                                            canAttempt
-                                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm shadow-amber-500/20 hover:shadow-md'
-                                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+                                                return (
+                                                    <motion.div
+                                                        key={test.id}
+                                                        initial={{ opacity: 0, y: 8 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: 0.05 * idx }}
+                                                        className={`relative overflow-hidden rounded-xl border p-4 pl-5 transition-all ${
+                                                            isCompleted
+                                                                ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-300/30 dark:border-emerald-600/25'
+                                                                : 'bg-white dark:bg-gray-800/50 border-gray-200/60 dark:border-gray-700/60 hover:border-amber-300/40 dark:hover:border-amber-500/30'
                                                         }`}
                                                     >
-                                                        🎟️ {EXCLUSIVE_TICKETS_PER_TEST}
-                                                        <span>{canAttempt ? 'Attempt' : `Need ${EXCLUSIVE_TICKETS_PER_TEST - exclusiveTickets} more`}</span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                                        {/* Gold/green accent strip */}
+                                                        <div
+                                                            className="absolute top-0 left-0 w-1 h-full"
+                                                            style={{ background: isCompleted ? '#10b981' : 'linear-gradient(to bottom, #f59e0b, #d97706)' }}
+                                                        />
 
-                        {/* Ticket info footer */}
-                        <div className="flex items-center justify-center gap-1.5 mt-3 py-2 px-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/30 dark:border-amber-500/10">
-                            <span className="text-xs">🎟️</span>
-                            <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60 font-medium">
-                                Earn tickets from Daily Rewards · {EXCLUSIVE_TICKETS_PER_TEST} tickets per test · 5 free on first join
-                            </p>
-                        </div>
-                    </div>
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <h4 className="text-[13px] font-bold text-gray-900 dark:text-white truncate">
+                                                                        {test.title}
+                                                                    </h4>
+                                                                    {isCompleted && (
+                                                                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-full flex-shrink-0">
+                                                                            <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                                                            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Done</span>
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                                                                        {test.subject}
+                                                                    </span>
+                                                                    {test.questionCount && (
+                                                                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                                                            {test.questionCount} Q
+                                                                        </span>
+                                                                    )}
+                                                                    {test.duration && (
+                                                                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                                                            {test.duration} min
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                                                                        <Zap className="w-3 h-3" /> +{EXCLUSIVE_TEST_XP_REWARD} XP
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            {isCompleted ? (
+                                                                <div className="px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold flex-shrink-0">
+                                                                    Completed ✓
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => canAttempt ? setExclusiveConfirm(test) : undefined}
+                                                                    disabled={!canAttempt}
+                                                                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40 ${
+                                                                        canAttempt
+                                                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm shadow-amber-500/20 hover:shadow-md'
+                                                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+                                                                    }`}
+                                                                >
+                                                                    🎟️ {EXCLUSIVE_TICKETS_PER_TEST}
+                                                                    <span>{canAttempt ? 'Attempt' : `Need ${EXCLUSIVE_TICKETS_PER_TEST - exclusiveTickets} more`}</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Ticket info footer */}
+                                    <div className="flex items-center justify-center gap-1.5 mt-3 py-2 px-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/30 dark:border-amber-500/10">
+                                        <span className="text-xs">🎟️</span>
+                                        <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60 font-medium">
+                                            Earn tickets from Daily Rewards · {EXCLUSIVE_TICKETS_PER_TEST} tickets per test · 5 free on first join
+                                        </p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </motion.div>
 
