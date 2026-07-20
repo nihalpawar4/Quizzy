@@ -21,6 +21,7 @@ import {
     Menu,
     Bot,
     Diamond,
+    Swords,
     Star,
     Lock,
     BookOpen as BookOpenIcon,
@@ -375,6 +376,20 @@ export default function StudentSidebar({
                     </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quizy Premium</span>
                 </Link>
+                {/* Play Arena */}
+                <a
+                    href="https://quizy-arena.vercel.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowProfileDropdown(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50/80 dark:hover:bg-purple-900/10 transition-colors group"
+                >
+                    <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                        <Swords className="w-3.5 h-3.5 text-purple-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Play Arena</span>
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold">NEW</span>
+                </a>
                 {/* My Reports */}
                 <button
                     onClick={() => { setShowProfileDropdown(false); onTabChange('reports'); }}
