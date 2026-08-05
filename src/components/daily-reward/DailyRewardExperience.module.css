@@ -1,0 +1,1003 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Daily Reward Experience — Premium Design System
+   Linear × Arc Browser × Stripe × Apple inspired
+   Dark/Light mode | Glassmorphism | CSS Animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+
+:root {
+    --dr-primary: #0EA5E9;
+    --dr-primary-soft: rgba(14, 165, 233, 0.15);
+    --dr-secondary: #38BDF8;
+    --dr-bg: #020617;
+    --dr-surface: rgba(2, 6, 23, 0.82);
+    --dr-glass-border: rgba(14, 165, 233, 0.08);
+    --dr-glass-blur: 24px;
+    --dr-text-primary: #f1f5f9;
+    --dr-text-secondary: rgba(148, 163, 184, 0.75);
+    --dr-text-muted: rgba(100, 116, 139, 0.6);
+    --dr-font: 'Inter', system-ui, -apple-system, sans-serif;
+    --dr-font-display: var(--font-manrope, 'Inter', system-ui, sans-serif);
+    --dr-radius-card: 28px;
+    --dr-radius-button: 14px;
+    --dr-radius-badge: 8px;
+    --dr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --dr-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Rarity palette */
+    --rarity-common: #94a3b8;
+    --rarity-uncommon: #60a5fa;
+    --rarity-rare: #38bdf8;
+    --rarity-epic: #a78bfa;
+    --rarity-legendary: #fbbf24;
+}
+
+/* Light mode overrides */
+@media (prefers-color-scheme: light) {
+    :root {
+        --dr-bg: #f8fafc;
+        --dr-surface: rgba(255, 255, 255, 0.82);
+        --dr-glass-border: rgba(14, 165, 233, 0.12);
+        --dr-text-primary: #0f172a;
+        --dr-text-secondary: rgba(71, 85, 105, 0.8);
+        --dr-text-muted: rgba(100, 116, 139, 0.5);
+    }
+}
+
+/* ─── Fullscreen Overlay ─────────────────────────────────────────────────── */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.backdropDark {
+    background: rgba(2, 6, 23, 0.92);
+    backdrop-filter: blur(20px) saturate(1.1);
+    -webkit-backdrop-filter: blur(20px) saturate(1.1);
+}
+
+@media (prefers-color-scheme: light) {
+    .backdropDark {
+        background: rgba(248, 250, 252, 0.88);
+    }
+}
+
+/* Subtle grid background */
+.gridBg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(14, 165, 233, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14, 165, 233, 0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 40%, transparent 100%);
+    pointer-events: none;
+}
+
+@media (prefers-color-scheme: light) {
+    .gridBg {
+        background-image:
+            linear-gradient(rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
+    }
+}
+
+/* Center spotlight */
+.spotlight {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+@media (prefers-color-scheme: light) {
+    .spotlight {
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, transparent 70%);
+    }
+}
+
+/* ─── Skip & Mute Buttons ────────────────────────────────────────────────── */
+
+.topControls {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 50;
+}
+
+.skipButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--dr-text-secondary);
+    font-family: var(--dr-font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s var(--dr-ease-out);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.skipButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--dr-text-primary);
+}
+
+@media (prefers-color-scheme: light) {
+    .skipButton {
+        background: rgba(0, 0, 0, 0.04);
+        border-color: rgba(0, 0, 0, 0.06);
+        color: var(--dr-text-secondary);
+    }
+    .skipButton:hover {
+        background: rgba(0, 0, 0, 0.08);
+    }
+}
+
+.muteButton {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--dr-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.muteButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--dr-text-secondary);
+}
+
+@media (prefers-color-scheme: light) {
+    .muteButton {
+        background: rgba(0, 0, 0, 0.04);
+        border-color: rgba(0, 0, 0, 0.06);
+    }
+    .muteButton:hover {
+        background: rgba(0, 0, 0, 0.08);
+    }
+}
+
+/* ─── Entry Phase ────────────────────────────────────────────────────────── */
+
+.entryContent {
+    text-align: center;
+    max-width: 400px;
+    padding: 0 24px;
+}
+
+.entryLabel {
+    font-family: var(--dr-font);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--dr-primary);
+    margin: 0 0 12px;
+}
+
+.entryHeadline {
+    font-family: var(--dr-font-display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--dr-text-primary);
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+}
+
+.entrySubtext {
+    font-family: var(--dr-font);
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--dr-text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ─── Capsule Phase Layout ───────────────────────────────────────────────── */
+
+.capsuleLayout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 440px;
+    padding: 0 20px;
+}
+
+.sceneContainer {
+    width: min(280px, 70vw);
+    height: min(280px, 70vw);
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* ─── Streak Timeline ────────────────────────────────────────────────────── */
+
+.streakTimeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 8px;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 340px;
+}
+
+.streakDay {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.streakDot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--dr-font);
+    border: 2px solid rgba(148, 163, 184, 0.15);
+    background: transparent;
+    color: var(--dr-text-muted);
+    transition: all 0.4s var(--dr-ease-out);
+    position: relative;
+    z-index: 2;
+}
+
+.streakDotCompleted {
+    composes: streakDot;
+    border-color: var(--dr-primary);
+    background: var(--dr-primary);
+    color: #fff;
+}
+
+.streakDotCurrent {
+    composes: streakDot;
+    border-color: var(--dr-primary);
+    color: var(--dr-primary);
+    animation: streakPulse 2s ease-in-out infinite;
+}
+
+.streakDotStar {
+    composes: streakDot;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+}
+
+.streakDotStarCompleted {
+    composes: streakDotStar;
+    border-color: var(--rarity-legendary);
+    background: var(--rarity-legendary);
+    color: #fff;
+}
+
+.streakConnector {
+    position: absolute;
+    top: 13px;
+    left: calc(50% + 16px);
+    right: calc(-50% + 16px);
+    height: 2px;
+    background: rgba(148, 163, 184, 0.12);
+    z-index: 1;
+}
+
+.streakConnectorFilled {
+    composes: streakConnector;
+    background: var(--dr-primary);
+}
+
+.streakLabel {
+    font-family: var(--dr-font);
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--dr-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.streakLabelActive {
+    composes: streakLabel;
+    color: var(--dr-primary);
+}
+
+@keyframes streakPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(14, 165, 233, 0); }
+}
+
+/* ─── Swipe to Unlock ────────────────────────────────────────────────────── */
+
+.swipeContainer {
+    width: 100%;
+    max-width: 320px;
+    margin-top: 8px;
+}
+
+.swipeTrack {
+    position: relative;
+    width: 100%;
+    height: 52px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+@media (prefers-color-scheme: light) {
+    .swipeTrack {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+}
+
+.swipeProgress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), rgba(14, 165, 233, 0.15));
+    border-radius: 26px;
+    pointer-events: none;
+    transition: width 0.05s linear;
+}
+
+.swipeKnob {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: var(--dr-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    position: relative;
+    z-index: 3;
+    margin-left: 4px;
+    box-shadow: 0 2px 12px rgba(14, 165, 233, 0.25);
+    touch-action: none;
+}
+
+.swipeKnob:active {
+    cursor: grabbing;
+}
+
+.swipeKnobIcon {
+    color: #fff;
+    display: flex;
+    align-items: center;
+}
+
+.swipeLabel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--dr-font);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dr-text-muted);
+    pointer-events: none;
+    padding-left: 48px;
+    letter-spacing: 0.02em;
+    animation: swipeLabelPulse 3s ease-in-out infinite;
+}
+
+@keyframes swipeLabelPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* ─── Reward Card (Reveal Phase) ─────────────────────────────────────────── */
+
+.revealContainer {
+    width: 100%;
+    max-width: 380px;
+    padding: 0 20px;
+}
+
+.rewardCard {
+    width: 100%;
+    background: var(--dr-surface);
+    backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.3);
+    -webkit-backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.3);
+    border: 1px solid var(--dr-glass-border);
+    border-radius: var(--dr-radius-card);
+    padding: 28px 24px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Top highlight line */
+.rewardCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.25), transparent);
+}
+
+/* Subtle inner glow */
+.rewardCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.03), transparent);
+    pointer-events: none;
+    border-radius: var(--dr-radius-card) var(--dr-radius-card) 0 0;
+}
+
+@media (prefers-color-scheme: light) {
+    .rewardCard::after {
+        background: linear-gradient(180deg, rgba(14, 165, 233, 0.05), transparent);
+    }
+}
+
+/* Icon */
+.rewardIconWrap {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.rewardIconWrapCommon { background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.1); }
+.rewardIconWrapUncommon { background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.1); }
+.rewardIconWrapRare { background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.1); }
+.rewardIconWrapEpic { background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.1); }
+.rewardIconWrapLegendary { background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.1); }
+
+.rewardIcon {
+    font-size: 24px;
+    line-height: 1;
+    color: var(--dr-text-primary);
+}
+
+/* Illustration SVG color classes */
+.illustrationGold { color: var(--rarity-legendary); }
+.illustrationCyan { color: var(--rarity-rare); }
+.illustrationBlue { color: var(--rarity-uncommon); }
+.illustrationGreen { color: #34d399; }
+.illustrationAmber { color: #f59e0b; }
+.illustrationYellow { color: #fbbf24; }
+.illustrationPurple { color: #a78bfa; }
+
+/* Title */
+.rewardTitle {
+    font-family: var(--dr-font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--dr-text-primary);
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Rarity badge */
+.rarityBadge {
+    display: inline-block;
+    font-family: var(--dr-font);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 3px 10px;
+    border-radius: var(--dr-radius-badge);
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.rarityCommon { color: var(--rarity-common); background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.12); }
+.rarityUncommon { color: var(--rarity-uncommon); background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.12); }
+.rarityRare { color: var(--rarity-rare); background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.12); }
+.rarityEpic { color: var(--rarity-epic); background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.12); }
+.rarityLegendary { color: var(--rarity-legendary); background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.12); }
+
+/* Description */
+.rewardDescription {
+    font-family: var(--dr-font);
+    font-size: 14px;
+    color: var(--dr-text-secondary);
+    margin: 0 0 14px;
+    line-height: 1.55;
+    position: relative;
+    z-index: 1;
+}
+
+/* Content block (quote, fact, question) */
+.rewardContent {
+    font-family: var(--dr-font);
+    font-size: 13.5px;
+    color: var(--dr-text-primary);
+    line-height: 1.6;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    margin-bottom: 14px;
+    text-align: left;
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-color-scheme: light) {
+    .rewardContent {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: rgba(0, 0, 0, 0.06);
+    }
+}
+
+.rewardContentQuestion {
+    composes: rewardContent;
+    font-weight: 500;
+}
+
+/* XP badge row */
+.badgeRow {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.xpBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--dr-font);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dr-primary);
+    background: var(--dr-primary-soft);
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(14, 165, 233, 0.15);
+}
+
+.xpBadgeLabel {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+/* XP display (in claim/header) */
+.xpDisplay {
+    font-family: var(--dr-font);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dr-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 50;
+}
+
+.xpDisplayValue {
+    color: var(--dr-primary);
+    font-weight: 700;
+}
+
+/* ─── Challenge Options ──────────────────────────────────────────────────── */
+
+.optionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.optionButton {
+    padding: 11px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--dr-text-primary);
+    font-family: var(--dr-font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s var(--dr-ease-out);
+    text-align: left;
+}
+
+.optionButton:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+    .optionButton {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+    .optionButton:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+}
+
+.optionCorrect {
+    composes: optionButton;
+    border-color: rgba(52, 211, 153, 0.4);
+    background: rgba(52, 211, 153, 0.08);
+    color: #34d399;
+    cursor: default;
+}
+
+.optionWrong {
+    composes: optionButton;
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.06);
+    color: rgba(248, 113, 113, 0.8);
+    cursor: default;
+}
+
+.optionDisabled {
+    composes: optionButton;
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* ─── Spin Wheel ─────────────────────────────────────────────────────────── */
+
+.spinWheelContainer {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 16px;
+    z-index: 1;
+}
+
+.spinWheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid var(--dr-glass-border);
+    position: relative;
+    overflow: hidden;
+}
+
+.spinSegment {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    transform-origin: 100% 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--dr-font);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.spinPointer {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 14px solid var(--dr-primary);
+    z-index: 5;
+}
+
+.spinButton {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--dr-primary);
+    border: 3px solid var(--dr-bg);
+    color: #fff;
+    font-family: var(--dr-font);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 5;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ─── Memory Game ────────────────────────────────────────────────────────── */
+
+.memoryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.memoryCard {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s var(--dr-ease-out);
+    position: relative;
+}
+
+.memoryCard:hover {
+    border-color: rgba(14, 165, 233, 0.2);
+}
+
+.memoryCardFlipped {
+    composes: memoryCard;
+    background: var(--dr-primary-soft);
+    border-color: rgba(14, 165, 233, 0.2);
+    cursor: default;
+}
+
+.memoryCardMatched {
+    composes: memoryCard;
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.3);
+    cursor: default;
+}
+
+.memoryCardBack {
+    font-size: 14px;
+    color: var(--dr-text-muted);
+}
+
+@media (prefers-color-scheme: light) {
+    .memoryCard {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+}
+
+/* ─── Claim / CTA Button ────────────────────────────────────────────────── */
+
+.claimButton {
+    width: 100%;
+    padding: 14px 24px;
+    border: none;
+    border-radius: var(--dr-radius-button);
+    background: var(--dr-primary);
+    color: #fff;
+    font-family: var(--dr-font);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: all 0.2s var(--dr-ease-out);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.claimButton:hover {
+    background: #0d94d0;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px -4px rgba(14, 165, 233, 0.3);
+}
+
+.claimButton:active {
+    transform: translateY(0);
+}
+
+.claimButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Shimmer effect on CTA */
+.claimButton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    animation: ctaShimmer 4s ease-in-out infinite 1.5s;
+}
+
+@keyframes ctaShimmer {
+    0%, 70%, 100% { left: -100%; }
+    85% { left: 100%; }
+}
+
+/* ─── Claim Animation ───────────────────────────────────────────────────── */
+
+.claimOverlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.xpOrb {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dr-primary);
+    box-shadow: 0 0 8px rgba(14, 165, 233, 0.4);
+    pointer-events: none;
+}
+
+/* ─── Confetti ───────────────────────────────────────────────────────────── */
+
+.confettiContainer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10001;
+    overflow: hidden;
+}
+
+.confettiPiece {
+    position: absolute;
+    width: 6px;
+    height: 10px;
+    border-radius: 1px;
+    top: -10px;
+    animation: confettiFall 2.5s ease-in forwards;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(0) rotateZ(0deg) rotateX(0deg);
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotateZ(720deg) rotateX(360deg);
+        opacity: 0;
+    }
+}
+
+/* ─── Screen Shake ───────────────────────────────────────────────────────── */
+
+.screenShake {
+    animation: shake 0.4s ease-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-2px, 1px); }
+    20% { transform: translate(2px, -1px); }
+    30% { transform: translate(-1px, 2px); }
+    40% { transform: translate(1px, -1px); }
+    50% { transform: translate(-1px, 1px); }
+    60% { transform: translate(1px, 0px); }
+    70% { transform: translate(-1px, -1px); }
+    80% { transform: translate(1px, 1px); }
+    90% { transform: translate(0px, -1px); }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+/* Mobile: bottom-sheet style */
+@media (max-width: 640px) {
+    .overlay {
+        justify-content: flex-end;
+        padding-bottom: 0;
+    }
+
+    .capsuleLayout {
+        padding: 0 16px;
+    }
+
+    .revealContainer {
+        padding: 0 16px 24px;
+        max-width: 100%;
+    }
+
+    .rewardCard {
+        border-radius: var(--dr-radius-card) var(--dr-radius-card) 0 0;
+    }
+
+    .sceneContainer {
+        width: min(240px, 65vw);
+        height: min(240px, 65vw);
+    }
+
+    .entryHeadline {
+        font-size: 26px;
+    }
+
+    .swipeContainer {
+        max-width: 280px;
+    }
+
+    .optionsGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .revealContainer {
+        max-width: 420px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+    .overlay {
+        justify-content: center;
+    }
+}

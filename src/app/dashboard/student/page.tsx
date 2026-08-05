@@ -91,7 +91,7 @@ const ProfileSettingsTab = dynamic(() => import('@/components/ui/ProfileSettings
 const DailySurpriseReward = dynamic(() => import('@/components/DailySurpriseReward'), { ssr: false });
 const WeeklyTestCard = dynamic(() => import('@/components/WeeklyTestCard'), { ssr: false });
 const ExclusiveTestScreen = dynamic(() => import('@/components/ExclusiveTestScreen'), { ssr: false });
-const ArenaAnnouncementPopup = dynamic(() => import('@/components/ArenaAnnouncementPopup'), { ssr: false });
+
 import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
 import {
     getExclusiveTests,
@@ -902,8 +902,7 @@ export default function StudentDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 relative flex">
-            {/* Arena Announcement Popup (one-time) */}
-            <ArenaAnnouncementPopup />
+
             {/* Left Sidebar Navigation */}
             <StudentSidebar
                 activeTab={activeTab}

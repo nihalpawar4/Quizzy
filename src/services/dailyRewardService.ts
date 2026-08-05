@@ -21,7 +21,9 @@ export type RewardType =
     | 'streak_protection'
     | 'challenge_ticket'
     | 'premium_trial'
-    | 'legendary';
+    | 'legendary'
+    | 'spin_wheel'
+    | 'memory_game';
 
 export interface RewardData {
     type: RewardType;
@@ -59,16 +61,18 @@ interface WeightedReward {
 }
 
 const REWARD_WEIGHTS: WeightedReward[] = [
-    { type: 'motivation',         weight: 25 },
-    { type: 'fact',               weight: 20 },
-    { type: 'brain_teaser',       weight: 15 },
-    { type: 'math_challenge',     weight: 10 },
+    { type: 'motivation',         weight: 20 },
+    { type: 'fact',               weight: 15 },
+    { type: 'brain_teaser',       weight: 12 },
+    { type: 'math_challenge',     weight: 8  },
     { type: 'bonus_xp',           weight: 10 },
-    { type: 'xp_boost',           weight: 8  },
+    { type: 'xp_boost',           weight: 7  },
     { type: 'streak_protection',  weight: 5  },
-    { type: 'challenge_ticket',   weight: 8  },
+    { type: 'challenge_ticket',   weight: 7  },
     { type: 'premium_trial',      weight: 2  },
     { type: 'legendary',          weight: 1  },
+    { type: 'spin_wheel',         weight: 7  },
+    { type: 'memory_game',        weight: 6  },
 ];
 
 // ─── Content Pools ─────────────────────────────────────────────────────
@@ -729,6 +733,32 @@ function generateRewardData(type: RewardType): RewardData {
                 coins: 0,
                 icon: 'sparkles',
                 rarity: 'legendary',
+            };
+        }
+
+        case 'spin_wheel': {
+            return {
+                type: 'spin_wheel',
+                title: 'Lucky Spin',
+                description: 'Spin the wheel to win XP!',
+                content: 'Tap SPIN to try your luck.',
+                xp: 10, // Default; actual XP determined by wheel result
+                coins: 0,
+                icon: 'sparkles',
+                rarity: 'uncommon',
+            };
+        }
+
+        case 'memory_game': {
+            return {
+                type: 'memory_game',
+                title: 'Memory Match',
+                description: 'Match the pairs to earn bonus XP!',
+                content: 'Flip cards and find the matching pairs.',
+                xp: 10, // Default; actual XP determined by performance
+                coins: 0,
+                icon: 'puzzle',
+                rarity: 'uncommon',
             };
         }
 

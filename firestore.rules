@@ -390,5 +390,114 @@ service cloud.firestore {
       // Only teachers can delete (admin cleanup)
       allow delete: if isTeacher();
     }
+    
+    // ==================== USERNAMES COLLECTION ====================
+    
+    match /usernames/{username} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+    }
+    
+    // ==========================================================
+    // QUIZY ARENA — Brain Training Games Collections
+    // ==========================================================
+    
+    // arena_profiles/{uid} — Arena game profile (XP, skills, levels, streaks)
+    match /arena_profiles/{uid} {
+      // Any authenticated user can read (needed for leaderboards, friend profiles)
+      allow read: if isAuthenticated();
+      // Only the profile owner can write
+      allow write: if isOwner(uid);
+    }
+    
+    // arena_sessions/{sessionId} — Game session logs
+    match /arena_sessions/{sessionId} {
+      // Users can read their own sessions
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      // Users can create sessions for themselves
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // arena_games/{gameId} — Game catalog (read-only for clients)
+    match /arena_games/{gameId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // arena_worlds/{worldId} — World catalog (read-only for clients)
+    match /arena_worlds/{worldId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // arena_matches/{matchId} — Multiplayer matches
+    match /arena_matches/{matchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+    }
+    
+    // arena_leaderboards/{boardId} — Leaderboards (read-only)
+    match /arena_leaderboards/{boardId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // arena_seasons/{seasonId} — Season catalog (read-only)
+    match /arena_seasons/{seasonId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // arena_season_progress/{progressId} — Player season progress
+    match /arena_season_progress/{progressId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // arena_missions/{missionId} — Mission catalog (read-only)
+    match /arena_missions/{missionId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // arena_mission_progress/{progressId} — Mission progress
+    match /arena_mission_progress/{progressId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // arena_chests/{chestId} — Treasure chests
+    match /arena_chests/{chestId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // arena_stars/{starId} — Star records per game
+    match /arena_stars/{starId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // achievements_catalog/{id} — Achievement catalog (read-only)
+    match /achievements_catalog/{id} {
+      allow read: if isAuthenticated();
+    }
+    
+    // user_achievements/{id} — User achievement progress
+    match /user_achievements/{id} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+    }
   }
 }

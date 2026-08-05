@@ -136,3 +136,24 @@ export function playSuccess(): void {
     playTone(659, 0.15, 'sine', 0.1, 0.1);   // E5
     playTone(1047, 0.3, 'sine', 0.08, 0.2);  // C6
 }
+
+/** Rising pitch — swipe progress (call sparingly) */
+export function playSwipeProgress(progress: number): void {
+    const freq = 300 + progress * 400; // 300–700 Hz range
+    playTone(freq, 0.04, 'sine', 0.04);
+}
+
+/** Deep crack — capsule opening */
+export function playCapsuleCrack(): void {
+    playNoise(0.15, 0.08, 1200);
+    playTone(120, 0.1, 'square', 0.06);
+    playTone(80, 0.15, 'sine', 0.04, 0.05);
+}
+
+/** Special chime — streak milestone */
+export function playStreakMilestone(): void {
+    playTone(523, 0.12, 'sine', 0.08);       // C5
+    playTone(659, 0.12, 'sine', 0.08, 0.08); // E5
+    playTone(784, 0.12, 'sine', 0.08, 0.16); // G5
+    playTone(1047, 0.25, 'sine', 0.06, 0.24); // C6
+}
