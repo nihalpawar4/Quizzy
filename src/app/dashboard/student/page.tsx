@@ -901,7 +901,7 @@ export default function StudentDashboard() {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 relative flex">
+        <div className="min-h-screen bg-[#F5F7FA] dark:bg-[#0F172A] relative flex">
 
             {/* Left Sidebar Navigation */}
             <StudentSidebar
@@ -935,7 +935,7 @@ export default function StudentDashboard() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -100 }}
                         onClick={() => setNewTestNotification(null)}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-[#1650EB] to-[#1650EB] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-[#2563EB] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
                     >
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                             <Bell className="w-6 h-6 text-white animate-bounce" />
@@ -964,7 +964,7 @@ export default function StudentDashboard() {
                             setActiveTab('reports');
                             setNewReportsCount(0);
                         }}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-[#10B981] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
                     >
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                             <FileText className="w-6 h-6 text-white animate-bounce" />
@@ -1289,7 +1289,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        className="mb-5 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-4 text-white shadow-lg shadow-green-500/20"
+                        className="mb-5 bg-[#10B981] rounded-2xl p-4 text-white shadow-md"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -1341,7 +1341,7 @@ export default function StudentDashboard() {
                                     }}
                                     className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all border ${
                                         showFilters || filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All'
-                                            ? 'bg-[#1650EB] text-white shadow-lg shadow-[#1650EB]/20 border-[#1650EB]'
+                                            ? 'bg-[#2563EB] text-white shadow-lg shadow-[#2563EB]/20 border-[#2563EB]'
                                             : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700 border-gray-200 dark:border-gray-800 shadow-sm'
                                     }`}
                                 >
@@ -1371,7 +1371,7 @@ export default function StudentDashboard() {
                                     }}
                                     className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all border ${
                                         showDailyHistory
-                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 border-amber-500'
+                                            ? 'bg-amber-500 text-white shadow-md border-amber-500'
                                             : 'bg-white dark:bg-gray-900 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-700 shadow-sm'
                                     }`}
                                 >
@@ -1394,7 +1394,7 @@ export default function StudentDashboard() {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -8, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[28px] border border-gray-200/80 dark:border-gray-800/80 p-5 space-y-4 shadow-2xl shadow-black/5"
+                                            className="absolute left-0 right-0 z-50 bg-white dark:bg-[#111827] rounded-[28px] border border-gray-200 dark:border-gray-800 p-5 space-y-4 shadow-2xl shadow-black/5"
                                         >
                                             {/* Subject Filter — Dropdown */}
                                             <div>
@@ -1411,7 +1411,7 @@ export default function StudentDashboard() {
                                                             });
                                                             setTimeout(() => setShowFilters(false), 200);
                                                         }}
-                                                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-[#1650EB] focus:ring-2 focus:ring-[#1650EB]/20 outline-none"
+                                                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none"
                                                     >
                                                         <option value="All">📚 All Subjects</option>
                                                         {Array.from(new Set(tests.map(t => t.subject))).map(subject => (
@@ -1442,7 +1442,7 @@ export default function StudentDashboard() {
                                                                 filterType === type
                                                                     ? type === 'PDF' ? 'bg-purple-500 text-white shadow-sm'
                                                                         : type === 'Quiz' ? 'bg-emerald-500 text-white shadow-sm'
-                                                                        : 'bg-[#1650EB] text-white shadow-sm'
+                                                                        : 'bg-[#2563EB] text-white shadow-sm'
                                                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                                             }`}
                                                         >
@@ -1476,7 +1476,7 @@ export default function StudentDashboard() {
                                                                     ? status === 'Completed' ? 'bg-green-500 text-white shadow-sm'
                                                                         : status === 'Expired' ? 'bg-red-500 text-white shadow-sm'
                                                                         : status === 'Pending' ? 'bg-amber-500 text-white shadow-sm'
-                                                                        : 'bg-[#1650EB] text-white shadow-sm'
+                                                                        : 'bg-[#2563EB] text-white shadow-sm'
                                                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                                             }`}
                                                         >
@@ -1494,7 +1494,7 @@ export default function StudentDashboard() {
                                             {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
                                                 <button
                                                     onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); setFilterTouched(new Set()); }}
-                                                    className="text-xs text-[#1650EB] hover:text-[#1243c7] font-medium flex items-center gap-1"
+                                                    className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1"
                                                 >
                                                     <X className="w-3 h-3" />
                                                     Clear all filters
@@ -1509,7 +1509,7 @@ export default function StudentDashboard() {
                             <AnimatePresence>
                                 {showDailyHistory && (
                                     <>
-                                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55]" onClick={() => setShowDailyHistory(false)} />
+                                        <div className="fixed inset-0 bg-black/50 z-[55]" onClick={() => setShowDailyHistory(false)} />
                                         <motion.div
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
@@ -1633,15 +1633,15 @@ export default function StudentDashboard() {
                         {(filterSubject !== 'All' || filterType !== 'All' || filterStatus !== 'All') && (
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                                 Showing {filteredTests.length} of {tests.length} tests
-                                {filterSubject !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterSubject}</span>}
-                                {filterType !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterType === 'PDF' ? 'PDF Papers' : 'Quizzes'}</span>}
-                                {filterStatus !== 'All' && <span className="font-medium text-[#1650EB]"> • {filterStatus}</span>}
+                                {filterSubject !== 'All' && <span className="font-medium text-[#2563EB]"> • {filterSubject}</span>}
+                                {filterType !== 'All' && <span className="font-medium text-[#2563EB]"> • {filterType === 'PDF' ? 'PDF Papers' : 'Quizzes'}</span>}
+                                {filterStatus !== 'All' && <span className="font-medium text-[#2563EB]"> • {filterStatus}</span>}
                             </p>
                         )}
 
                         {loading && tests.length === 0 ? (
                             <div className="flex items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 text-[#1650EB] animate-spin" />
+                                <Loader2 className="w-8 h-8 text-[#2563EB] animate-spin" />
                             </div>
                         ) : filteredTests.length === 0 ? (
                             <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -1654,7 +1654,7 @@ export default function StudentDashboard() {
                                 {tests.length > 0 && (
                                     <button
                                         onClick={() => { setFilterSubject('All'); setFilterType('All'); setFilterStatus('All'); }}
-                                        className="mt-3 text-sm text-[#1650EB] hover:text-[#1243c7] font-medium"
+                                        className="mt-3 text-sm text-[#2563EB] hover:text-[#1D4ED8] font-medium"
                                     >
                                         Clear filters
                                     </button>
@@ -1709,7 +1709,7 @@ export default function StudentDashboard() {
                                     const totalMarks = test.marksPerQuestion && test.questionCount ? test.marksPerQuestion * test.questionCount : null;
 
                                     return (
-                                        <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-[24px] border ${isExpanded ? 'border-[#1650EB]/20 ring-1 ring-[#1650EB]/5 shadow-lg shadow-[#1650EB]/5' : `${iconSvgConfig.border} hover:shadow-md`} overflow-hidden ${isExpired ? 'opacity-55' : ''} transition-all duration-200`}>
+                                        <div key={test.id} className={`bg-white dark:bg-gray-900 rounded-[24px] border ${isExpanded ? 'border-[#2563EB]/20 ring-1 ring-[#2563EB]/5 shadow-lg shadow-[#2563EB]/5' : `${iconSvgConfig.border} hover:shadow-md`} overflow-hidden ${isExpired ? 'opacity-55' : ''} transition-all duration-200`}>
                                             {/* Main Row */}
                                             <div
                                                 className="flex items-center gap-3 sm:gap-3.5 px-3 sm:px-4 py-3 sm:py-4 cursor-pointer"
@@ -1779,7 +1779,7 @@ export default function StudentDashboard() {
                                                     {hasTaken ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setExpandedTestId(expandedTestId === test.id ? null : test.id); }}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-[#2563EB] text-white hover:bg-[#1D4ED8] hover:shadow-md transition-all active:scale-95"
                                                         >
                                                             View Result <ArrowRight className="w-3 h-3" />
                                                         </button>
@@ -1794,7 +1794,7 @@ export default function StudentDashboard() {
                                                     ) : isPdf ? (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setSelectedPdfTest(test); }}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] text-white hover:shadow-lg hover:shadow-[#1650EB]/20 transition-all active:scale-95"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-[#2563EB] text-white hover:bg-[#1D4ED8] hover:shadow-md transition-all active:scale-95"
                                                         >
                                                             Start <ArrowRight className="w-3 h-3" />
                                                         </button>
@@ -1803,8 +1803,8 @@ export default function StudentDashboard() {
                                                             href={`/test/${test.id}`}
                                                             onClick={(e) => e.stopPropagation()}
                                                             className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full text-white hover:shadow-lg transition-all active:scale-95 ${hasActiveSession
-                                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-orange-500/20'
-                                                                : 'bg-gradient-to-r from-[#1650EB] to-[#4f5bd5] hover:shadow-[#1650EB]/20'
+                                                                ? 'bg-amber-500 hover:bg-amber-600'
+                                                                : 'bg-[#2563EB] hover:bg-[#1D4ED8]'
                                                             }`}
                                                         >
                                                             {hasActiveSession ? 'Resume' : 'Start'} <ArrowRight className="w-3 h-3" />
@@ -1891,7 +1891,7 @@ export default function StudentDashboard() {
                                                                     {/* View Full Report Button */}
                                                                     <button
                                                                         onClick={() => setSelectedReport(result)}
-                                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1650EB] text-white rounded-xl font-medium text-sm hover:bg-[#1243c7] transition-colors"
+                                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2563EB] text-white rounded-xl font-medium text-sm hover:bg-[#1D4ED8] transition-colors"
                                                                     >
                                                                         <FileText className="w-4 h-4" /> View Full Report
                                                                     </button>
@@ -1991,11 +1991,11 @@ export default function StudentDashboard() {
                                                                         <Link
                                                                             href={`/test/${test.id}`}
                                                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-medium text-sm transition-colors ${hasActiveSession
-                                                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
-                                                                                : 'bg-[#1650EB] hover:bg-[#1243c7]'
+                                                                                ? 'bg-amber-500 hover:bg-amber-600'
+                                                                                : 'bg-blue-600 hover:bg-blue-700'
                                                                             }`}
                                                                         >
-                                                                            {hasActiveSession ? '🔄 Resume Test' : 'Start Test'} <ArrowRight className="w-4 h-4" />
+                                                                            {hasActiveSession ? 'Resume Test' : 'Start Test'} <ArrowRight className="w-4 h-4" />
                                                                         </Link>
                                                                     )
                                                                 )}
@@ -2070,7 +2070,7 @@ export default function StudentDashboard() {
                         </div>
 
                         {/* Info Banner — illustration + circular gauge */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/30 border border-gray-200/80 dark:border-gray-800 p-5 sm:p-6 mb-6">
+                        <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800 p-5 sm:p-6 mb-6">
                             <div className="flex items-center justify-between">
                                 {/* Left — illustration + text */}
                                 <div className="flex items-center gap-4">
@@ -2106,7 +2106,7 @@ export default function StudentDashboard() {
                                     <div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Reports available</p>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">instantly for</p>
-                                        <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mt-0.5">24 Hours</p>
+                                        <p className="text-2xl sm:text-3xl font-bold text-[#2563EB] mt-0.5">24 Hours</p>
                                     </div>
                                 </div>
 
@@ -2411,16 +2411,16 @@ export default function StudentDashboard() {
             {/* Coming Soon Modal */}
             <AnimatePresence>
                 {showComingSoon && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setShowComingSoon(false)}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setShowComingSoon(false)}>
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="w-16 h-16 bg-gradient-to-br from-[#1650EB] to-[#1650EB] rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="w-16 h-16 bg-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Coming Soon!</h3>
                             <p className="text-gray-600 dark:text-gray-400 mb-6">
-                                <span className="font-semibold text-[#1650EB] dark:text-[#6095DB]">{comingSoonFeature}</span> is under development and will be available soon. Stay tuned!
+                                <span className="font-semibold text-[#2563EB] dark:text-[#6095DB]">{comingSoonFeature}</span> is under development and will be available soon. Stay tuned!
                             </p>
-                            <button onClick={() => setShowComingSoon(false)} className="w-full flex items-center justify-center gap-2 py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                            <button onClick={() => setShowComingSoon(false)} className="w-full flex items-center justify-center gap-2 py-3 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors">
                                 <X className="w-4 h-4" /> Close
                             </button>
                         </motion.div>
@@ -2435,7 +2435,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
+                        className="fixed inset-0 bg-black/50 z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedReport(null)}
                     >
                         <motion.div
@@ -2740,13 +2740,13 @@ export default function StudentDashboard() {
                                     {(selectedReport.evaluationStatus === 'published' || !selectedReport.evaluationMode || selectedReport.evaluationMode === 'auto') && (
                                         <button
                                             onClick={() => downloadReport(selectedReport)}
-                                            className="flex items-center gap-2 px-4 py-2 border border-[#1650EB] text-[#1650EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#1650EB]/10 transition-colors"
+                                            className="flex items-center gap-2 px-4 py-2 border border-[#2563EB] text-[#2563EB] dark:text-[#6095DB] dark:border-[#6095DB] rounded-xl font-medium hover:bg-[#2563EB]/10 transition-colors"
                                         >
                                             <Download className="w-4 h-4" />
                                             <span className="hidden sm:inline">Download PDF</span>
                                         </button>
                                     )}
-                                    <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                                    <button onClick={() => setSelectedReport(null)} className="px-4 py-2 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors">
                                         Close Report
                                     </button>
                                 </div>
@@ -2763,7 +2763,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
+                        className="fixed inset-0 bg-black/50 z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedNote(null)}
                     >
                         <motion.div
@@ -2777,7 +2777,7 @@ export default function StudentDashboard() {
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB] text-xs font-medium rounded-full">
+                                        <span className="px-2 py-1 bg-[#2563EB]/10 dark:bg-indigo-900/50 text-[#1D4ED8] dark:text-[#6095DB] text-xs font-medium rounded-full">
                                             {selectedNote.subject}
                                         </span>
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${selectedNote.contentType === 'json' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
@@ -2904,7 +2904,7 @@ export default function StudentDashboard() {
 
                             {/* Modal Footer */}
                             <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex justify-end flex-shrink-0">
-                                <button onClick={() => setSelectedNote(null)} className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors">
+                                <button onClick={() => setSelectedNote(null)} className="px-6 py-2 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors">
                                     Close
                                 </button>
                             </div>
@@ -2920,7 +2920,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
+                        className="fixed inset-0 bg-black/50 z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8"
                         onClick={() => setSelectedNotification(null)}
                     >
                         <motion.div
@@ -2997,7 +2997,7 @@ export default function StudentDashboard() {
                                 </button>
                                 <button
                                     onClick={() => setSelectedNotification(null)}
-                                    className="px-6 py-2 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                                    className="px-6 py-2 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors"
                                 >
                                     Close
                                 </button>
@@ -3015,7 +3015,7 @@ export default function StudentDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+                        className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-2 sm:p-4"
                         onClick={() => setSelectedPdfTest(null)}
                     >
                         <motion.div
@@ -3028,7 +3028,7 @@ export default function StudentDashboard() {
                             {/* Header */}
                             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-rose-400 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <FileText className="w-5 h-5 text-white" />
                                     </div>
                                     <div className="min-w-0">
@@ -3075,7 +3075,7 @@ export default function StudentDashboard() {
                                     {selectedPdfTest.pdfUrl && (
                                         <button
                                             onClick={() => downloadPdfTest(selectedPdfTest)}
-                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all"
+                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-rose-500 text-white rounded-xl font-medium hover:bg-rose-600 transition-all"
                                         >
                                             <Download className="w-4 h-4" /> Download PDF
                                         </button>
@@ -3302,14 +3302,14 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                 className="mb-8"
             >
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 border border-violet-200/40 dark:border-violet-800/30 flex items-center justify-center mb-5">
+                    <div className="w-20 h-20 rounded-3xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 flex items-center justify-center mb-5">
                         <Lock className="w-8 h-8 text-violet-400" />
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Premium Features</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">Unlock powerful learning tools including Practice Streaks, Timed Challenges, and more.</p>
                     <button
                         onClick={() => router.push('/premium')}
-                        className="px-6 py-3 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                        className="px-6 py-3 rounded-2xl text-sm font-bold text-white bg-violet-500 shadow-md hover:bg-violet-600 hover:-translate-y-0.5 transition-all flex items-center gap-2"
                     >
                         <Crown className="w-4 h-4" />
                         Upgrade to Premium
@@ -3328,13 +3328,13 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
         >
             {/* Section Header */}
             <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-violet-500 flex items-center justify-center shadow-sm shrink-0">
                     <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         Premium Features
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white tracking-wider">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500 text-white tracking-wider">
                             PRO
                         </span>
                     </h2>
@@ -3349,14 +3349,14 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12 }}
-                className="mb-6 rounded-3xl overflow-hidden border border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50 via-orange-50/50 to-yellow-50/30 dark:from-amber-950/40 dark:via-orange-950/20 dark:to-yellow-950/10 shadow-sm"
+                className="mb-6 rounded-3xl overflow-hidden border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 shadow-sm"
             >
                 {/* Streak Hero */}
                 <div className="p-5 sm:p-6">
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-3">
                             <motion.div
-                                className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25"
+                                className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center shadow-sm"
                                 animate={{ scale: [1, 1.08, 1] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                             >
@@ -3380,7 +3380,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
 
                     {/* Streak Stats */}
                     <div className="grid grid-cols-2 gap-3 mb-5">
-                        <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20">
+                        <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 border border-amber-100 dark:border-amber-900/30">
                             <p className="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mb-1">Current Streak</p>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-3xl font-black text-amber-600 dark:text-amber-400 tabular-nums">{currentStreak}</span>
@@ -3393,7 +3393,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                 </span>
                             </div>
                         </div>
-                        <div className="bg-white/70 dark:bg-gray-900/50 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/20">
+                        <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 border border-amber-100 dark:border-amber-900/30">
                             <p className="text-[10px] font-bold text-violet-600/70 dark:text-violet-400/70 uppercase tracking-wider mb-1">Longest Streak</p>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-3xl font-black text-violet-600 dark:text-violet-400 tabular-nums">{longestStreak}</span>
@@ -3497,12 +3497,12 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                         : 'border-amber-400/25 dark:border-amber-500/20 shadow-md shadow-amber-500/5'
                 }`}>
                     {/* Gold top bar */}
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500" />
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-amber-500" />
 
                     {/* ── Clickable Banner ── */}
                     <button
                         onClick={() => setExclusiveExpanded(!exclusiveExpanded)}
-                        className="relative w-full p-4 bg-gradient-to-br from-amber-50 via-yellow-50/50 to-orange-50/30 dark:from-amber-900/15 dark:via-yellow-900/10 dark:to-orange-900/8 text-left group"
+                        className="relative w-full p-4 bg-amber-50 dark:bg-amber-900/15 text-left group"
                     >
                         {/* Shimmer */}
                         <motion.div
@@ -3513,7 +3513,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
 
                         <div className="relative flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/30 flex items-center justify-center flex-shrink-0">
+                                <div className="w-11 h-11 rounded-xl bg-amber-500 shadow-sm flex items-center justify-center flex-shrink-0">
                                     <Crown className="w-5 h-5 text-white" />
                                 </div>
                                 <div className="min-w-0">
@@ -3659,7 +3659,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                                                     disabled={!canAttempt}
                                                                     className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40 ${
                                                                         canAttempt
-                                                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm shadow-amber-500/20 hover:shadow-md'
+                                                                            ? 'bg-amber-500 text-white shadow-sm hover:shadow-md'
                                                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
                                                                     }`}
                                                                 >
@@ -3696,7 +3696,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+                            className="fixed inset-0 bg-black/50 z-[60]"
                             onClick={() => setExclusiveConfirm(null)}
                         />
                         <motion.div
@@ -3706,7 +3706,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                             className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[61] max-w-sm mx-auto rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
                         >
                             {/* Gold header */}
-                            <div className="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 px-6 py-5 text-center text-white relative overflow-hidden">
+                            <div className="bg-amber-500 px-6 py-5 text-center text-white relative overflow-hidden">
                                 <motion.div
                                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
                                     animate={{ x: ['-100%', '100%'] }}
@@ -3747,7 +3747,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                     <button
                                         onClick={handleExclusiveConfirm}
                                         disabled={ticketSpending}
-                                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-amber-500 shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         {ticketSpending ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -3791,7 +3791,7 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                     {feature.description}
                                 </p>
                                 <div className="absolute top-3 right-3">
-                                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border border-gray-200/60 dark:border-gray-700/60 uppercase tracking-wider backdrop-blur-sm">
+                                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase tracking-wider">
                                         Soon
                                     </span>
                                 </div>
@@ -3922,7 +3922,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
         return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 max-w-2xl mx-auto">
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-lg">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
+                    <div className="bg-[#10B981] p-6 text-white text-center">
                         <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                             <Trophy className="w-8 h-8 text-white" />
                         </div>
@@ -3971,7 +3971,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
 
                         <button
                             onClick={exitReview}
-                            className="w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors"
+                            className="w-full py-3 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors"
                         >
                             Back to Practice Mode
                         </button>
@@ -4002,7 +4002,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <motion.div
                             animate={{ width: `${progress}%` }}
-                            className="h-2 rounded-full bg-gradient-to-r from-[#1650EB] to-green-500"
+                            className="h-2 rounded-full bg-gradient-to-r from-[#2563EB] to-green-500"
                         />
                     </div>
                 </div>
@@ -4011,7 +4011,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-lg">
                     {/* Subject & Test info */}
                     <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
-                        <span className="text-xs font-medium text-[#1650EB] dark:text-[#6095DB] bg-[#1650EB]/10 dark:bg-[#1650EB]/20 px-2.5 py-1 rounded-full">
+                        <span className="text-xs font-medium text-[#2563EB] dark:text-[#6095DB] bg-[#2563EB]/10 dark:bg-[#2563EB]/20 px-2.5 py-1 rounded-full">
                             {currentItem.subject}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -4048,8 +4048,8 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                                                 : isWrong
                                                 ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                                                 : isSelected
-                                                ? 'border-[#1650EB] bg-[#1650EB]/5'
-                                                : 'border-gray-200 dark:border-gray-700 hover:border-[#1650EB]/50 dark:hover:border-[#1650EB]/50'
+                                                ? 'border-[#2563EB] bg-[#2563EB]/5'
+                                                : 'border-gray-200 dark:border-gray-700 hover:border-[#2563EB]/50 dark:hover:border-[#2563EB]/50'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -4096,7 +4096,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 onClick={handleNext}
-                                className="mt-6 w-full py-3 bg-[#1650EB] text-white rounded-xl font-medium hover:bg-[#1243c7] transition-colors flex items-center justify-center gap-2"
+                                className="mt-6 w-full py-3 bg-[#2563EB] text-white rounded-xl font-medium hover:bg-[#1D4ED8] transition-colors flex items-center justify-center gap-2"
                             >
                                 {currentReviewIndex < reviewItems.length - 1 ? (
                                     <>Next Question <ArrowRight className="w-4 h-4" /></>
@@ -4306,7 +4306,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                            className="bg-amber-500 rounded-2xl p-5 text-white shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all"
                             onClick={() => startReview(yesterdayMistakes)}
                         >
                             <div className="flex items-center justify-between">
@@ -4328,7 +4328,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="relative overflow-hidden bg-gradient-to-r from-[#1650EB] via-[#4f5bd5] to-[#7c3aed] rounded-[28px] p-5 sm:p-6 text-white shadow-xl shadow-[#1650EB]/20 cursor-pointer hover:shadow-2xl hover:scale-[1.005] transition-all"
+                        className="relative overflow-hidden bg-[#2563EB] rounded-[28px] p-5 sm:p-6 text-white shadow-lg cursor-pointer hover:shadow-xl hover:scale-[1.005] transition-all"
                         onClick={() => startReview(mistakeItems)}
                     >
                         {/* Wave pattern overlay */}
@@ -4340,7 +4340,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                         </div>
                         <div className="relative flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0 border border-white/10">
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0 border border-white/10">
                                     <svg viewBox="0 0 32 32" fill="none" className="w-7 h-7">
                                         <rect x="4" y="4" width="24" height="18" rx="3" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.3"/>
                                         <rect x="6" y="6" width="14" height="10" rx="2" fill="white" fillOpacity="0.15"/>
@@ -4357,7 +4357,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                                     </p>
                                 </div>
                             </div>
-                            <div className="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/10 hover:bg-white/25 transition-colors">
+                            <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/10 hover:bg-white/25 transition-colors">
                                 <RefreshCw className="w-6 h-6" />
                             </div>
                         </div>
@@ -4377,7 +4377,7 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.05 * idx }}
                                         onClick={() => startReview(mistakeItems.filter(item => item.subject === subject))}
-                                        className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 hover:border-[#1650EB]/30 dark:hover:border-[#1650EB]/30 transition-all text-left group shadow-sm hover:shadow-md relative overflow-hidden"
+                                        className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3.5 hover:border-[#2563EB]/30 dark:hover:border-[#2563EB]/30 transition-all text-left group shadow-sm hover:shadow-md relative overflow-hidden"
                                     >
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2.5">
@@ -4389,11 +4389,11 @@ function PracticeModeTab({ mistakeItems, masteredCount, onRecordAttempt }: Pract
                                                     {cfg.icon}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#1650EB] transition-colors">{subject}</p>
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB] transition-colors">{subject}</p>
                                                     <p className="text-[11px] text-gray-400 mt-0.5">{count} mistake{count > 1 ? 's' : ''}</p>
                                                 </div>
                                             </div>
-                                            <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 -rotate-90 group-hover:text-[#1650EB] transition-colors flex-shrink-0" />
+                                            <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-600 -rotate-90 group-hover:text-[#2563EB] transition-colors flex-shrink-0" />
                                         </div>
                                         {/* Progress bar */}
                                         <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -4572,7 +4572,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white"
+                className="mb-6 bg-[#10B981] rounded-2xl p-5 text-white"
             >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -4662,7 +4662,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
                                             optionStyle = 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 opacity-50';
                                         }
                                     } else if (isSelected) {
-                                        optionStyle = 'bg-[#1650EB]/10 border-[#1650EB] ring-1 ring-[#1650EB]';
+                                        optionStyle = 'bg-[#2563EB]/10 border-[#2563EB] ring-1 ring-[#2563EB]';
                                     }
 
                                     return (
@@ -4721,7 +4721,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 bg-gradient-to-r from-red-500/90 to-rose-600 rounded-2xl p-5 text-white"
+                className="mb-6 bg-red-500 rounded-2xl p-5 text-white"
             >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -4747,7 +4747,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg hover:shadow-orange-500/20 transition-shadow"
+            className="mb-6 bg-amber-500 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg transition-shadow"
             onClick={async () => {
                 // Create a session before starting
                 if (!sessionIdRef.current) {
@@ -4827,13 +4827,13 @@ function HelpCenterTab() {
             {/* Hero */}
             <div className="text-center mb-8">
                 <motion.div
-                    className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/8 dark:from-blue-500/15 dark:to-violet-500/10 border border-blue-500/10 dark:border-blue-500/15 flex items-center justify-center relative"
+                    className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800/30 flex items-center justify-center relative"
                     animate={{ scale: [1, 1.04, 1], rotate: [0, 1.5, -1.5, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                    <Construction className="w-8 h-8 text-[#1650EB] dark:text-[#6095DB]" />
+                    <Construction className="w-8 h-8 text-[#2563EB] dark:text-[#6095DB]" />
                     <motion.div
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center"
                         animate={{ scale: [1, 1.25, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
                     >
@@ -4874,7 +4874,7 @@ function HelpCenterTab() {
                     {isPremium ? (
                         <Crown className="w-5 h-5 text-emerald-500" />
                     ) : (
-                        <Lock className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB]" />
+                        <Lock className="w-5 h-5 text-[#2563EB] dark:text-[#6095DB]" />
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -4891,7 +4891,7 @@ function HelpCenterTab() {
                     <button
                         onClick={(e) => { e.stopPropagation(); router.push('/premium'); }}
                         className="text-[11px] font-bold px-3.5 py-2 rounded-xl text-white flex items-center gap-1 transition-all hover:-translate-y-0.5 flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #1650EB, #8B5CF6)', boxShadow: '0 4px 14px rgba(22,80,235,0.25)' }}
+                        style={{ background: 'linear-gradient(135deg, #2563EB, #8B5CF6)', boxShadow: '0 4px 14px rgba(22,80,235,0.25)' }}
                     >
                         <Crown className="w-3 h-3" />
                         Upgrade
@@ -4906,7 +4906,7 @@ function HelpCenterTab() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 6 }}
                             className="absolute left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-lg text-[10px] font-semibold text-white whitespace-nowrap"
-                            style={{ background: 'linear-gradient(135deg, #1650EB, #8B5CF6)', top: '100%', marginTop: 6, boxShadow: '0 4px 12px rgba(22,80,235,0.3)' }}
+                            style={{ background: 'linear-gradient(135deg, #2563EB, #8B5CF6)', top: '100%', marginTop: 6, boxShadow: '0 4px 12px rgba(22,80,235,0.3)' }}
                         >
                             <div className="flex items-center gap-1">
                                 <Crown className="w-2.5 h-2.5" />
@@ -4947,8 +4947,8 @@ function HelpCenterTab() {
 
                                 {/* Lock overlay for non-premium on hover */}
                                 {!isPremium && (
-                                    <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px]">
-                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1650EB] dark:text-[#6095DB]">
+                                    <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/95 dark:bg-gray-900/95">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#2563EB] dark:text-[#6095DB]">
                                             <Lock className="w-3.5 h-3.5" />
                                             Premium Only
                                         </div>

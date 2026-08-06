@@ -91,9 +91,9 @@ export default function StudentSidebar({
             shortLabel: 'Tests',
             icon: BookOpen,
             tab: 'tests',
-            activeColor: 'bg-[#1650EB]',
+            activeColor: 'bg-[#2563EB]',
             iconBg: 'bg-blue-50 dark:bg-blue-900/20',
-            iconColor: 'text-[#1650EB]',
+            iconColor: 'text-[#2563EB]',
         },
         {
             id: 'practice',
@@ -228,23 +228,23 @@ export default function StudentSidebar({
         const content = (
             <div
                 className={`
-                    relative flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer
+                    relative flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 ${isCollapsed ? 'p-2' : 'px-3 py-2.5'} rounded-2xl cursor-pointer
                     transition-all duration-200 group
                     ${isActive
-                        ? 'bg-[#1650EB]/10 dark:bg-[#1650EB]/15 text-[#1650EB] dark:text-[#6095DB] shadow-sm'
+                        ? 'bg-[#2563EB]/10 dark:bg-[#2563EB]/15 text-[#2563EB] dark:text-[#6095DB] shadow-sm'
                         : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/50 hover:text-gray-800 dark:hover:text-gray-200'
                     }
                 `}
             >
                 {/* Active indicator bar */}
-                {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-3 w-[3px] h-5 bg-[#1650EB] dark:bg-[#6095DB] rounded-r-full" />
+                {isActive && !isCollapsed && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-3 w-[3px] h-5 bg-[#2563EB] dark:bg-[#6095DB] rounded-r-full" />
                 )}
 
                 {/* Icon in colored container */}
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                <div className={`${isCollapsed ? 'w-10 h-10 rounded-2xl' : 'w-8 h-8 rounded-xl'} flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
                     isActive
-                        ? 'bg-[#1650EB] shadow-md shadow-[#1650EB]/25'
+                        ? 'bg-[#2563EB] shadow-sm'
                         : (item.iconBg || 'bg-gray-100/80 dark:bg-gray-800/60 group-hover:bg-gray-200/80 dark:group-hover:bg-gray-700/60')
                 }`}>
                     <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
@@ -255,7 +255,7 @@ export default function StudentSidebar({
                 {!isCollapsed && (
                     <>
                         <span className={`text-[13px] font-semibold truncate transition-colors ${
-                            isActive ? 'text-[#1650EB] dark:text-[#6095DB]' : ''
+                            isActive ? 'text-[#2563EB] dark:text-[#6095DB]' : ''
                         }`}>
                             {item.label}
                         </span>
@@ -264,7 +264,7 @@ export default function StudentSidebar({
                         {item.badge && item.badge > 0 ? (
                             <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 transition-colors
                                 ${isActive
-                                    ? 'bg-[#1650EB]/20 dark:bg-[#1650EB]/30 text-[#1650EB] dark:text-[#6095DB]'
+                                    ? 'bg-[#2563EB]/20 dark:bg-[#2563EB]/30 text-[#2563EB] dark:text-[#6095DB]'
                                     : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
                                 }`}>
                                 {item.badge}
@@ -342,7 +342,7 @@ export default function StudentSidebar({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80 dark:border-gray-800/80 overflow-hidden z-[60]"
+            className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#111827] rounded-2xl shadow-2xl shadow-black/10 border border-gray-200 dark:border-gray-800 overflow-hidden z-[60]"
         >
             {/* User info */}
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -361,7 +361,7 @@ export default function StudentSidebar({
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group"
                 >
                     <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                        <Settings className="w-3.5 h-3.5 text-[#1650EB]" />
+                        <Settings className="w-3.5 h-3.5 text-[#2563EB]" />
                     </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Settings</span>
                 </button>
@@ -426,7 +426,7 @@ export default function StudentSidebar({
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-4 py-5`}>
                 {!isCollapsed && (
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#4f5bd5] rounded-2xl flex items-center justify-center shadow-lg shadow-[#1650EB]/20">
+                        <div className="w-10 h-10 bg-[#2563EB] rounded-2xl flex items-center justify-center shadow-sm">
                             <GraduationCap className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -437,7 +437,7 @@ export default function StudentSidebar({
                 )}
 
                 {isCollapsed && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#1650EB] to-[#4f5bd5] rounded-2xl flex items-center justify-center shadow-lg shadow-[#1650EB]/20">
+                    <div className="w-10 h-10 bg-[#2563EB] rounded-2xl flex items-center justify-center shadow-sm">
                         <GraduationCap className="w-5 h-5 text-white" />
                     </div>
                 )}
@@ -510,9 +510,9 @@ export default function StudentSidebar({
                     {isPremium ? (
                         <Link
                             href="/premium"
-                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-green-50/60 to-teal-50/80 dark:from-emerald-950/40 dark:via-green-950/30 dark:to-teal-950/40 border border-emerald-200/60 dark:border-emerald-800/30 hover:shadow-md hover:shadow-emerald-500/5 transition-all group cursor-pointer"
+                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 hover:shadow-md transition-all group cursor-pointer"
                         >
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 flex-shrink-0 relative">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm flex-shrink-0 relative">
                                 <Crown className="w-5 h-5 text-white" />
                                 <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 flex items-center justify-center shadow-sm">
                                     <Star className="w-2.5 h-2.5 text-white fill-white" />
@@ -527,9 +527,9 @@ export default function StudentSidebar({
                     ) : (
                         <Link
                             href="/premium"
-                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-50/80 via-violet-50/60 to-purple-50/80 dark:from-blue-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border border-blue-100/60 dark:border-blue-900/30 hover:shadow-md hover:shadow-blue-500/5 transition-all group cursor-pointer"
+                            className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 hover:shadow-md transition-all group cursor-pointer"
                         >
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 relative">
+                            <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-sm flex-shrink-0 relative">
                                 <Diamond className="w-5 h-5 text-white" />
                                 <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
                                     <Star className="w-2.5 h-2.5 text-white fill-white" />
@@ -550,8 +550,8 @@ export default function StudentSidebar({
                         href="/premium"
                         className={`flex items-center justify-center w-12 h-12 mx-auto rounded-xl shadow-md hover:shadow-lg transition-all ${
                             isPremium
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/20 hover:shadow-emerald-500/30'
-                                : 'bg-gradient-to-br from-blue-500 to-violet-500 shadow-blue-500/20 hover:shadow-blue-500/30'
+                                ? 'bg-emerald-500 shadow-sm hover:shadow-md'
+                                : 'bg-[#2563EB] shadow-sm hover:shadow-md'
                         }`}
                         title={isPremium ? 'Premium User' : 'Go Premium'}
                     >
@@ -569,11 +569,11 @@ export default function StudentSidebar({
     return (
         <>
             {/* ===== MOBILE: Top Bar ===== */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-2xl border-b border-gray-100/50 dark:border-gray-800/50">
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#0F172A]">
                 <div className="flex items-center justify-between px-4 py-2.5">
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#1650EB] to-[#4f5bd5] rounded-xl flex items-center justify-center shadow-md shadow-[#1650EB]/15">
+                        <div className="w-8 h-8 bg-[#2563EB] rounded-xl flex items-center justify-center shadow-sm">
                             <GraduationCap className="w-4 h-4 text-white" />
                         </div>
                         <h1 className="font-bold text-gray-900 dark:text-white text-sm tracking-tight">Quizy</h1>
@@ -590,7 +590,7 @@ export default function StudentSidebar({
                             className="relative p-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-colors"
                             title="Chat"
                         >
-                            <MessageSquare className="w-5 h-5 text-[#1650EB] dark:text-[#6095DB] fill-none stroke-[2.5]" />
+                            <MessageSquare className="w-5 h-5 text-[#2563EB] dark:text-[#6095DB] fill-none stroke-[2.5]" />
                             {totalUnreadChat > 0 && (
                                 <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
                                     {totalUnreadChat > 99 ? '99+' : totalUnreadChat}
@@ -621,7 +621,7 @@ export default function StudentSidebar({
                         <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="rounded-full hover:ring-2 hover:ring-[#1650EB]/20 transition-all"
+                                className="rounded-full hover:ring-2 hover:ring-[#2563EB]/20 transition-all"
                             >
                                 <ProfileFrame
                                     frameType={(activeProfileFrame as ProfileFrameType) || 'none'}
@@ -653,7 +653,7 @@ export default function StudentSidebar({
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 8 }}
                             transition={{ duration: 0.15 }}
-                            className="lg:hidden fixed right-4 z-[56] w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80 dark:border-gray-800/80 overflow-hidden"
+                            className="lg:hidden fixed right-4 z-[56] w-56 bg-white dark:bg-[#111827] rounded-2xl shadow-2xl shadow-black/10 border border-gray-200 dark:border-gray-800 overflow-hidden"
                             style={{ bottom: 'calc(72px + max(8px, env(safe-area-inset-bottom)))' }}
                         >
                             {/* Menu items */}
@@ -695,7 +695,7 @@ export default function StudentSidebar({
                                     onClick={() => { setShowMoreMenu(false); onComingSoon('AI Companion'); }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
                                 >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/15 to-blue-500/10 flex items-center justify-center border border-violet-200/30 dark:border-violet-800/30">
+                                    <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
                                         <Bot className="w-3.5 h-3.5 text-violet-500" />
                                     </div>
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Companion</span>
@@ -721,7 +721,7 @@ export default function StudentSidebar({
 
             {/* ===== MOBILE: Bottom Dock Navigation ===== */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[max(8px,env(safe-area-inset-bottom))]">
-                <div className="bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl rounded-[28px] border border-gray-200/50 dark:border-gray-800/50 shadow-2xl shadow-black/8 px-2 py-1.5">
+                <div className="bg-white dark:bg-[#111827] rounded-[28px] border border-gray-200/50 dark:border-gray-800/50 shadow-2xl shadow-black/8 px-2 py-1.5">
                     <div className="flex items-center justify-around">
                         {mobileBottomItems.map((item) => {
                             const isActive = activeTab === item.tab;
@@ -742,7 +742,7 @@ export default function StudentSidebar({
                                     {isActive && (
                                         <motion.div
                                             layoutId="mobileActiveTab"
-                                            className="absolute inset-0 bg-[#1650EB]/10 dark:bg-[#1650EB]/15 rounded-2xl"
+                                            className="absolute inset-0 bg-[#2563EB]/10 dark:bg-[#2563EB]/15 rounded-2xl"
                                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                         />
                                     )}
@@ -750,7 +750,7 @@ export default function StudentSidebar({
                                         {/* Icon container */}
                                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
                                             isActive
-                                                ? 'bg-[#1650EB] shadow-md shadow-[#1650EB]/25 scale-105'
+                                                ? 'bg-[#2563EB] shadow-md shadow-[#2563EB]/25 scale-105'
                                                 : ''
                                         }`}>
                                             <item.icon className={`w-[18px] h-[18px] transition-colors ${
@@ -771,7 +771,7 @@ export default function StudentSidebar({
                                         )}
                                     </div>
                                     <span className={`relative z-10 text-[10px] font-semibold transition-colors ${
-                                        isActive ? 'text-[#1650EB] dark:text-[#6095DB]' : ''
+                                        isActive ? 'text-[#2563EB] dark:text-[#6095DB]' : ''
                                     }`}>
                                         {item.shortLabel}
                                     </span>
@@ -779,7 +779,7 @@ export default function StudentSidebar({
                                     {isActive && (
                                         <motion.div
                                             layoutId="mobileActiveDot"
-                                            className="w-1 h-1 bg-[#1650EB] dark:bg-[#6095DB] rounded-full"
+                                            className="w-1 h-1 bg-[#2563EB] dark:bg-[#6095DB] rounded-full"
                                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                         />
                                     )}
@@ -799,14 +799,14 @@ export default function StudentSidebar({
                             {showMoreMenu && (
                                 <motion.div
                                     layoutId="mobileMoreBg"
-                                    className="absolute inset-0 bg-[#1650EB]/10 dark:bg-[#1650EB]/15 rounded-2xl"
+                                    className="absolute inset-0 bg-[#2563EB]/10 dark:bg-[#2563EB]/15 rounded-2xl"
                                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                 />
                             )}
                             <div className="relative z-10">
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
                                     showMoreMenu
-                                        ? 'bg-[#1650EB] shadow-md shadow-[#1650EB]/25 scale-105'
+                                        ? 'bg-[#2563EB] shadow-md shadow-[#2563EB]/25 scale-105'
                                         : ''
                                 }`}>
                                     <Menu className={`w-[18px] h-[18px] transition-colors ${
@@ -819,7 +819,7 @@ export default function StudentSidebar({
                                 )}
                             </div>
                             <span className={`relative z-10 text-[10px] font-semibold transition-colors ${
-                                showMoreMenu ? 'text-[#1650EB] dark:text-[#6095DB]' : ''
+                                showMoreMenu ? 'text-[#2563EB] dark:text-[#6095DB]' : ''
                             }`}>
                                 More
                             </span>
@@ -828,11 +828,10 @@ export default function StudentSidebar({
                 </div>
             </div>
 
-            {/* ===== DESKTOP: Sidebar (floating glass) ===== */}
+            {/* ===== DESKTOP: Sidebar ===== */}
             <aside
                 className={`hidden lg:flex flex-col fixed top-0 left-0 bottom-0 z-40
-                    ${sidebarWidth} bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl
-                    border-r border-gray-200/40 dark:border-gray-800/40
+                    ${sidebarWidth} bg-white dark:bg-[#0F172A]
                     transition-all duration-300 ease-in-out`}
             >
                 {sidebarContent}
@@ -840,7 +839,7 @@ export default function StudentSidebar({
 
             {/* ===== DESKTOP: Top Bar ===== */}
             <div className="hidden lg:block fixed top-0 right-0 z-50" style={{ left: isCollapsed ? '72px' : '260px', transition: 'left 0.3s ease-in-out' }}>
-                <div className="flex items-center justify-end px-6 py-2.5 bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl border-b border-gray-200/40 dark:border-gray-800/40">
+                <div className="flex items-center justify-end px-6 py-2.5 bg-white dark:bg-[#0F172A]">
                     <div className="flex items-center gap-1.5">
                         {/* Streak badge */}
                         {streak > 0 && (
@@ -851,7 +850,7 @@ export default function StudentSidebar({
                         {/* Chat */}
                         <Link
                             href="/chat"
-                            className="relative p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-[#1650EB] dark:text-[#6095DB] border border-gray-200/50 dark:border-gray-700/50"
+                            className="relative w-9 h-9 rounded-xl bg-gray-50 dark:bg-[#1E293B] hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-[#2563EB] dark:text-[#3B82F6] flex items-center justify-center"
                             title="Chat"
                         >
                             <MessageSquare className="w-4 h-4" />
@@ -864,7 +863,7 @@ export default function StudentSidebar({
                         {/* Home */}
                         <Link
                             href="/?home=true"
-                            className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
+                            className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-[#1E293B] hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center"
                             title="Home"
                         >
                             <Home className="w-4 h-4" />
@@ -872,7 +871,7 @@ export default function StudentSidebar({
                         {/* Notification */}
                         <button
                             onClick={onNotificationClick}
-                            className="relative p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200/50 dark:border-gray-700/50"
+                            className="relative w-9 h-9 rounded-xl bg-gray-50 dark:bg-[#1E293B] hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center"
                         >
                             <Bell className="w-4 h-4" />
                             {notificationCount > 0 && (
@@ -885,7 +884,7 @@ export default function StudentSidebar({
                         <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                className="p-0.5 rounded-full hover:ring-2 hover:ring-[#1650EB]/15 transition-all"
+                                className="p-0.5 rounded-full hover:ring-2 hover:ring-[#2563EB]/15 transition-all"
                             >
                                 {userPhotoURL ? (
                                     <ProfileFrame
