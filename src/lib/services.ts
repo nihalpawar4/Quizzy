@@ -440,6 +440,28 @@ export async function submitTestResult(result: Omit<TestResult, 'id' | 'timestam
     const cleanData = sanitize(resultData as unknown as Record<string, unknown>);
 
     const docRef = await addDoc(resultsRef, cleanData);
+
+    // Auto-complete: visually mark test as "Completed" in teacher dashboard
+    // when the first student submits. Test stays accessible (isActive remains true)
+    // — only expiresAt is set so the teacher sees it as completed.
+    if (result.testId) {
+        try {
+            const testRef = doc(db, COLLECTIONS.TESTS, result.testId);
+            const testSnap = await getDoc(testRef);
+            if (testSnap.exists()) {
+                const testData = testSnap.data();
+                // Only auto-complete if test is active and doesn't already have an expiry
+                if (testData.isActive && !testData.expiresAt) {
+                    await updateDoc(testRef, {
+                        expiresAt: Timestamp.now(),
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('[Quizy] Auto-complete test status failed (non-blocking):', err);
+        }
+    }
+
     return docRef.id;
 }
 

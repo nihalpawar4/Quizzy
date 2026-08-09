@@ -90,7 +90,7 @@ export async function getDailyQuizQuestions(
     const testIds: string[] = [];
     testsSnap.docs.forEach(d => {
         const data = d.data();
-        if (!data.isPdfTest) {
+        if (!data.isPdfTest && !data.isExclusiveTest) {
             testIds.push(d.id);
             testSubjectMap[d.id] = data.subject || 'General';
         }

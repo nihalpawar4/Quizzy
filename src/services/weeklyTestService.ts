@@ -100,7 +100,7 @@ export async function getCompletedTestQuestions(
 
     resultsSnap.docs.forEach(doc => {
         const data = doc.data();
-        if (!data.isPdfTest && !data.isDailyChallenge && data.testId) {
+        if (!data.isPdfTest && !data.isDailyChallenge && !data.isExclusiveTest && data.testId) {
             completedTestIds.add(data.testId);
             testMeta[data.testId] = {
                 subject: data.subject || 'General',
@@ -128,7 +128,7 @@ export async function getCompletedTestQuestions(
         testsSnap.docs.forEach(doc => {
             const data = doc.data();
             // Only include tests that match the student's CURRENT class
-            if ((data.targetClass as number) === studentClass) {
+            if ((data.targetClass as number) === studentClass && !data.isExclusiveTest) {
                 filteredTestIds.push(doc.id);
             }
         });

@@ -1322,11 +1322,11 @@ export default function TeacherDashboard() {
         const isSch = test.scheduledStartTime && new Date(test.scheduledStartTime) > now;
         const isExp = test.expiresAt && new Date(test.expiresAt) < now;
         switch (testTabFilter) {
-            case 'active': return test.isActive && !isSch && !isExp;
-            case 'scheduled': return !!isSch;
+            case 'active': return test.isActive && !isSch && !isExp && !test.isExclusiveTest;
+            case 'scheduled': return !!isSch && !test.isExclusiveTest;
             case 'completed': return !!isExp;
-            case 'drafts': return !test.isActive && !isSch;
-            default: return true;
+            case 'drafts': return (!test.isActive && !isSch) || !!test.isExclusiveTest;
+            default: return !test.isExclusiveTest;
         }
     });
 
