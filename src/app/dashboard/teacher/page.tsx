@@ -168,7 +168,7 @@ export default function TeacherDashboard() {
     const [newTest, setNewTest] = useState<{
         title: string;
         subject: typeof SUBJECTS[number];
-        targetClass: number;
+        targetClass: number | 'all';
         duration: number;
         questionType: QuestionType;
         scheduledStartTime: string; // ISO string or empty
@@ -263,7 +263,7 @@ export default function TeacherDashboard() {
     const [editTestData, setEditTestData] = useState<{
         title: string;
         subject: typeof SUBJECTS[number];
-        targetClass: number;
+        targetClass: number | 'all';
         duration: number;
         isActive: boolean;
         scheduledStartTime: string;
@@ -678,23 +678,14 @@ export default function TeacherDashboard() {
 
     // Create test
     const handleCreateTest = async () => {
-        // Handle PDF test creation separately
-        if (newTest.questionType === 'pdf_upload') {
-            if (!newTest.title.trim()) {
-                setParseError('Please provide a test title');
-                return;
-            }
-            if (!pdfBase64) {
-                setPdfUploadError('Please upload a PDF file');
-                return;
-            }
-
-            setIsCreating(true);
-            try {
+        // Helper to create a single test for a specific class
+        const createTestForClass = async (targetClassNum: number) => {
+            // Handle PDF test creation
+            if (newTest.questionType === 'pdf_upload') {
                 const testId = await createTest({
                     title: newTest.title,
                     subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
-                    targetClass: newTest.targetClass,
+                    targetClass: targetClassNum,
                     createdBy: user!.uid,
                     isActive: true,
                     questionCount: 0,
@@ -710,12 +701,73 @@ export default function TeacherDashboard() {
                     ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
                     ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
                 });
-
-                // Send push notification to students in the target class
                 createTestNotification(
-                    { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
+                    { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: targetClassNum, createdBy: user!.uid } as Test,
                     user!.name
                 ).catch(err => console.error('Error sending test notification:', err));
+                return testId;
+            }
+
+            // Handle regular test creation
+            const questions = newTest.questionType === 'mixed'
+                ? parsedQuestions
+                : (uploadMethod === 'manual' ? manualQuestions : parsedQuestions);
+
+            const testId = await createTest({
+                title: newTest.title,
+                subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
+                targetClass: targetClassNum,
+                duration: newTest.duration,
+                createdBy: user!.uid,
+                isActive: true,
+                questionCount: questions.length,
+                marksPerQuestion: newTest.marksPerQuestion,
+                negativeMarking: newTest.negativeMarking,
+                negativeMarksPerQuestion: newTest.negativeMarksPerQuestion,
+                enableAntiCheat: newTest.enableAntiCheat,
+                showInstructions: newTest.showInstructions,
+                difficultyLevel: newTest.difficultyLevel,
+                isCombinedSubject: newTest.isCombinedSubject,
+                combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
+                isScheduleEnabled: newTest.isScheduleEnabled,
+                evaluationMode: newTest.evaluationMode,
+                expectedResultDays: newTest.expectedResultDays,
+                ...(newTest.isWeeklyTest ? { isWeeklyTest: true, weeklyTestNumber: newTest.weeklyTestNumber } : {}),
+                ...(newTest.isExclusiveTest ? { isExclusiveTest: true } : {}),
+                ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
+                ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
+            });
+
+            await uploadQuestions(testId, questions);
+
+            createTestNotification(
+                { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: targetClassNum, createdBy: user!.uid } as Test,
+                user!.name
+            ).catch(err => console.error('Error sending test notification:', err));
+            return testId;
+        };
+
+        // Handle PDF test creation separately
+        if (newTest.questionType === 'pdf_upload') {
+            if (!newTest.title.trim()) {
+                setParseError('Please provide a test title');
+                return;
+            }
+            if (!pdfBase64) {
+                setPdfUploadError('Please upload a PDF file');
+                return;
+            }
+
+            setIsCreating(true);
+            try {
+                if (newTest.targetClass === 'all') {
+                    // Create PDF test for all classes (5-10)
+                    for (let classNum = 5; classNum <= 10; classNum++) {
+                        await createTestForClass(classNum);
+                    }
+                } else {
+                    await createTestForClass(newTest.targetClass as number);
+                }
 
                 setCreateSuccess(true);
                 setTimeout(() => {
@@ -744,38 +796,14 @@ export default function TeacherDashboard() {
 
         setIsCreating(true);
         try {
-            const testId = await createTest({
-                title: newTest.title,
-                subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject,
-                targetClass: newTest.targetClass,
-                duration: newTest.duration,
-                createdBy: user!.uid,
-                isActive: true,
-                questionCount: questions.length,
-                marksPerQuestion: newTest.marksPerQuestion,
-                negativeMarking: newTest.negativeMarking,
-                negativeMarksPerQuestion: newTest.negativeMarksPerQuestion,
-                enableAntiCheat: newTest.enableAntiCheat,
-                showInstructions: newTest.showInstructions,
-                difficultyLevel: newTest.difficultyLevel,
-                isCombinedSubject: newTest.isCombinedSubject,
-                combinedSubjects: newTest.isCombinedSubject ? newTest.combinedSubjects : [],
-                isScheduleEnabled: newTest.isScheduleEnabled,
-                evaluationMode: newTest.evaluationMode,
-                expectedResultDays: newTest.expectedResultDays,
-                ...(newTest.isWeeklyTest ? { isWeeklyTest: true, weeklyTestNumber: newTest.weeklyTestNumber } : {}),
-                ...(newTest.isExclusiveTest ? { isExclusiveTest: true } : {}),
-                ...(newTest.isScheduleEnabled && newTest.scheduledStartTime ? { scheduledStartTime: new Date(newTest.scheduledStartTime) } : {}),
-                ...(newTest.isExpiryEnabled && newTest.expiresAt ? { expiresAt: new Date(newTest.expiresAt) } : {})
-            });
-
-            await uploadQuestions(testId, questions);
-
-            // Send push notification to students in the target class
-            createTestNotification(
-                { id: testId, title: newTest.title, subject: newTest.isCombinedSubject ? 'Combined' : newTest.subject, targetClass: newTest.targetClass, createdBy: user!.uid } as Test,
-                user!.name
-            ).catch(err => console.error('Error sending test notification:', err));
+            if (newTest.targetClass === 'all') {
+                // Create test for all classes (5-10)
+                for (let classNum = 5; classNum <= 10; classNum++) {
+                    await createTestForClass(classNum);
+                }
+            } else {
+                await createTestForClass(newTest.targetClass as number);
+            }
 
             setCreateSuccess(true);
             // Data updates automatically via real-time listener
@@ -1014,7 +1042,7 @@ export default function TeacherDashboard() {
             await updateTest(editingTest.id, {
                 title: editTestData.title,
                 subject: editTestData.subject,
-                targetClass: editTestData.targetClass,
+                targetClass: editTestData.targetClass as number,
                 duration: editTestData.duration,
                 isActive: editTestData.isActive,
                 ...(editTestData.scheduledStartTime ? { scheduledStartTime: new Date(editTestData.scheduledStartTime) } : {}),
@@ -1743,7 +1771,7 @@ export default function TeacherDashboard() {
                                                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                                                             <span>{test.isCombinedSubject ? 'Combined' : test.subject}</span>
                                                             <span className="text-gray-300 dark:text-gray-600">|</span>
-                                                            <span>Class {test.targetClass}</span>
+                                                            <span>{String(test.targetClass) === 'all' ? 'All Classes' : `Class ${test.targetClass}`}</span>
                                                         </div>
                                                         <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
                                                             {test.isPdfTest ? '1 File' : `${test.questionCount || 0} Questions`} • {test.duration || 30} min
@@ -2307,9 +2335,16 @@ export default function TeacherDashboard() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class *</label>
-                                                        <select value={newTest.targetClass} onChange={(e) => setNewTest({ ...newTest, targetClass: Number(e.target.value) })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
+                                                        <select value={newTest.targetClass} onChange={(e) => setNewTest({ ...newTest, targetClass: e.target.value === 'all' ? 'all' : Number(e.target.value) })} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none">
+                                                            <option value="all">📢 All Classes (5-10)</option>
                                                             {CLASS_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                                         </select>
+                                                        {newTest.targetClass === 'all' && (
+                                                            <div className="mt-2 flex items-start gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                                                <span className="text-amber-500 flex-shrink-0 mt-0.5">ℹ️</span>
+                                                                <p className="text-xs text-amber-700 dark:text-amber-400">This test will be created for <strong>all classes (5-10)</strong> separately, so every student can see and attempt it.</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration (minutes)</label>
@@ -3151,7 +3186,7 @@ export default function TeacherDashboard() {
                             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedTest.title}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTest.subject} • Class {selectedTest.targetClass} • {detailedResults.length} submissions</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTest.subject} • {String(selectedTest.targetClass) === 'all' ? 'All Classes' : `Class ${selectedTest.targetClass}`} • {detailedResults.length} submissions</p>
                                 </div>
                                 <button onClick={() => setShowDetailedAnalytics(false)} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                                     <X className="w-5 h-5" />
@@ -3290,7 +3325,7 @@ export default function TeacherDashboard() {
                                                             <h4 className="font-semibold text-gray-900 dark:text-white">{test.title}</h4>
                                                             <div className="flex flex-wrap gap-2 mt-2">
                                                                 <span className="px-2 py-1 bg-[#1650EB]/10 dark:bg-indigo-900/50 text-[#1243c7] dark:text-[#6095DB]/50 text-xs rounded-full">{test.subject}</span>
-                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">Class {test.targetClass}</span>
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">{String(test.targetClass) === 'all' ? 'All Classes' : `Class ${test.targetClass}`}</span>
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">{test.questionCount || 0} Questions</span>
                                                                 {test.duration && <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">{test.duration} min</span>}
                                                             </div>
@@ -3700,9 +3735,10 @@ export default function TeacherDashboard() {
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Class</label>
                                                 <select
                                                     value={editTestData.targetClass}
-                                                    onChange={(e) => setEditTestData({ ...editTestData, targetClass: Number(e.target.value) })}
+                                                    onChange={(e) => setEditTestData({ ...editTestData, targetClass: e.target.value === 'all' ? 'all' : Number(e.target.value) })}
                                                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1650EB] outline-none"
                                                 >
+                                                    <option value="all">📢 All Classes (5-10)</option>
                                                     {CLASS_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                                 </select>
                                             </div>
