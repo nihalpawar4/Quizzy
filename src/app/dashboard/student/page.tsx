@@ -98,6 +98,8 @@ import {
     getExclusiveTicketCount,
     spendTickets,
     hasCompletedExclusiveTest,
+    getTicketPrice,
+    purchaseTicketWithXp,
 } from '@/services/exclusiveTestService';
 import { EXCLUSIVE_TICKETS_PER_TEST, EXCLUSIVE_TEST_XP_REWARD, SUBJECTS } from '@/lib/constants';
 // import GamesZone from '@/components/games/GamesZone';
@@ -3224,6 +3226,12 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
     const [ticketSpending, setTicketSpending] = useState(false);
     const [exclusiveExpanded, setExclusiveExpanded] = useState(false);
 
+    // XP-to-Ticket purchase state
+    const [showBuyTicketModal, setShowBuyTicketModal] = useState(false);
+    const [ticketPrice, setTicketPrice] = useState(100);
+    const [userXp, setUserXp] = useState(0);
+    const [buyingTicket, setBuyingTicket] = useState(false);
+
     // Load exclusive tests data
     useEffect(() => {
         if (!isPremium || !tabUser?.uid) return;
@@ -3231,12 +3239,15 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
         async function loadExclusiveData() {
             setExclusiveLoading(true);
             try {
-                const [tickets, tests] = await Promise.all([
+                const [tickets, tests, priceInfo] = await Promise.all([
                     getExclusiveTicketCount(tabUser!.uid),
                     getExclusiveTests(tabUser!.studentClass || 0, exclusiveSubject),
+                    getTicketPrice(tabUser!.uid),
                 ]);
                 setExclusiveTickets(tickets);
                 setExclusiveTests(tests);
+                setTicketPrice(priceInfo.price);
+                setUserXp(priceInfo.userXp);
 
                 const completedSet = new Set<string>();
                 await Promise.all(
@@ -3281,6 +3292,28 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
         }
         setActiveExclusiveTest(null);
     }, [activeExclusiveTest]);
+
+    // Purchase a ticket with XP
+    const handleBuyTicket = useCallback(async () => {
+        if (!tabUser?.uid || buyingTicket) return;
+        setBuyingTicket(true);
+        try {
+            const result = await purchaseTicketWithXp(tabUser.uid);
+            if (!result.success) {
+                alert(result.error || 'Purchase failed.');
+                setBuyingTicket(false);
+                return;
+            }
+            // Update local state
+            setExclusiveTickets(result.newTickets || 0);
+            setUserXp(result.remainingXp || 0);
+            setTicketPrice(result.newPrice || ticketPrice);
+            setShowBuyTicketModal(false);
+        } catch (err) {
+            console.error('[Exclusive] Ticket purchase error:', err);
+        }
+        setBuyingTicket(false);
+    }, [tabUser?.uid, buyingTicket, ticketPrice]);
 
     // Render exclusive test screen (full-screen overlay)
     if (activeExclusiveTest && tabUser) {
@@ -3674,12 +3707,21 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                         </div>
                                     )}
 
-                                    {/* Ticket info footer */}
-                                    <div className="flex items-center justify-center gap-1.5 mt-3 py-2 px-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/30 dark:border-amber-500/10">
-                                        <span className="text-xs">🎟️</span>
-                                        <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60 font-medium">
-                                            Earn tickets from Daily Rewards · {EXCLUSIVE_TICKETS_PER_TEST} tickets per test · 5 free on first join
-                                        </p>
+                                    {/* Buy Ticket with XP + Info footer */}
+                                    <div className="mt-3 space-y-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowBuyTicketModal(true); }}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-[12px] font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                        >
+                                            <Zap className="w-3.5 h-3.5" />
+                                            Buy Ticket · {ticketPrice} XP
+                                        </button>
+                                        <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/30 dark:border-amber-500/10">
+                                            <span className="text-xs">🎟️</span>
+                                            <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60 font-medium">
+                                                Earn from Daily Rewards · Buy with XP · Price increases every 3 tickets
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -3755,6 +3797,113 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                                             <>
                                                 <Crown className="w-4 h-4" />
                                                 Start Test
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* ═══════ Buy Ticket with XP Modal ═══════ */}
+            <AnimatePresence>
+                {showBuyTicketModal && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-[60]"
+                            onClick={() => setShowBuyTicketModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[61] max-w-sm mx-auto rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+                        >
+                            {/* Purple gradient header */}
+                            <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-5 text-center text-white relative overflow-hidden">
+                                <motion.div
+                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                                    animate={{ x: ['-100%', '100%'] }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                />
+                                <div className="relative">
+                                    <div className="text-3xl mb-2">⚡</div>
+                                    <h3 className="font-bold text-lg">Buy Ticket with XP</h3>
+                                    <p className="text-white/70 text-sm mt-1">Exchange your XP for exclusive test tickets</p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 text-center">
+                                {/* XP and ticket exchange display */}
+                                <div className="flex items-center justify-center gap-4 mb-4">
+                                    <div className="text-center">
+                                        <p className="text-2xl font-extrabold text-violet-500">{ticketPrice}</p>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500">XP Cost</p>
+                                    </div>
+                                    <div className="text-gray-300 dark:text-gray-600 text-lg">→</div>
+                                    <div className="text-center">
+                                        <p className="text-2xl font-extrabold text-amber-500">1</p>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500">Ticket</p>
+                                    </div>
+                                </div>
+
+                                {/* XP balance info */}
+                                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 mb-4 space-y-1.5">
+                                    <div className="flex items-center justify-between text-[12px]">
+                                        <span className="text-gray-500 dark:text-gray-400">Your XP</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{userXp} XP</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[12px]">
+                                        <span className="text-gray-500 dark:text-gray-400">Cost</span>
+                                        <span className="font-bold text-violet-500">−{ticketPrice} XP</span>
+                                    </div>
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5">
+                                        <div className="flex items-center justify-between text-[12px]">
+                                            <span className="text-gray-500 dark:text-gray-400">Remaining</span>
+                                            <span className={`font-bold ${userXp >= ticketPrice ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                {Math.max(0, userXp - ticketPrice)} XP
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Insufficient XP warning */}
+                                {userXp < ticketPrice && (
+                                    <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-medium">
+                                        <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                        Not enough XP. Need {ticketPrice - userXp} more.
+                                    </div>
+                                )}
+
+                                {/* Price escalation info */}
+                                <div className="flex items-center justify-center gap-1.5 mb-5 text-[10px] font-medium px-3 py-2 rounded-lg bg-violet-50 dark:bg-violet-500/8 text-violet-600 dark:text-violet-400">
+                                    <Sparkles className="w-3 h-3" />
+                                    Price increases by 50 XP every 3 tickets purchased
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowBuyTicketModal(false)}
+                                        className="flex-1 py-3 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleBuyTicket}
+                                        disabled={buyingTicket || userXp < ticketPrice}
+                                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-purple-600 shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {buyingTicket ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Zap className="w-4 h-4" />
+                                                Buy Ticket
                                             </>
                                         )}
                                     </button>

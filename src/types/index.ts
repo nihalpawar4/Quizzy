@@ -47,6 +47,8 @@ export interface User {
     aboutBio?: string;
     // Exclusive test tickets (earned from daily rewards)
     exclusiveTickets?: number;
+    // Tracks total tickets purchased with XP (for escalating price tiers)
+    exclusiveTicketsPurchased?: number;
 }
 
 // Class change request (requires teacher approval)

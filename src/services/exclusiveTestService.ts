@@ -134,6 +134,97 @@ export async function awardTickets(userId: string, count: number = 1): Promise<v
     });
 }
 
+// ── XP-to-Ticket Purchase ──────────────────────────────────────────────
+
+/** Base XP cost for the first ticket purchase tier (tickets 1-3). */
+const BASE_TICKET_PRICE = 100;
+
+/** XP price increase per tier (every 3 tickets purchased). */
+const PRICE_INCREMENT_PER_TIER = 50;
+
+/** Number of tickets per price tier before the price escalates. */
+const TICKETS_PER_TIER = 3;
+
+/**
+ * Calculate the current ticket price based on how many the user has already purchased.
+ * Pricing: 100 XP for tickets 1-3, 150 XP for tickets 4-6, 200 XP for 7-9, etc.
+ */
+export function calculateTicketPrice(purchasedCount: number): number {
+    const tier = Math.floor(purchasedCount / TICKETS_PER_TIER);
+    return BASE_TICKET_PRICE + tier * PRICE_INCREMENT_PER_TIER;
+}
+
+/**
+ * Get the current ticket price for a user.
+ * Reads their purchase count from Firestore and calculates the price.
+ */
+export async function getTicketPrice(userId: string): Promise<{ price: number; purchasedCount: number; userXp: number }> {
+    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return { price: BASE_TICKET_PRICE, purchasedCount: 0, userXp: 0 };
+
+    const data = snap.data();
+    const purchasedCount = (data.exclusiveTicketsPurchased as number) || 0;
+    const userXp = (data.xp as number) || 0;
+
+    return {
+        price: calculateTicketPrice(purchasedCount),
+        purchasedCount,
+        userXp,
+    };
+}
+
+/**
+ * Purchase one exclusive ticket using XP.
+ * Deducts XP, increments ticket count and purchase tracker.
+ * Returns updated state or error.
+ */
+export async function purchaseTicketWithXp(userId: string): Promise<{
+    success: boolean;
+    error?: string;
+    newTickets?: number;
+    xpSpent?: number;
+    newPrice?: number;
+    remainingXp?: number;
+}> {
+    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+        return { success: false, error: 'User not found.' };
+    }
+
+    const data = snap.data();
+    const currentXp = (data.xp as number) || 0;
+    const purchasedCount = (data.exclusiveTicketsPurchased as number) || 0;
+    const currentTickets = (data.exclusiveTickets as number) || 0;
+    const price = calculateTicketPrice(purchasedCount);
+
+    if (currentXp < price) {
+        return {
+            success: false,
+            error: `Not enough XP. You need ${price} XP but have ${currentXp}.`,
+        };
+    }
+
+    // Atomic update: deduct XP, add ticket, increment purchase count
+    await updateDoc(userRef, {
+        xp: increment(-price),
+        exclusiveTickets: increment(1),
+        exclusiveTicketsPurchased: increment(1),
+    });
+
+    const newPurchasedCount = purchasedCount + 1;
+
+    return {
+        success: true,
+        newTickets: currentTickets + 1,
+        xpSpent: price,
+        newPrice: calculateTicketPrice(newPurchasedCount),
+        remainingXp: currentXp - price,
+    };
+}
+
 // ── Completion tracking ────────────────────────────────────────────────
 
 /**
