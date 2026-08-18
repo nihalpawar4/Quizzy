@@ -41,6 +41,7 @@ import {
     completeSession,
 } from '@/services/testSessionService';
 import { awardActivityXp } from '@/services/coinService';
+import { getPremiumStatus } from '@/services/premiumService';
 import { cleanQuestionText } from '@/lib/utils/cleanText';
 
 // Circular Progress Component
@@ -984,12 +985,16 @@ export default function TestPage() {
 
             // Fire-and-forget: XP award, mistake bucket, session completion
             // These run in background and don't block the results screen
-            awardActivityXp(
-                currentUser.uid,
-                'test',
-                correctCount,
-                currentQuestions.length
-            ).catch(err => console.error('[Quizy] Test XP award failed (non-blocking):', err));
+            getPremiumStatus(currentUser.uid).then(ps => {
+                const tier = ps.isPremium ? ps.premiumTier : undefined;
+                return awardActivityXp(
+                    currentUser.uid,
+                    'test',
+                    correctCount,
+                    currentQuestions.length,
+                    tier
+                );
+            }).catch(err => console.error('[Quizy] Test XP award failed (non-blocking):', err));
 
             addMistakesFromResult(
                 currentUser.uid,

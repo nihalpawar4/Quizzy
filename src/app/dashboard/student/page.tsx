@@ -48,6 +48,7 @@ import {
     Repeat,
     ChevronRight,
     Zap,
+    BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -109,7 +110,7 @@ import { EXCLUSIVE_TICKETS_PER_TEST, EXCLUSIVE_TEST_XP_REWARD, SUBJECTS } from '
 export default function StudentDashboard() {
     const { user, loading: authLoading, signOut, refreshUser } = useAuth();
     const { totalUnreadCount } = useChat();
-    const { isPremium: isPremiumUser } = usePremium();
+    const { isPremium: isPremiumUser, premiumTier } = usePremium();
     const router = useRouter();
 
     // Save current route for persistence
@@ -2386,7 +2387,9 @@ export default function StudentDashboard() {
                         longestStreak={user.longestStreak || 0}
                         lastStreakDate={user.lastStreakDate || null}
                         isPremium={isPremiumUser}
+                        premiumTier={premiumTier}
                         user={user}
+                        results={results}
                     />
                 )}
 
@@ -2627,12 +2630,19 @@ export default function StudentDashboard() {
                                                                             </div>
                                                                         )}
 
-                                                                        {/* Explanation */}
+                                                                        {/* Explanation — premium gated */}
                                                                         {da?.explanation && (
-                                                                            <div className="mt-2 p-2 bg-amber-50/80 dark:bg-amber-900/20 rounded-lg">
-                                                                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">💡 Explanation: </span>
-                                                                                <span className="text-sm text-amber-800 dark:text-amber-300">{da.explanation}</span>
-                                                                            </div>
+                                                                            isPremiumUser && (premiumTier === 'promax' || (premiumTier === 'pro' && !da.isCorrect)) ? (
+                                                                                <div className="mt-2 p-2 bg-amber-50/80 dark:bg-amber-900/20 rounded-lg">
+                                                                                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">💡 Explanation: </span>
+                                                                                    <span className="text-sm text-amber-800 dark:text-amber-300">{da.explanation}</span>
+                                                                                </div>
+                                                                            ) : !isPremiumUser ? (
+                                                                                <div className="mt-2 p-2 bg-gray-50/80 dark:bg-gray-800/40 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                                                                                    <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                                                    <span className="text-[11px] text-gray-400 dark:text-gray-500">Upgrade to Pro to see explanations</span>
+                                                                                </div>
+                                                                            ) : null
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -2679,17 +2689,24 @@ export default function StudentDashboard() {
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                {/* Explanation */}
+                                                                {/* Explanation — premium gated */}
                                                                 {answer.explanation && (
-                                                                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                                        <div className="flex items-start gap-2">
-                                                                            <span className="text-base mt-0.5">💡</span>
-                                                                            <div>
-                                                                                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Explanation</p>
-                                                                                <p className="text-sm text-amber-800 dark:text-amber-300">{answer.explanation}</p>
+                                                                    isPremiumUser && (premiumTier === 'promax' || (premiumTier === 'pro' && !answer.isCorrect)) ? (
+                                                                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                            <div className="flex items-start gap-2">
+                                                                                <span className="text-base mt-0.5">💡</span>
+                                                                                <div>
+                                                                                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Explanation</p>
+                                                                                    <p className="text-sm text-amber-800 dark:text-amber-300">{answer.explanation}</p>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
+                                                                    ) : !isPremiumUser ? (
+                                                                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                                                                            <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                                            <span className="text-xs text-gray-400 dark:text-gray-500">Upgrade to <strong>Pro</strong> to unlock detailed explanations</span>
+                                                                        </div>
+                                                                    ) : null
                                                                 )}
                                                             </div>
                                                         </div>
@@ -3172,10 +3189,12 @@ interface PremiumFeaturesTabProps {
     longestStreak: number;
     lastStreakDate: string | null;
     isPremium: boolean;
+    premiumTier: string;
     user: AppUser | null;
+    results: TestResult[];
 }
 
-function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPremium, user: tabUser }: PremiumFeaturesTabProps) {
+function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPremium, premiumTier, user: tabUser, results }: PremiumFeaturesTabProps) {
     const [expandedFeature, setExpandedFeature] = useState<string | null>('Practice Streaks');
     const router = useRouter();
 
@@ -3914,45 +3933,203 @@ function PremiumFeaturesTab({ currentStreak, longestStreak, lastStreakDate, isPr
                 )}
             </AnimatePresence>
 
-            {/* ═══════ OTHER FEATURES GRID (Coming Soon) ═══════ */}
-            <div className="mb-2">
-                <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em] mb-3 px-0.5">More Premium Features</h4>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                    {PREMIUM_FEATURES_DATA.filter(f => f.title !== 'Practice Streaks').map((feature, index) => {
-                        const Icon = feature.icon;
-                        return (
-                            <motion.div
-                                key={feature.title}
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
-                                className={`relative p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} border ${feature.borderColor} group cursor-default overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 hover:-translate-y-0.5`}
-                            >
-                                <div className={`w-9 h-9 rounded-xl ${feature.iconBg} flex items-center justify-center mb-3 shadow-md`}
-                                    style={{ boxShadow: `0 4px 12px ${feature.color}30` }}
-                                >
-                                    <Icon className="text-white" style={{ width: 18, height: 18 }} />
+            {/* ═══════ PERFORMANCE INSIGHTS (LIVE) ═══════ */}
+            {(() => {
+                // Compute insights from real test data
+                const scorableResults = results.filter(r => typeof r.score === 'number' && typeof r.totalQuestions === 'number' && r.totalQuestions > 0);
+
+                // Subject-wise breakdown
+                const subjectStats: Record<string, { total: number; scored: number; count: number }> = {};
+                for (const r of scorableResults) {
+                    const subj = r.subject || 'General';
+                    if (!subjectStats[subj]) subjectStats[subj] = { total: 0, scored: 0, count: 0 };
+                    subjectStats[subj].scored += r.score;
+                    subjectStats[subj].total += r.totalQuestions;
+                    subjectStats[subj].count += 1;
+                }
+                const subjectEntries = Object.entries(subjectStats)
+                    .map(([name, s]) => ({ name, avg: Math.round((s.scored / s.total) * 100), count: s.count }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 6);
+
+                // Improvement trend (last 8 tests)
+                const recentTests = scorableResults
+                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .slice(0, 8)
+                    .reverse();
+                const trendData = recentTests.map(r => Math.round((r.score / r.totalQuestions) * 100));
+
+                // Overall stats
+                const totalTests = scorableResults.length;
+                const overallAvg = totalTests > 0
+                    ? Math.round(scorableResults.reduce((s, r) => s + (r.score / r.totalQuestions) * 100, 0) / totalTests)
+                    : 0;
+
+                // Weak subjects (avg < 50%)
+                const weakSubjects = subjectEntries.filter(s => s.avg < 50);
+                // Strong subjects (avg >= 75%)
+                const strongSubjects = subjectEntries.filter(s => s.avg >= 75);
+
+                // XP multiplier info
+                const tierMultiplier = premiumTier === 'promax' ? '2x' : premiumTier === 'pro' ? '1.5x' : premiumTier === 'basic' ? '1.25x' : '1x';
+                const tierBonus = premiumTier === 'promax' ? 20 : premiumTier === 'pro' ? 10 : premiumTier === 'basic' ? 5 : 0;
+
+                const barColors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EC4899', '#06B6D4'];
+
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="space-y-4"
+                    >
+                        {/* ── Premium Perks Active ── */}
+                        <div className="rounded-2xl overflow-hidden border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/30">
+                            <div className="p-4">
+                                <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                    <Zap className="w-3.5 h-3.5" /> Your Premium Perks
+                                </h4>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/30">
+                                        <p className="text-lg font-black text-blue-600 dark:text-blue-400">{tierMultiplier}</p>
+                                        <p className="text-[9px] font-bold text-blue-500/60 uppercase">XP Multiplier</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/30">
+                                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">+{tierBonus}</p>
+                                        <p className="text-[9px] font-bold text-emerald-500/60 uppercase">Daily Bonus XP</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/30">
+                                        <p className="text-lg font-black text-violet-600 dark:text-violet-400">
+                                            {premiumTier === 'promax' ? '✓' : premiumTier === 'pro' ? '~' : '—'}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-violet-500/60 uppercase">Explanations</p>
+                                    </div>
                                 </div>
-                                <p className="text-[13px] font-bold text-gray-900 dark:text-white mb-1 leading-tight">
-                                    {feature.title}
-                                </p>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                                    {feature.description}
-                                </p>
-                                <div className="absolute top-3 right-3">
-                                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase tracking-wider">
-                                        Soon
-                                    </span>
+                            </div>
+                        </div>
+
+                        {/* ── Performance Insights ── */}
+                        <div className="rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800/40 bg-violet-50 dark:bg-violet-950/30">
+                            <div className="p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <BarChart3 className="w-3.5 h-3.5" /> Performance Insights
+                                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500 text-white ml-1">LIVE</span>
+                                    </h4>
                                 </div>
-                                <div
-                                    className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-2xl"
-                                    style={{ background: feature.color }}
-                                />
-                            </motion.div>
-                        );
-                    })}
-                </div>
-            </div>
+
+                                {totalTests === 0 ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Take some tests to see your insights!</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Quick Stats */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-violet-100 dark:border-violet-900/30">
+                                                <p className="text-2xl font-black text-violet-600 dark:text-violet-400 tabular-nums">{totalTests}</p>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase">Tests Taken</p>
+                                            </div>
+                                            <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-violet-100 dark:border-violet-900/30">
+                                                <p className="text-2xl font-black tabular-nums" style={{ color: overallAvg >= 70 ? '#10B981' : overallAvg >= 50 ? '#F59E0B' : '#EF4444' }}>
+                                                    {overallAvg}%
+                                                </p>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase">Avg Score</p>
+                                            </div>
+                                            <div className="bg-white dark:bg-[#111827] rounded-xl p-3 text-center border border-violet-100 dark:border-violet-900/30">
+                                                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums">{strongSubjects.length}</p>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase">Strong Subj</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Subject Breakdown (Bar Chart) */}
+                                        {subjectEntries.length > 0 && (premiumTier === 'pro' || premiumTier === 'promax') && (
+                                            <div className="bg-white dark:bg-[#111827] rounded-xl p-4 border border-violet-100 dark:border-violet-900/30">
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Subject-wise Average</p>
+                                                <div className="space-y-2.5">
+                                                    {subjectEntries.map((s, i) => (
+                                                        <div key={s.name}>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{s.name}</span>
+                                                                <span className="text-xs font-bold tabular-nums" style={{ color: barColors[i % barColors.length] }}>{s.avg}%</span>
+                                                            </div>
+                                                            <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                                <motion.div
+                                                                    className="h-full rounded-full"
+                                                                    style={{ background: barColors[i % barColors.length] }}
+                                                                    initial={{ width: 0 }}
+                                                                    animate={{ width: `${s.avg}%` }}
+                                                                    transition={{ delay: 0.3 + i * 0.1, duration: 0.6, ease: 'easeOut' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Improvement Trend */}
+                                        {trendData.length >= 3 && (premiumTier === 'pro' || premiumTier === 'promax') && (
+                                            <div className="bg-white dark:bg-[#111827] rounded-xl p-4 border border-violet-100 dark:border-violet-900/30">
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Recent Score Trend</p>
+                                                <div className="flex items-end gap-1.5 h-16">
+                                                    {trendData.map((val, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            className="flex-1 rounded-t-md min-h-[4px]"
+                                                            style={{
+                                                                background: val >= 70 ? '#10B981' : val >= 50 ? '#F59E0B' : '#EF4444',
+                                                                opacity: 0.7 + (i / trendData.length) * 0.3,
+                                                            }}
+                                                            initial={{ height: 0 }}
+                                                            animate={{ height: `${Math.max(val * 0.6, 6)}%` }}
+                                                            transition={{ delay: 0.4 + i * 0.08, duration: 0.5 }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-[8px] text-gray-400">Oldest</span>
+                                                    <span className="text-[8px] text-gray-400">Latest</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Weak Topics Alert */}
+                                        {weakSubjects.length > 0 && (
+                                            <div className="bg-red-50 dark:bg-red-950/20 rounded-xl p-3 border border-red-200 dark:border-red-800/30">
+                                                <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                                    <Target className="w-3 h-3" /> Focus Areas
+                                                </p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {weakSubjects.map(s => (
+                                                        <span key={s.name} className="text-[11px] font-semibold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 px-2.5 py-1 rounded-full">
+                                                            {s.name} ({s.avg}%)
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[10px] text-red-500/70 dark:text-red-400/50 mt-2">
+                                                    💡 Practice these subjects more to improve your overall score
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Tier upgrade nudge for Basic users */}
+                                        {premiumTier === 'basic' && subjectEntries.length > 0 && (
+                                            <div className="bg-violet-100/50 dark:bg-violet-900/20 rounded-xl p-3 border border-dashed border-violet-300 dark:border-violet-700 flex items-center gap-2">
+                                                <Lock className="w-4 h-4 text-violet-400 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400">Upgrade to Pro for full insights</p>
+                                                    <p className="text-[10px] text-violet-500/60">Subject charts, score trends, and study recommendations</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })()}
         </motion.div>
     );
 }
@@ -4597,6 +4774,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
     const [resultLongest, setResultLongest] = useState(longestStreak);
     const [submitting, setSubmitting] = useState(false);
     const [streakMessage, setStreakMessage] = useState('');
+    const [resultXpEarned, setResultXpEarned] = useState(0);
     const [sessionId, setSessionId] = useState<string | null>(existingSession?.id || null);
     const [isFailed, setIsFailed] = useState(existingSession?.status === 'failed');
     const sessionIdRef = useRef<string | null>(existingSession?.id || null);
@@ -4700,6 +4878,7 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
             setResultStreak(result.currentStreak);
             setResultLongest(result.longestStreak);
             setStreakMessage(result.message);
+            setResultXpEarned(result.xpEarned || 0);
         } catch (err) {
             console.error('[Quizy] Daily quiz submit error:', err);
         }
@@ -4746,6 +4925,18 @@ function DailyQuizCard({ questions, completed, loading, user, streak, longestStr
                     >
                         {streakMessage}
                     </motion.p>
+                )}
+                {resultXpEarned > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mt-2 flex items-center justify-center gap-2"
+                    >
+                        <span className="text-sm font-bold text-white/90 bg-white/15 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                            ⚡ +{resultXpEarned} XP earned
+                        </span>
+                    </motion.div>
                 )}
             </motion.div>
         );

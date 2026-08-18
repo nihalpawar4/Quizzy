@@ -23,6 +23,22 @@ export const HIGH_SCORE_BONUS_XP = 15;
 /** Score percentage threshold for bonus XP */
 export const HIGH_SCORE_THRESHOLD = 80;
 
+// ── Premium Tier XP Bonuses ─────────────────────────────────────────────
+
+/** Tier-based XP multiplier: applied to base+bonus XP */
+export const TIER_XP_MULTIPLIER: Record<string, number> = {
+    basic: 1.25,
+    pro: 1.5,
+    promax: 2,
+};
+
+/** Tier-based flat bonus XP awarded on daily challenge completion */
+export const TIER_DAILY_BONUS_XP: Record<string, number> = {
+    basic: 5,
+    pro: 10,
+    promax: 20,
+};
+
 // ── XP Activity Types ───────────────────────────────────────────────────
 
 export type XpActivityType = 'daily_challenge' | 'weekly_challenge' | 'test';
@@ -44,14 +60,16 @@ export async function addXp(userId: string, amount: number): Promise<void> {
  * - Weekly challenge completed: +30 XP
  * - Regular test completed: +10 XP
  * - Bonus: +15 XP if scored > 80% in any activity
+ * - Premium: tier multiplier + flat bonus on daily challenges
  *
- * Returns the total XP awarded.
+ * Returns { totalXp, baseXp, bonusXp, premiumBonusXp, multiplier }.
  */
 export async function awardActivityXp(
     userId: string,
     activityType: XpActivityType,
     score: number,
-    totalQuestions: number
+    totalQuestions: number,
+    premiumTier?: string
 ): Promise<number> {
     // Base XP based on activity type
     let baseXp = 0;
@@ -76,7 +94,14 @@ export async function awardActivityXp(
         }
     }
 
-    const totalXp = baseXp + bonusXp;
+    // Premium tier multiplier (applies to base + bonus)
+    const multiplier = (premiumTier && TIER_XP_MULTIPLIER[premiumTier]) || 1;
+    let totalXp = Math.round((baseXp + bonusXp) * multiplier);
+
+    // Premium tier flat bonus for daily challenges
+    if (activityType === 'daily_challenge' && premiumTier) {
+        totalXp += TIER_DAILY_BONUS_XP[premiumTier] || 0;
+    }
 
     // Award XP atomically
     if (totalXp > 0) {

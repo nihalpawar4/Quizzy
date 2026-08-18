@@ -19,6 +19,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import { claimDailyStreak } from '@/lib/services';
 import { awardActivityXp } from '@/services/coinService';
+import { getPremiumStatus } from '@/services/premiumService';
 import type { Question, User } from '@/types';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -191,6 +192,7 @@ export async function hasCompletedDailyQuiz(
 /**
  * Submit a daily quiz result and update the student's streak.
  * Also saves to the `results` collection so it appears in My Reports.
+ * Premium users get tier-based XP multiplier + bonus.
  */
 export async function submitDailyQuiz(
     user: User,
@@ -200,6 +202,7 @@ export async function submitDailyQuiz(
     currentStreak: number;
     longestStreak: number;
     message: string;
+    xpEarned: number;
 }> {
     const today = getTodayIST();
 
@@ -215,9 +218,13 @@ export async function submitDailyQuiz(
         completedAt: Timestamp.now(),
     });
 
-    // 1.5) Award XP: 10 XP for daily challenge + 15 bonus if >80%
+    // 1.5) Award XP: base + premium multiplier + tier bonus
+    let xpEarned = 0;
     try {
-        await awardActivityXp(user.uid, 'daily_challenge', score, totalQuestions);
+        // Fetch premium tier for multiplier
+        const premiumStatus = await getPremiumStatus(user.uid);
+        const tier = premiumStatus.isPremium ? premiumStatus.premiumTier : undefined;
+        xpEarned = await awardActivityXp(user.uid, 'daily_challenge', score, totalQuestions, tier);
     } catch (xpErr) {
         console.error('[Quizy] Daily challenge XP award failed (non-blocking):', xpErr);
     }
@@ -230,6 +237,7 @@ export async function submitDailyQuiz(
             currentStreak: streakResult.currentStreak,
             longestStreak: streakResult.longestStreak,
             message: streakResult.message,
+            xpEarned,
         };
     }
 
@@ -238,6 +246,7 @@ export async function submitDailyQuiz(
         currentStreak: user.currentStreak || 0,
         longestStreak: user.longestStreak || 0,
         message: 'Streak already counted!',
+        xpEarned,
     };
 }
 
