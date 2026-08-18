@@ -57,6 +57,7 @@ import {
     ChevronRight,
     SlidersHorizontal,
 } from 'lucide-react';
+import StudentManagementModal from '@/components/ui/StudentManagementModal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     getResultsByTest,
@@ -3346,192 +3347,23 @@ export default function TeacherDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Students Modal */}
+            {/* Students Modal — Premium SaaS 2026 Design */}
             <AnimatePresence>
-                {showStudentsModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-4 sm:pt-8" onClick={() => setShowStudentsModal(false)}>
-                        <motion.div initial={{ scale: 0.98 }} animate={{ scale: 1 }} exit={{ scale: 0.98 }} className="bg-white dark:bg-gray-900 shadow-2xl w-full min-h-screen sm:min-h-0 sm:max-w-3xl sm:max-h-[85vh] sm:rounded-2xl overflow-hidden flex flex-col sm:my-4" onClick={(e) => e.stopPropagation()}>
-                            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
-                                        <Users className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">All Students ({students.length})</h3>
-                                        <p className="text-sm text-gray-500">Registered students on the platform</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setShowStudentsModal(false)} className="p-2 text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-6">
-                                {/* Class Change Requests Section */}
-                                {classChangeRequests.length > 0 && (
-                                    <div className="mb-6">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                                            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                                                Pending Class Change Requests ({classChangeRequests.length})
-                                            </h4>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {classChangeRequests.map((request) => (
-                                                <div key={request.id} className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <h5 className="font-semibold text-gray-900 dark:text-white text-sm">{request.studentName}</h5>
-                                                                <span className="text-xs text-gray-500 dark:text-gray-400">{request.studentEmail}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full">
-                                                                    Class {request.currentClass}
-                                                                </span>
-                                                                <ArrowRight className="w-3 h-3 text-amber-500" />
-                                                                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-xs font-semibold rounded-full">
-                                                                    Class {request.requestedClass}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                                                Requested {request.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => handleRejectClassChange(request.id)}
-                                                                disabled={processingClassChange === request.id}
-                                                                className="p-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                                                                title="Reject"
-                                                            >
-                                                                {processingClassChange === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleApproveClassChange(request.id)}
-                                                                disabled={processingClassChange === request.id}
-                                                                className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                                                                title="Approve"
-                                                            >
-                                                                {processingClassChange === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                                                Approve
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {students.length === 0 ? (
-                                    <p className="text-center text-gray-500 py-8">No students registered yet.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {students.map((student) => {
-                                            const studentResults = results.filter(r => r.studentId === student.uid && !r.isPdfTest && r.totalQuestions > 0);
-                                            const avgScore = studentResults.length > 0 ? Math.round(studentResults.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 100, 0) / studentResults.length) : null;
-                                            const isLoading = studentActionLoading === student.uid;
-                                            const showDeleteConfirm = confirmDeleteStudent === student.uid;
-                                            return (
-                                                <div key={student.uid} className={`p-4 rounded-xl border ${student.isRestricted ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-gray-800 border-transparent'}`}>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div className="flex items-center gap-4 flex-1">
-                                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${student.isRestricted ? 'bg-red-100 dark:bg-red-900/50' : 'bg-green-100 dark:bg-green-900/50'}`}>
-                                                                {student.isRestricted ? (
-                                                                    <ShieldX className="w-6 h-6 text-red-600" />
-                                                                ) : (
-                                                                    <UserIcon className="w-6 h-6 text-green-600" />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <h4 className="font-semibold text-gray-900 dark:text-white">{student.name}</h4>
-                                                                    {student.isRestricted && (
-                                                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs rounded-full font-medium">Restricted</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                                    <Mail className="w-4 h-4" />
-                                                                    <span>{student.email}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-3 mt-1">
-                                                                    <span className="text-xs text-gray-400">Class {student.studentClass || 'N/A'}</span>
-                                                                    <span className="text-xs text-gray-400">•</span>
-                                                                    <span className="text-xs text-gray-400">{studentResults.length} tests</span>
-                                                                    {avgScore !== null && (
-                                                                        <>
-                                                                            <span className="text-xs text-gray-400">•</span>
-                                                                            <span className={`text-xs font-medium ${avgScore >= 70 ? 'text-green-600' : avgScore >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>Avg: {avgScore}%</span>
-                                                                        </>
-                                                                    )}
-                                                                    {(student.currentStreak || 0) > 0 && (
-                                                                        <>
-                                                                            <span className="text-xs text-gray-400">•</span>
-                                                                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">🔥{student.currentStreak}</span>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {/* Action Buttons */}
-                                                        {showDeleteConfirm ? (
-                                                            <div className="flex items-center gap-2 bg-red-100 dark:bg-red-900/50 px-3 py-2 rounded-xl">
-                                                                <span className="text-sm text-red-700 dark:text-red-300">Delete permanently?</span>
-                                                                <button
-                                                                    onClick={() => handleDeleteStudent(student.uid)}
-                                                                    disabled={isLoading}
-                                                                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-                                                                >
-                                                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes'}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setConfirmDeleteStudent(null)}
-                                                                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300"
-                                                                >
-                                                                    No
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                {student.isRestricted ? (
-                                                                    <button
-                                                                        onClick={() => handleEnableStudent(student.uid)}
-                                                                        disabled={isLoading}
-                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900 transition-colors disabled:opacity-50"
-                                                                        title="Enable student account"
-                                                                    >
-                                                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                                                                        Enable
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => handleRestrictStudent(student.uid)}
-                                                                        disabled={isLoading}
-                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors disabled:opacity-50"
-                                                                        title="Restrict student account"
-                                                                    >
-                                                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-                                                                        Restrict
-                                                                    </button>
-                                                                )}
-                                                                <button
-                                                                    onClick={() => setConfirmDeleteStudent(student.uid)}
-                                                                    disabled={isLoading}
-                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900 transition-colors disabled:opacity-50"
-                                                                    title="Delete student permanently"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
+                {showStudentsModal && (<StudentManagementModal
+                    students={students}
+                    results={results}
+                    classChangeRequests={classChangeRequests}
+                    processingClassChange={processingClassChange}
+                    studentActionLoading={studentActionLoading}
+                    confirmDeleteStudent={confirmDeleteStudent}
+                    onClose={() => setShowStudentsModal(false)}
+                    onApproveClassChange={handleApproveClassChange}
+                    onRejectClassChange={handleRejectClassChange}
+                    onRestrictStudent={handleRestrictStudent}
+                    onEnableStudent={handleEnableStudent}
+                    onDeleteStudent={handleDeleteStudent}
+                    onSetConfirmDelete={setConfirmDeleteStudent}
+                />)}
             </AnimatePresence>
 
             {/* Submissions Modal */}
