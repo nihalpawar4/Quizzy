@@ -75,13 +75,20 @@ function cacheUserProfile(profile: User | null) {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    // Initialize from cache for instant hydration — no loading screen on refresh
-    const [user, setUser] = useState<User | null>(() => getCachedUserProfile());
-    const [loading, setLoading] = useState(() => {
-        // If we have cached data, skip the blocking loading state
-        return !getCachedUserProfile();
-    });
+    // Always start with null/loading=true so server and client HTML match (prevents hydration mismatch).
+    // The cached profile is applied after mount in a useEffect below.
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
     const [rememberedUser, setRememberedUser] = useState<RememberedUser | null>(null);
+
+    // Restore cached profile after mount for instant display (avoids SSR mismatch)
+    useEffect(() => {
+        const cached = getCachedUserProfile();
+        if (cached) {
+            setUser(cached);
+            setLoading(false);
+        }
+    }, []);
 
     // Check if email is admin
     const isAdminEmail = (email: string): boolean => {
