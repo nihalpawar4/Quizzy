@@ -146,13 +146,18 @@ export function canClaimStreakToday(user: User): boolean {
 
 /**
  * Claim daily streak for user
- * Returns updated streak info or null if already claimed today
+ * Returns updated streak info or null if already claimed today.
+ * 
+ * Streak Shield (Premium): If a premium user misses 1-5 days and has
+ * enough streak shields, shields are consumed and the streak continues
+ * instead of resetting to 1.
  */
 export async function claimDailyStreak(uid: string, user: User): Promise<{
     success: boolean;
     currentStreak: number;
     longestStreak: number;
     message: string;
+    shieldsUsed?: number;
 } | null> {
     const today = getTodayDateString();
     const yesterday = getYesterdayDateString();
@@ -169,15 +174,50 @@ export async function claimDailyStreak(uid: string, user: User): Promise<{
 
     let newStreak = 1;
     let newLongestStreak = user.longestStreak || 0;
+    let shieldsUsed = 0;
 
-    // Check if last claim was yesterday (continue streak) or older (reset)
+    // Check if last claim was yesterday (continue streak) or older (potential break)
     if (user.lastStreakDate === yesterday) {
-        // Continue streak
+        // Continue streak — no gap
         newStreak = (user.currentStreak || 0) + 1;
-    } else {
-        // Streak broken, start fresh
-        newStreak = 1;
+    } else if (user.lastStreakDate) {
+        // Gap detected — calculate how many days were missed
+        const lastDate = new Date(user.lastStreakDate + 'T00:00:00+05:30');
+        const todayDate = new Date(today + 'T00:00:00+05:30');
+        const diffMs = todayDate.getTime() - lastDate.getTime();
+        const daysMissed = Math.floor(diffMs / (24 * 60 * 60 * 1000)) - 1; // subtract 1 because "today" is the claim day
+
+        // Streak Shield: check if premium user has enough shields (max 5 days protection)
+        const MAX_SHIELD_DAYS = 5;
+        if (
+            daysMissed > 0 &&
+            daysMissed <= MAX_SHIELD_DAYS &&
+            user.isPremium &&
+            (user.streakShieldsRemaining || 0) >= daysMissed
+        ) {
+            // Try to consume shields
+            try {
+                const { useStreakShield } = await import('@/services/premiumService');
+                const consumed = await useStreakShield(uid, daysMissed);
+                if (consumed) {
+                    // Shields consumed — preserve streak!
+                    newStreak = (user.currentStreak || 0) + 1;
+                    shieldsUsed = daysMissed;
+                    console.log(`[Quizy] Streak shield used: ${daysMissed} shield(s) consumed for ${user.name} (${user.email})`);
+                } else {
+                    // Shields couldn't be consumed (race condition) — streak breaks
+                    newStreak = 1;
+                }
+            } catch (err) {
+                console.error('[Quizy] Streak shield error (non-blocking):', err);
+                newStreak = 1;
+            }
+        } else {
+            // No shields, not premium, or gap too large — streak breaks
+            newStreak = 1;
+        }
     }
+    // else: no lastStreakDate at all — first ever streak, newStreak stays 1
 
     // Update longest streak if needed
     if (newStreak > newLongestStreak) {
@@ -192,11 +232,22 @@ export async function claimDailyStreak(uid: string, user: User): Promise<{
         lastStreakDate: today
     });
 
+    // Build response message
+    let message: string;
+    if (newStreak === 1 && shieldsUsed === 0) {
+        message = 'Streak started! 🔥';
+    } else if (shieldsUsed > 0) {
+        message = `🛡️ Streak Shield protected you! ${shieldsUsed} shield${shieldsUsed > 1 ? 's' : ''} used. ${newStreak} day streak! 🔥`;
+    } else {
+        message = `${newStreak} day streak! 🔥`;
+    }
+
     return {
         success: true,
         currentStreak: newStreak,
         longestStreak: newLongestStreak,
-        message: newStreak === 1 ? 'Streak started! 🔥' : `${newStreak} day streak! 🔥`
+        message,
+        shieldsUsed,
     };
 }
 

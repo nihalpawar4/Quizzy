@@ -187,11 +187,12 @@ export async function purchasePremium(userId: string): Promise<{ success: boolea
         return { success: false, error: `Not enough XP. You need ${PREMIUM_XP_COST} XP but have ${currentXP} XP.` };
     }
 
-    // Deduct XP and activate premium
+    // Deduct XP and activate premium + grant 3 streak shields
     await updateDoc(userRef, {
         xp: increment(-PREMIUM_XP_COST),
         isPremium: true,
         premiumPurchasedAt: new Date(),
+        streakShieldsRemaining: increment(3),
     });
 
     // Log the purchase
@@ -240,12 +241,17 @@ export async function purchasePremiumTier(
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
+    // Grant tier-based streak shields: basic=3, pro=4, promax=5
+    const tierShields: Record<string, number> = { basic: 3, pro: 4, promax: 5 };
+    const shieldsToGrant = tierShields[tier] || 3;
+
     await updateDoc(userRef, {
         xp: increment(-xpCost),
         isPremium: true,
         premiumTier: tier,
         premiumPurchasedAt: new Date(),
         premiumExpiresAt: expiresAt,
+        streakShieldsRemaining: increment(shieldsToGrant),
     });
 
     // Log the purchase
@@ -318,15 +324,21 @@ export async function addStreakShields(userId: string, count: number = 1): Promi
     await updateDoc(userRef, { streakShieldsRemaining: increment(count) });
 }
 
-export async function useStreakShield(userId: string): Promise<boolean> {
+/**
+ * Consume streak shield(s) for a user.
+ * @param userId - The user ID
+ * @param count - Number of shields to consume (default 1, max 5)
+ * @returns true if shields were successfully consumed, false if not enough shields
+ */
+export async function useStreakShield(userId: string, count: number = 1): Promise<boolean> {
     const userRef = doc(db, COLLECTIONS.USERS, userId);
     const snap = await getDoc(userRef);
     if (!snap.exists()) return false;
 
     const shields = (snap.data().streakShieldsRemaining as number) || 0;
-    if (shields <= 0) return false;
+    if (shields < count) return false;
 
-    await updateDoc(userRef, { streakShieldsRemaining: increment(-1) });
+    await updateDoc(userRef, { streakShieldsRemaining: increment(-count) });
     return true;
 }
 
