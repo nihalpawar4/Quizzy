@@ -21,6 +21,7 @@ import {
     Ban,
     ShieldCheck,
     Trash2,
+    Flame,
 } from 'lucide-react';
 import type { User, TestResult, ClassChangeRequest } from '@/types';
 
@@ -38,6 +39,8 @@ interface StudentManagementModalProps {
     onEnableStudent: (uid: string) => void;
     onDeleteStudent: (uid: string) => void;
     onSetConfirmDelete: (uid: string | null) => void;
+    onRestoreStreak?: (uid: string, newStreak: number) => Promise<void>;
+    streakRestoreLoading?: string | null;
 }
 
 // Color palette for avatar backgrounds — deterministic by name
@@ -77,9 +80,14 @@ export default function StudentManagementModal({
     onEnableStudent,
     onDeleteStudent,
     onSetConfirmDelete,
+    onRestoreStreak,
+    streakRestoreLoading,
 }: StudentManagementModalProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [classFilter, setClassFilter] = useState<number | null>(null);
+    // Streak restore local state
+    const [streakRestoreUid, setStreakRestoreUid] = useState<string | null>(null);
+    const [streakValue, setStreakValue] = useState('');
 
     // Available classes (unique, sorted)
     const availableClasses = Array.from(
@@ -324,11 +332,9 @@ export default function StudentManagementModal({
                                                             {avgScore}%
                                                         </span>
                                                     )}
-                                                    {(student.currentStreak || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-0.5 px-2 py-[3px] bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-bold rounded-md">
-                                                            🔥 {student.currentStreak}
-                                                        </span>
-                                                    )}
+                                                    <span className="inline-flex items-center gap-0.5 px-2 py-[3px] bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-bold rounded-md">
+                                                        🔥 {student.currentStreak || 0}
+                                                    </span>
                                                 </div>
                                             </div>
 
@@ -357,6 +363,24 @@ export default function StudentManagementModal({
                                                     </motion.div>
                                                 ) : (
                                                     <>
+                                                        {/* Streak Restore Button */}
+                                                        {onRestoreStreak && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setStreakRestoreUid(streakRestoreUid === student.uid ? null : student.uid);
+                                                                    setStreakValue(String(student.currentStreak || 0));
+                                                                }}
+                                                                disabled={isLoading}
+                                                                className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-50 active:scale-95 ${
+                                                                    streakRestoreUid === student.uid
+                                                                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 ring-1 ring-orange-300/50 dark:ring-orange-700/50'
+                                                                        : 'bg-transparent text-gray-300 dark:text-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/15 hover:text-orange-500 dark:hover:text-orange-400'
+                                                                }`}
+                                                                title="Restore streak"
+                                                            >
+                                                                <Flame className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                         {student.isRestricted ? (
                                                             <button
                                                                 onClick={() => onEnableStudent(student.uid)}
@@ -388,6 +412,57 @@ export default function StudentManagementModal({
                                                 )}
                                             </div>
                                         </div>
+
+                                        {/* Streak Restore Inline Panel */}
+                                        {streakRestoreUid === student.uid && onRestoreStreak && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="mt-2.5 ml-[52px]"
+                                            >
+                                                <div className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/15 border border-orange-200/50 dark:border-orange-800/30 rounded-xl">
+                                                    <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+                                                    <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-300 whitespace-nowrap">Set streak to</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="9999"
+                                                        value={streakValue}
+                                                        onChange={(e) => setStreakValue(e.target.value)}
+                                                        className="w-16 px-2 py-1 bg-white dark:bg-gray-900 border border-orange-200 dark:border-orange-800/50 rounded-lg text-sm text-center font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-400/50"
+                                                        placeholder="0"
+                                                        autoFocus
+                                                    />
+                                                    <span className="text-[11px] text-orange-600/70 dark:text-orange-400/60 font-medium">days</span>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const val = parseInt(streakValue, 10);
+                                                            if (isNaN(val) || val < 0) return;
+                                                            await onRestoreStreak(student.uid, val);
+                                                            setStreakRestoreUid(null);
+                                                            setStreakValue('');
+                                                        }}
+                                                        disabled={streakRestoreLoading === student.uid || !streakValue || parseInt(streakValue, 10) < 0}
+                                                        className="flex items-center gap-1 px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50 shadow-sm shadow-orange-600/20"
+                                                    >
+                                                        {streakRestoreLoading === student.uid ? (
+                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                        ) : (
+                                                            <Check className="w-3 h-3" />
+                                                        )}
+                                                        Restore
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setStreakRestoreUid(null); setStreakValue(''); }}
+                                                        className="w-6 h-6 flex items-center justify-center rounded-md bg-gray-200/80 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )}
                                     </motion.div>
                                 );
                             })}

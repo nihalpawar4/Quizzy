@@ -85,7 +85,8 @@ import {
     evaluatePdfTestResult,
     subscribeToPendingClassChangeRequests,
     approveClassChange,
-    rejectClassChange
+    rejectClassChange,
+    restoreStudentStreak
 } from '@/lib/services';
 // Heavy libraries dynamically imported at call site to save ~1MB from initial bundle
 // import { downloadAnalyticsCSV } from '@/lib/utils/downloadCSV';
@@ -147,6 +148,7 @@ export default function TeacherDashboard() {
     // Student management state
     const [studentActionLoading, setStudentActionLoading] = useState<string | null>(null); // uid of student being processed
     const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<string | null>(null); // uid of student to delete
+    const [streakRestoreLoading, setStreakRestoreLoading] = useState<string | null>(null); // uid of student whose streak is being restored
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'tests' | 'analytics' | 'notes' | 'qa'>('tests');
@@ -960,6 +962,19 @@ export default function TeacherDashboard() {
             console.error('Error deleting student:', error);
         } finally {
             setStudentActionLoading(null);
+        }
+    };
+
+    // Restore a student's streak (teacher power)
+    const handleRestoreStreak = async (uid: string, newStreak: number) => {
+        setStreakRestoreLoading(uid);
+        try {
+            await restoreStudentStreak(uid, newStreak);
+            await loadStudents(); // Refresh students list to show updated streak
+        } catch (error) {
+            console.error('Error restoring student streak:', error);
+        } finally {
+            setStreakRestoreLoading(null);
         }
     };
 
@@ -3363,6 +3378,8 @@ export default function TeacherDashboard() {
                     onEnableStudent={handleEnableStudent}
                     onDeleteStudent={handleDeleteStudent}
                     onSetConfirmDelete={setConfirmDeleteStudent}
+                    onRestoreStreak={handleRestoreStreak}
+                    streakRestoreLoading={streakRestoreLoading}
                 />)}
             </AnimatePresence>
 

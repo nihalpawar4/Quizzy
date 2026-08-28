@@ -251,6 +251,40 @@ export async function claimDailyStreak(uid: string, user: User): Promise<{
     };
 }
 
+// ==================== STREAK RESTORE (Teacher) ====================
+
+/**
+ * Restore / set a student's streak to a specific value.
+ * Only intended to be called by teachers from the dashboard.
+ * 
+ * - Sets currentStreak to the given value.
+ * - Updates longestStreak if the new value exceeds the existing record.
+ * - Sets lastStreakDate to today (IST) so the streak continues from now.
+ */
+export async function restoreStudentStreak(
+    studentUid: string,
+    newStreak: number
+): Promise<void> {
+    const userRef = doc(db, COLLECTIONS.USERS, studentUid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) throw new Error('Student not found');
+
+    const data = snap.data();
+    const currentLongest = data.longestStreak || 0;
+
+    // Get today in IST
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const todayIST = istDate.toISOString().split('T')[0];
+
+    await updateDoc(userRef, {
+        currentStreak: newStreak,
+        longestStreak: Math.max(currentLongest, newStreak),
+        lastStreakDate: todayIST,
+    });
+}
+
 // ==================== TEST OPERATIONS ====================
 
 /**
