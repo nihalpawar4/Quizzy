@@ -5346,17 +5346,22 @@ function HelpCenterTab() {
 function PYQBankTab() {
     const [selectedYear, setSelectedYear] = useState<number>(2025);
     const [selectedSubject, setSelectedSubject] = useState<'Mathematics' | 'Science'>('Mathematics');
-    const [selectedChapter, setSelectedChapter] = useState<number>(0); // 0 = All
+    const [selectedChapter, setSelectedChapter] = useState<number>(0);
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedQ, setExpandedQ] = useState<string | null>(null);
-
+    // Track student answers: { [questionId]: selectedOptionIndex }
+    const [answers, setAnswers] = useState<Record<string, number>>({});
+    // Track which questions have explanation open
+    const [showExplanation, setShowExplanation] = useState<Record<string, boolean>>({});
 
     const chapters = selectedSubject === 'Mathematics' ? MATHS_CHAPTERS : SCIENCE_CHAPTERS;
 
     useEffect(() => {
         setLoading(true);
         setExpandedQ(null);
+        setAnswers({});
+        setShowExplanation({});
         const fetchQuestions = async () => {
             try {
                 let data = await getPYQByYear(selectedSubject, selectedYear);
@@ -5374,6 +5379,15 @@ function PYQBankTab() {
         fetchQuestions();
     }, [selectedYear, selectedSubject, selectedChapter]);
 
+    const handleOptionClick = (qId: string, optionIndex: number) => {
+        if (answers[qId] !== undefined) return; // Already answered
+        setAnswers(prev => ({ ...prev, [qId]: optionIndex }));
+    };
+
+    const toggleExplanation = (qId: string) => {
+        setShowExplanation(prev => ({ ...prev, [qId]: !prev[qId] }));
+    };
+
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
             {/* Header */}
@@ -5382,21 +5396,15 @@ function PYQBankTab() {
                     <FileQuestion className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
                 </div>
                 <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                        PYQ Bank
-                    </h2>
-                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
-                        Previous Year Questions · CBSE Board Pattern
-                    </p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PYQ Bank</h2>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">Previous Year Questions · CBSE Board Pattern</p>
                 </div>
             </div>
 
             {/* Subject Toggle */}
             <div className="flex gap-2 mb-4">
                 {(['Mathematics', 'Science'] as const).map(sub => (
-                    <button
-                        key={sub}
-                        onClick={() => { setSelectedSubject(sub); setSelectedChapter(0); }}
+                    <button key={sub} onClick={() => { setSelectedSubject(sub); setSelectedChapter(0); }}
                         className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
                             selectedSubject === sub
                                 ? sub === 'Mathematics'
@@ -5413,9 +5421,7 @@ function PYQBankTab() {
             {/* Year Pills */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
                 {PYQ_YEARS.map((year: number) => (
-                    <button
-                        key={year}
-                        onClick={() => setSelectedYear(year)}
+                    <button key={year} onClick={() => setSelectedYear(year)}
                         className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
                             selectedYear === year
                                 ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
@@ -5429,16 +5435,12 @@ function PYQBankTab() {
 
             {/* Chapter Filter */}
             <div className="relative mb-5">
-                <select
-                    value={selectedChapter}
-                    onChange={e => setSelectedChapter(Number(e.target.value))}
+                <select value={selectedChapter} onChange={e => setSelectedChapter(Number(e.target.value))}
                     className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none cursor-pointer"
                 >
                     <option value={0}>📚 All Chapters</option>
                     {chapters.map((ch: any) => (
-                        <option key={ch.number} value={ch.number}>
-                            {ch.emoji} Ch {ch.number}: {ch.shortName}
-                        </option>
+                        <option key={ch.number} value={ch.number}>{ch.emoji} Ch {ch.number}: {ch.shortName}</option>
                     ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -5449,16 +5451,12 @@ function PYQBankTab() {
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                     {loading ? 'Loading...' : `${questions.length} question${questions.length !== 1 ? 's' : ''} found`}
                 </p>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                    CBSE {selectedYear} · {selectedSubject}
-                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">CBSE {selectedYear} · {selectedSubject}</span>
             </div>
 
             {/* Questions */}
             {loading ? (
-                <div className="flex justify-center py-12">
-                    <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
-                </div>
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-amber-500 animate-spin" /></div>
             ) : questions.length === 0 ? (
                 <div className="text-center py-16">
                     <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -5471,94 +5469,164 @@ function PYQBankTab() {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {questions.map((q: any, idx: number) => (
-                        <motion.div
-                            key={q.id}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
-                        >
-                            <button
-                                onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
-                                className="w-full text-left p-4 flex items-start gap-3"
-                            >
-                                <span className="flex-shrink-0 w-7 h-7 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center justify-center text-xs font-bold text-amber-600">
-                                    {idx + 1}
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">
-                                        {q.text}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                            {q.chapterName || 'General'}
-                                        </span>
-                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
-                                            {q.type === 'mcq' ? 'MCQ' : q.type === 'fill_blank' ? 'Fill' : q.type === 'true_false' ? 'T/F' : q.type}
-                                        </span>
-                                    </div>
-                                </div>
-                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 mt-1 ${expandedQ === q.id ? 'rotate-180' : ''}`} />
-                            </button>
+                    {questions.map((q: any, idx: number) => {
+                        const studentAnswer = answers[q.id];
+                        const hasAnswered = studentAnswer !== undefined;
+                        const isCorrect = hasAnswered && studentAnswer === q.correctOption;
 
-                            {/* Expanded — show answer & explanation */}
-                            <AnimatePresence>
-                                {expandedQ === q.id && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="border-t border-gray-100 dark:border-gray-800"
-                                    >
-                                        <div className="p-4 space-y-3">
-                                            {/* Options (for MCQ) */}
-                                            {q.options && q.options.length > 0 && (
-                                                <div className="space-y-2">
-                                                    {q.options.map((opt: string, oi: number) => (
-                                                        <div
-                                                            key={oi}
-                                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
-                                                                oi === q.correctOption
-                                                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800'
-                                                                    : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400'
-                                                            }`}
-                                                        >
-                                                            <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                                                                oi === q.correctOption
-                                                                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                                                                    : 'border-gray-300 dark:border-gray-600'
-                                                            }`}>
-                                                                {String.fromCharCode(65 + oi)}
-                                                            </span>
-                                                            <span>{opt}</span>
-                                                            {oi === q.correctOption && (
-                                                                <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto flex-shrink-0" />
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {/* Correct answer for non-MCQ */}
-                                            {q.correctAnswer && (
-                                                <div className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-                                                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-0.5">Correct Answer</p>
-                                                    <p className="text-sm text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
-                                                </div>
-                                            )}
-                                            {/* Explanation */}
-                                            {q.explanation && (
-                                                <div className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800">
-                                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
-                                                    <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
-                                                </div>
-                                            )}
+                        return (
+                            <motion.div
+                                key={q.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                            >
+                                <button
+                                    onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
+                                    className="w-full text-left p-4 flex items-start gap-3"
+                                >
+                                    <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                        hasAnswered
+                                            ? isCorrect
+                                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                                                : 'bg-red-100 dark:bg-red-900/30 text-red-600'
+                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
+                                    }`}>
+                                        {hasAnswered ? (isCorrect ? '✓' : '✗') : idx + 1}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">{q.text}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                                {q.chapterName || 'General'}
+                                            </span>
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                                                {q.type === 'mcq' ? 'MCQ' : q.type === 'fill_blank' ? 'Fill' : q.type === 'true_false' ? 'T/F' : q.type}
+                                            </span>
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    ))}
+                                    </div>
+                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 mt-1 ${expandedQ === q.id ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Expanded — interactive answer area */}
+                                <AnimatePresence>
+                                    {expandedQ === q.id && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="border-t border-gray-100 dark:border-gray-800"
+                                        >
+                                            <div className="p-4 space-y-3">
+                                                {/* MCQ Options — clickable */}
+                                                {q.options && q.options.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        {q.options.map((opt: string, oi: number) => {
+                                                            const isSelected = studentAnswer === oi;
+                                                            const isCorrectOption = oi === q.correctOption;
+                                                            let optionStyle = 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-[#2563EB] dark:hover:border-blue-500 cursor-pointer';
+
+                                                            if (hasAnswered) {
+                                                                if (isCorrectOption) {
+                                                                    optionStyle = 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-300 dark:border-emerald-800';
+                                                                } else if (isSelected && !isCorrectOption) {
+                                                                    optionStyle = 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-semibold border border-red-300 dark:border-red-800';
+                                                                } else {
+                                                                    optionStyle = 'bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-gray-800 opacity-60';
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <button
+                                                                    key={oi}
+                                                                    onClick={() => handleOptionClick(q.id, oi)}
+                                                                    disabled={hasAnswered}
+                                                                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all ${optionStyle}`}
+                                                                >
+                                                                    <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${
+                                                                        hasAnswered && isCorrectOption
+                                                                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                                                                            : hasAnswered && isSelected && !isCorrectOption
+                                                                            ? 'border-red-500 bg-red-500 text-white'
+                                                                            : 'border-gray-300 dark:border-gray-600'
+                                                                    }`}>
+                                                                        {hasAnswered && isCorrectOption ? '✓'
+                                                                            : hasAnswered && isSelected && !isCorrectOption ? '✗'
+                                                                            : String.fromCharCode(65 + oi)}
+                                                                    </span>
+                                                                    <span className="text-left">{opt}</span>
+                                                                    {hasAnswered && isCorrectOption && (
+                                                                        <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto flex-shrink-0" />
+                                                                    )}
+                                                                    {hasAnswered && isSelected && !isCorrectOption && (
+                                                                        <XCircle className="w-4 h-4 text-red-500 ml-auto flex-shrink-0" />
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {/* Result feedback after answering */}
+                                                {hasAnswered && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 5 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 ${
+                                                            isCorrect
+                                                                ? 'bg-emerald-50 dark:bg-emerald-900/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                                                : 'bg-red-50 dark:bg-red-900/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                                                        }`}
+                                                    >
+                                                        {isCorrect ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                                        {isCorrect ? 'Correct! Well done 🎉' : `Wrong! Correct answer is ${String.fromCharCode(65 + q.correctOption)}`}
+                                                    </motion.div>
+                                                )}
+
+                                                {/* Non-MCQ correct answer — show only after expanding */}
+                                                {q.correctAnswer && !q.options?.length && (
+                                                    <div className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                                                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-0.5">Correct Answer</p>
+                                                        <p className="text-sm text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Explanation — toggle button */}
+                                                {q.explanation && hasAnswered && (
+                                                    <div>
+                                                        <button
+                                                            onClick={() => toggleExplanation(q.id)}
+                                                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-1"
+                                                        >
+                                                            <HelpCircle className="w-3.5 h-3.5" />
+                                                            {showExplanation[q.id] ? 'Hide Explanation' : 'Show Explanation'}
+                                                            <ChevronDown className={`w-3 h-3 transition-transform ${showExplanation[q.id] ? 'rotate-180' : ''}`} />
+                                                        </button>
+                                                        <AnimatePresence>
+                                                            {showExplanation[q.id] && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 mt-1.5">
+                                                                        <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
+                                                                        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
         </motion.div>
@@ -5571,9 +5639,39 @@ function QuickToolsTab() {
     const [activeSection, setActiveSection] = useState<'formulas' | 'revision' | 'weightage'>('formulas');
     const [selectedSubject, setSelectedSubject] = useState<'Mathematics' | 'Science'>('Mathematics');
     const [expandedCard, setExpandedCard] = useState<number | null>(null);
-
+    // Custom formulas: student-added, saved in localStorage
+    const [customFormulas, setCustomFormulas] = useState<{id: string; chapterNumber: number; text: string}[]>([]);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newFormulaChapter, setNewFormulaChapter] = useState<number>(1);
+    const [newFormulaText, setNewFormulaText] = useState('');
 
     const chapters = selectedSubject === 'Mathematics' ? MATHS_CHAPTERS : SCIENCE_CHAPTERS;
+
+    // Load custom formulas from localStorage on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('quizy_custom_formulas');
+            if (saved) setCustomFormulas(JSON.parse(saved));
+        } catch {}
+    }, []);
+
+    // Save custom formulas to localStorage
+    const saveFormulas = (formulas: typeof customFormulas) => {
+        setCustomFormulas(formulas);
+        localStorage.setItem('quizy_custom_formulas', JSON.stringify(formulas));
+    };
+
+    const addFormula = () => {
+        if (!newFormulaText.trim()) return;
+        const newFormula = { id: Date.now().toString(), chapterNumber: newFormulaChapter, text: newFormulaText.trim() };
+        saveFormulas([...customFormulas, newFormula]);
+        setNewFormulaText('');
+        setShowAddForm(false);
+    };
+
+    const deleteFormula = (id: string) => {
+        saveFormulas(customFormulas.filter(f => f.id !== id));
+    };
 
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
@@ -5583,12 +5681,8 @@ function QuickToolsTab() {
                     <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
                 </div>
                 <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                        Quick Tools
-                    </h2>
-                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
-                        Formulas, revision tips & chapter weightage
-                    </p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Quick Tools</h2>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">Formulas, revision tips & chapter weightage</p>
                 </div>
             </div>
 
@@ -5618,59 +5712,126 @@ function QuickToolsTab() {
             {/* Formula Cards */}
             {activeSection === 'formulas' && (
                 <div className="space-y-3">
-                    {MATHS_FORMULA_CARDS.map((card: any) => (
-                        <motion.div
-                            key={card.chapterNumber}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: card.chapterNumber * 0.03 }}
-                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
-                        >
-                            <button
-                                onClick={() => setExpandedCard(expandedCard === card.chapterNumber ? null : card.chapterNumber)}
-                                className="w-full text-left p-4 flex items-center gap-3"
-                            >
-                                <span className="text-xl">{card.emoji}</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                        Ch {card.chapterNumber}: {card.chapter}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{card.title}</p>
-                                </div>
-                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400">
-                                    {card.formulas.length} formulas
-                                </span>
-                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedCard === card.chapterNumber ? 'rotate-180' : ''}`} />
-                            </button>
+                    {/* Add Formula Button */}
+                    <button
+                        onClick={() => setShowAddForm(!showAddForm)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400 text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-900/10 transition-colors"
+                    >
+                        <span className="text-lg">{showAddForm ? '−' : '+'}</span>
+                        {showAddForm ? 'Cancel' : 'Add Your Own Formula'}
+                    </button>
 
-                            <AnimatePresence>
-                                {expandedCard === card.chapterNumber && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="border-t border-gray-100 dark:border-gray-800"
-                                    >
-                                        <div className="p-4 space-y-2">
-                                            {card.formulas.map((formula: string, fi: number) => (
-                                                <div
-                                                    key={fi}
-                                                    className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-violet-50/50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900/30"
-                                                >
-                                                    <span className="w-5 h-5 rounded-md bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                        {fi + 1}
-                                                    </span>
-                                                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
-                                                        {formula}
-                                                    </p>
-                                                </div>
+                    {/* Add Formula Form */}
+                    <AnimatePresence>
+                        {showAddForm && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-violet-200 dark:border-violet-800 p-4 space-y-3">
+                                    <div className="relative">
+                                        <select
+                                            value={newFormulaChapter}
+                                            onChange={e => setNewFormulaChapter(Number(e.target.value))}
+                                            className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 outline-none cursor-pointer"
+                                        >
+                                            {MATHS_CHAPTERS.map((ch: any) => (
+                                                <option key={ch.number} value={ch.number}>{ch.emoji} Ch {ch.number}: {ch.shortName}</option>
                                             ))}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={newFormulaText}
+                                        onChange={e => setNewFormulaText(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && addFormula()}
+                                        placeholder="Type your formula... e.g. a² + b² = c²"
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-gray-400"
+                                    />
+                                    <button
+                                        onClick={addFormula}
+                                        disabled={!newFormulaText.trim()}
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Add Formula
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Formula chapter cards */}
+                    {MATHS_FORMULA_CARDS.map((card: any) => {
+                        const myFormulas = customFormulas.filter(f => f.chapterNumber === card.chapterNumber);
+                        const totalCount = card.formulas.length + myFormulas.length;
+
+                        return (
+                            <motion.div
+                                key={card.chapterNumber}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: card.chapterNumber * 0.03 }}
+                                className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                            >
+                                <button
+                                    onClick={() => setExpandedCard(expandedCard === card.chapterNumber ? null : card.chapterNumber)}
+                                    className="w-full text-left p-4 flex items-center gap-3"
+                                >
+                                    <span className="text-xl">{card.emoji}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">Ch {card.chapterNumber}: {card.chapter}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{card.title}</p>
+                                    </div>
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400">
+                                        {totalCount} formulas
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedCard === card.chapterNumber ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {expandedCard === card.chapterNumber && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="border-t border-gray-100 dark:border-gray-800"
+                                        >
+                                            <div className="p-4 space-y-2">
+                                                {/* Default formulas */}
+                                                {card.formulas.map((formula: string, fi: number) => (
+                                                    <div key={fi} className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-violet-50/50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900/30">
+                                                        <span className="w-5 h-5 rounded-md bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                            {fi + 1}
+                                                        </span>
+                                                        <p className="text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed">{formula}</p>
+                                                    </div>
+                                                ))}
+                                                {/* Student-added formulas */}
+                                                {myFormulas.map((f, fi) => (
+                                                    <div key={f.id} className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 group">
+                                                        <span className="w-5 h-5 rounded-md bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                            ✎
+                                                        </span>
+                                                        <p className="text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed flex-1">{f.text}</p>
+                                                        <button
+                                                            onClick={() => deleteFormula(f.id)}
+                                                            className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -5912,27 +6073,20 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                 </div>
             </div>
 
-            {/* Section Navigation */}
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
-                {([
-                    { id: 'overview', label: '🏠 Overview' },
-                    { id: 'chapter', label: '📖 Chapter-wise' },
-                    { id: 'numericals', label: '🔢 Numericals' },
-                    { id: 'most-asked', label: '⭐ Most Asked' },
-                    { id: 'mistakes', label: `🔄 Mistake Bucket (${mistakeItems.length})` },
-                ] as const).map(sec => (
-                    <button
-                        key={sec.id}
-                        onClick={() => setActiveSection(sec.id)}
-                        className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border whitespace-nowrap ${
-                            activeSection === sec.id
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/15'
-                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
-                        }`}
-                    >
-                        {sec.label}
-                    </button>
-                ))}
+            {/* Section Navigation — Dropdown */}
+            <div className="relative mb-5">
+                <select
+                    value={activeSection}
+                    onChange={e => setActiveSection(e.target.value as any)}
+                    className="w-full appearance-none px-4 py-3 pr-10 rounded-2xl text-sm font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none cursor-pointer shadow-sm"
+                >
+                    <option value="overview">🏠  Overview</option>
+                    <option value="chapter">📖  Chapter-wise Practice</option>
+                    <option value="numericals">🔢  Numericals</option>
+                    <option value="most-asked">⭐  Most Asked Questions</option>
+                    <option value="mistakes">🔄  Mistake Bucket ({mistakeItems.length})</option>
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
             {/* Overview */}
