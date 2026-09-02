@@ -8,6 +8,8 @@ import {
     BookOpen,
     Clock,
     ArrowRight,
+    ArrowLeft,
+    Flag,
     User,
     Trophy,
     Loader2,
@@ -5349,7 +5351,6 @@ function PYQBankTab() {
     const [selectedChapter, setSelectedChapter] = useState<number>(0);
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expandedQ, setExpandedQ] = useState<string | null>(null);
     // Track student answers: { [questionId]: selectedOptionIndex }
     const [answers, setAnswers] = useState<Record<string, number>>({});
     // Track which questions have explanation open
@@ -5359,7 +5360,6 @@ function PYQBankTab() {
 
     useEffect(() => {
         setLoading(true);
-        setExpandedQ(null);
         setAnswers({});
         setShowExplanation({});
         const fetchQuestions = async () => {
@@ -5380,7 +5380,7 @@ function PYQBankTab() {
     }, [selectedYear, selectedSubject, selectedChapter]);
 
     const handleOptionClick = (qId: string, optionIndex: number) => {
-        if (answers[qId] !== undefined) return; // Already answered
+        if (answers[qId] !== undefined) return;
         setAnswers(prev => ({ ...prev, [qId]: optionIndex }));
     };
 
@@ -5401,229 +5401,160 @@ function PYQBankTab() {
                 </div>
             </div>
 
-            {/* Subject Toggle */}
-            <div className="flex gap-2 mb-4">
-                {(['Mathematics', 'Science'] as const).map(sub => (
-                    <button key={sub} onClick={() => { setSelectedSubject(sub); setSelectedChapter(0); }}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                            selectedSubject === sub
-                                ? sub === 'Mathematics'
-                                    ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/15'
-                                    : 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/15'
-                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
-                        }`}
+            {/* Filter Bar */}
+            <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 mb-5 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
+                        <select value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value as any); setSelectedChapter(0); setAnswers({}); setShowExplanation({}); }}
+                            className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-xl text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none cursor-pointer"
+                        >
+                            <option value="Mathematics">Mathematics</option>
+                            <option value="Science">Science</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 bottom-3 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                    </div>
+                    <div className="relative">
+                        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Year</label>
+                        <select value={selectedYear} onChange={e => { setSelectedYear(Number(e.target.value)); setAnswers({}); setShowExplanation({}); }}
+                            className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-xl text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none cursor-pointer"
+                        >
+                            {PYQ_YEARS.map((year: number) => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 bottom-3 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                    </div>
+                </div>
+                <div className="relative">
+                    <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Chapter</label>
+                    <select value={selectedChapter} onChange={e => { setSelectedChapter(Number(e.target.value)); setAnswers({}); setShowExplanation({}); }}
+                        className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-xl text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none cursor-pointer"
                     >
-                        {sub === 'Mathematics' ? '📐' : '🔬'} {sub}
-                    </button>
-                ))}
-            </div>
-
-            {/* Year Pills */}
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-                {PYQ_YEARS.map((year: number) => (
-                    <button key={year} onClick={() => setSelectedYear(year)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                            selectedYear === year
-                                ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-700'
-                        }`}
-                    >
-                        {year}
-                    </button>
-                ))}
-            </div>
-
-            {/* Chapter Filter */}
-            <div className="relative mb-5">
-                <select value={selectedChapter} onChange={e => setSelectedChapter(Number(e.target.value))}
-                    className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none cursor-pointer"
-                >
-                    <option value={0}>📚 All Chapters</option>
-                    {chapters.map((ch: any) => (
-                        <option key={ch.number} value={ch.number}>{ch.emoji} Ch {ch.number}: {ch.shortName}</option>
-                    ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-
-            {/* Results Count */}
-            <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {loading ? 'Loading...' : `${questions.length} question${questions.length !== 1 ? 's' : ''} found`}
-                </p>
-                <span className="text-xs text-gray-400 dark:text-gray-500">CBSE {selectedYear} · {selectedSubject}</span>
+                        <option value={0}>All Chapters</option>
+                        {[...chapters].sort((a: any, b: any) => a.number - b.number).map((ch: any) => (
+                            <option key={ch.number} value={ch.number}>Ch {ch.number}: {ch.shortName}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 bottom-3 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        {loading ? 'Loading...' : `${questions.length} question${questions.length !== 1 ? 's' : ''} found`}
+                    </p>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                        CBSE {selectedYear}
+                    </span>
+                </div>
             </div>
 
             {/* Questions */}
             {loading ? (
                 <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-amber-500 animate-spin" /></div>
             ) : questions.length === 0 ? (
-                <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <FileQuestion className="w-8 h-8 text-amber-400" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">No PYQs Yet</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-                        Questions will appear here once your teacher creates {selectedSubject} tests. Ask your teacher to upload PYQ papers!
-                    </p>
+                <div className="text-center py-12">
+                    <FileQuestion className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">No questions found</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Try changing the year or chapter filter.</p>
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {questions.map((q: any, idx: number) => {
-                        const studentAnswer = answers[q.id];
-                        const hasAnswered = studentAnswer !== undefined;
+                    {questions.map((q: any, qi: number) => {
+                        const qId = q.id || `q-${qi}`;
+                        const hasAnswered = answers[qId] !== undefined;
+                        const studentAnswer = answers[qId];
                         const isCorrect = hasAnswered && studentAnswer === q.correctOption;
 
                         return (
                             <motion.div
-                                key={q.id}
+                                key={qId}
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.03 }}
-                                className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                                transition={{ delay: qi * 0.03 }}
+                                className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4"
                             >
-                                <button
-                                    onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
-                                    className="w-full text-left p-4 flex items-start gap-3"
-                                >
-                                    <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                        hasAnswered
-                                            ? isCorrect
-                                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
-                                                : 'bg-red-100 dark:bg-red-900/30 text-red-600'
-                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
-                                    }`}>
-                                        {hasAnswered ? (isCorrect ? '✓' : '✗') : idx + 1}
+                                {/* Question */}
+                                <div className="flex items-start gap-3 mb-3">
+                                    <span className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-xs font-bold text-amber-600 flex-shrink-0 mt-0.5">
+                                        {qi + 1}
                                     </span>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">{q.text}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                                {q.chapterName || 'General'}
+                                        {q.marks && (
+                                            <span className="inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
+                                                {q.marks} mark{q.marks > 1 ? 's' : ''}
                                             </span>
-                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
-                                                {q.type === 'mcq' ? 'MCQ' : q.type === 'fill_blank' ? 'Fill' : q.type === 'true_false' ? 'T/F' : q.type}
-                                            </span>
-                                        </div>
+                                        )}
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 mt-1 ${expandedQ === q.id ? 'rotate-180' : ''}`} />
-                                </button>
+                                </div>
 
-                                {/* Expanded — interactive answer area */}
-                                <AnimatePresence>
-                                    {expandedQ === q.id && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="border-t border-gray-100 dark:border-gray-800"
+                                {/* MCQ Options */}
+                                {q.options && q.options.length > 0 && (
+                                    <div className="space-y-2 ml-10 mb-3">
+                                        {q.options.map((opt: string, oi: number) => {
+                                            const isSelected = hasAnswered && studentAnswer === oi;
+                                            const isCorrectOpt = oi === q.correctOption;
+                                            const showAsCorrect = hasAnswered && isCorrectOpt;
+                                            const showAsWrong = isSelected && !isCorrect;
+
+                                            return (
+                                                <button
+                                                    key={oi}
+                                                    onClick={() => handleOptionClick(qId, oi)}
+                                                    disabled={hasAnswered}
+                                                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all border ${
+                                                        showAsCorrect
+                                                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 font-semibold'
+                                                            : showAsWrong
+                                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 font-semibold'
+                                                            : hasAnswered
+                                                            ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-800 cursor-not-allowed'
+                                                            : 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-amber-400 dark:hover:border-amber-600 cursor-pointer'
+                                                    }`}
+                                                >
+                                                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold flex-shrink-0 ${
+                                                        showAsCorrect ? 'border-emerald-500 bg-emerald-500 text-white'
+                                                        : showAsWrong ? 'border-red-500 bg-red-500 text-white'
+                                                        : 'border-gray-300 dark:border-gray-600'
+                                                    }`}>
+                                                        {showAsCorrect ? '✓' : showAsWrong ? '✗' : String.fromCharCode(65 + oi)}
+                                                    </span>
+                                                    <span className="text-left flex-1">{opt}</span>
+                                                    {showAsCorrect && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />}
+                                                    {showAsWrong && <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Explanation — only after answering */}
+                                {hasAnswered && q.explanation && (
+                                    <div className="ml-10">
+                                        <button
+                                            onClick={() => toggleExplanation(qId)}
+                                            className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors flex items-center gap-1"
                                         >
-                                            <div className="p-4 space-y-3">
-                                                {/* MCQ Options — clickable */}
-                                                {q.options && q.options.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        {q.options.map((opt: string, oi: number) => {
-                                                            const isSelected = studentAnswer === oi;
-                                                            const isCorrectOption = oi === q.correctOption;
-                                                            let optionStyle = 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-[#2563EB] dark:hover:border-blue-500 cursor-pointer';
-
-                                                            if (hasAnswered) {
-                                                                if (isCorrectOption) {
-                                                                    optionStyle = 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-300 dark:border-emerald-800';
-                                                                } else if (isSelected && !isCorrectOption) {
-                                                                    optionStyle = 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-semibold border border-red-300 dark:border-red-800';
-                                                                } else {
-                                                                    optionStyle = 'bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-gray-800 opacity-60';
-                                                                }
-                                                            }
-
-                                                            return (
-                                                                <button
-                                                                    key={oi}
-                                                                    onClick={() => handleOptionClick(q.id, oi)}
-                                                                    disabled={hasAnswered}
-                                                                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all ${optionStyle}`}
-                                                                >
-                                                                    <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${
-                                                                        hasAnswered && isCorrectOption
-                                                                            ? 'border-emerald-500 bg-emerald-500 text-white'
-                                                                            : hasAnswered && isSelected && !isCorrectOption
-                                                                            ? 'border-red-500 bg-red-500 text-white'
-                                                                            : 'border-gray-300 dark:border-gray-600'
-                                                                    }`}>
-                                                                        {hasAnswered && isCorrectOption ? '✓'
-                                                                            : hasAnswered && isSelected && !isCorrectOption ? '✗'
-                                                                            : String.fromCharCode(65 + oi)}
-                                                                    </span>
-                                                                    <span className="text-left">{opt}</span>
-                                                                    {hasAnswered && isCorrectOption && (
-                                                                        <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto flex-shrink-0" />
-                                                                    )}
-                                                                    {hasAnswered && isSelected && !isCorrectOption && (
-                                                                        <XCircle className="w-4 h-4 text-red-500 ml-auto flex-shrink-0" />
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
+                                            <HelpCircle className="w-3 h-3" />
+                                            {showExplanation[qId] ? 'Hide' : 'Show'} Explanation
+                                        </button>
+                                        <AnimatePresence>
+                                            {showExplanation[qId] && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 mt-1.5">
+                                                        <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">Explanation</p>
+                                                        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
                                                     </div>
-                                                )}
-
-                                                {/* Result feedback after answering */}
-                                                {hasAnswered && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 5 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 ${
-                                                            isCorrect
-                                                                ? 'bg-emerald-50 dark:bg-emerald-900/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                                                                : 'bg-red-50 dark:bg-red-900/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
-                                                        }`}
-                                                    >
-                                                        {isCorrect ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                                        {isCorrect ? 'Correct! Well done 🎉' : `Wrong! Correct answer is ${String.fromCharCode(65 + q.correctOption)}`}
-                                                    </motion.div>
-                                                )}
-
-                                                {/* Non-MCQ correct answer — show only after expanding */}
-                                                {q.correctAnswer && !q.options?.length && (
-                                                    <div className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-                                                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-0.5">Correct Answer</p>
-                                                        <p className="text-sm text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
-                                                    </div>
-                                                )}
-
-                                                {/* Explanation — toggle button */}
-                                                {q.explanation && hasAnswered && (
-                                                    <div>
-                                                        <button
-                                                            onClick={() => toggleExplanation(q.id)}
-                                                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-1"
-                                                        >
-                                                            <HelpCircle className="w-3.5 h-3.5" />
-                                                            {showExplanation[q.id] ? 'Hide Explanation' : 'Show Explanation'}
-                                                            <ChevronDown className={`w-3 h-3 transition-transform ${showExplanation[q.id] ? 'rotate-180' : ''}`} />
-                                                        </button>
-                                                        <AnimatePresence>
-                                                            {showExplanation[q.id] && (
-                                                                <motion.div
-                                                                    initial={{ height: 0, opacity: 0 }}
-                                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                                    exit={{ height: 0, opacity: 0 }}
-                                                                    className="overflow-hidden"
-                                                                >
-                                                                    <div className="px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 mt-1.5">
-                                                                        <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
-                                                                        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
-                                                                    </div>
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
                             </motion.div>
                         );
                     })}
@@ -5632,7 +5563,6 @@ function PYQBankTab() {
         </motion.div>
     );
 }
-
 
 // ==================== QUICK TOOLS TAB (CLASS 10 ONLY) ====================
 function QuickToolsTab() {
@@ -5689,9 +5619,9 @@ function QuickToolsTab() {
             {/* Section Toggle */}
             <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
                 {([
-                    { id: 'formulas', label: '📝 Formulas', color: 'violet' },
-                    { id: 'weightage', label: '📊 Weightage', color: 'blue' },
-                    { id: 'revision', label: '💡 Revision Tips', color: 'amber' },
+                    { id: 'formulas', label: 'Formulas', color: 'violet' },
+                    { id: 'weightage', label: 'Weightage', color: 'blue' },
+                    { id: 'revision', label: 'Revision Tips', color: 'amber' },
                 ] as const).map(sec => (
                     <button
                         key={sec.id}
@@ -5738,7 +5668,7 @@ function QuickToolsTab() {
                                             className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 outline-none cursor-pointer"
                                         >
                                             {MATHS_CHAPTERS.map((ch: any) => (
-                                                <option key={ch.number} value={ch.number}>{ch.emoji} Ch {ch.number}: {ch.shortName}</option>
+                                                <option key={ch.number} value={ch.number}>Ch {ch.number}: {ch.shortName}</option>
                                             ))}
                                         </select>
                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -5780,7 +5710,7 @@ function QuickToolsTab() {
                                     onClick={() => setExpandedCard(expandedCard === card.chapterNumber ? null : card.chapterNumber)}
                                     className="w-full text-left p-4 flex items-center gap-3"
                                 >
-                                    <span className="text-xl">{card.emoji}</span>
+                                    <span className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 dark:text-violet-400 flex-shrink-0">{card.chapterNumber}</span>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-gray-900 dark:text-white">Ch {card.chapterNumber}: {card.chapter}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{card.title}</p>
@@ -5850,7 +5780,7 @@ function QuickToolsTab() {
                                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
                                 }`}
                             >
-                                {sub === 'Mathematics' ? '📐' : '🔬'} {sub}
+                                {sub}
                             </button>
                         ))}
                     </div>
@@ -5869,7 +5799,7 @@ function QuickToolsTab() {
                                         transition={{ delay: idx * 0.03 }}
                                         className="flex items-center gap-3"
                                     >
-                                        <span className="text-base w-6 text-center">{ch.emoji}</span>
+                                        <span className="w-6 h-6 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">{ch.number}</span>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-1">
                                                 <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
@@ -5920,7 +5850,7 @@ function QuickToolsTab() {
                             className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4"
                         >
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="text-lg">{tip.emoji}</span>
+                                <span className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-xs font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">{idx + 1}</span>
                                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">{tip.title}</h3>
                             </div>
                             <ul className="space-y-2">
@@ -6045,7 +5975,7 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                             )}
                             {q.explanation && (
                                 <div className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800">
-                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
+                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">Explanation</p>
                                     <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
                                 </div>
                             )}
@@ -6080,11 +6010,11 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                     onChange={e => setActiveSection(e.target.value as any)}
                     className="w-full appearance-none px-4 py-3 pr-10 rounded-2xl text-sm font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none cursor-pointer shadow-sm"
                 >
-                    <option value="overview">🏠  Overview</option>
-                    <option value="chapter">📖  Chapter-wise Practice</option>
-                    <option value="numericals">🔢  Numericals</option>
-                    <option value="most-asked">⭐  Most Asked Questions</option>
-                    <option value="mistakes">🔄  Mistake Bucket ({mistakeItems.length})</option>
+                    <option value="overview">Overview</option>
+                    <option value="chapter">Chapter-wise Practice</option>
+                    <option value="numericals">Numericals</option>
+                    <option value="most-asked">Most Asked Questions</option>
+                    <option value="mistakes">Mistake Bucket ({mistakeItems.length})</option>
                 </select>
                 <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -6211,7 +6141,7 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
                                 }`}
                             >
-                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                                {sub === 'Mathematics' ? 'Maths' : 'Science'}
                             </button>
                         ))}
                     </div>
@@ -6221,10 +6151,10 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                             onChange={e => setSelectedChapter(Number(e.target.value))}
                             className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none cursor-pointer"
                         >
-                            <option value={0}>📚 Select a chapter</option>
-                            {chapters.map((ch: any) => (
+                            <option value={0}>Select a chapter</option>
+                            {[...chapters].sort((a: any, b: any) => a.number - b.number).map((ch: any) => (
                                 <option key={ch.number} value={ch.number}>
-                                    {ch.emoji} Ch {ch.number}: {ch.shortName}
+                                    Ch {ch.number}: {ch.shortName}
                                 </option>
                             ))}
                         </select>
@@ -6266,7 +6196,7 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
                                 }`}
                             >
-                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                                {sub === 'Mathematics' ? 'Maths' : 'Science'}
                             </button>
                         ))}
                     </div>
@@ -6300,7 +6230,7 @@ function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: C
                                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
                                 }`}
                             >
-                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                                {sub === 'Mathematics' ? 'Maths' : 'Science'}
                             </button>
                         ))}
                     </div>
