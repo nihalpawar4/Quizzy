@@ -49,6 +49,9 @@ import {
     ChevronRight,
     Zap,
     BarChart3,
+    ChevronUp,
+    Hash,
+    Star,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getResultsByStudent, hasStudentTakenTest, markNotificationAsViewed, deleteNotification, submitPdfTestDownload, markPdfTestViewed } from '@/lib/services';
@@ -93,6 +96,9 @@ const DailySurpriseReward = dynamic(() => import('@/components/DailySurpriseRewa
 const WeeklyTestCard = dynamic(() => import('@/components/WeeklyTestCard'), { ssr: false });
 const ExclusiveTestScreen = dynamic(() => import('@/components/ExclusiveTestScreen'), { ssr: false });
 
+import { PYQ_YEARS, MATHS_CHAPTERS, SCIENCE_CHAPTERS, MATHS_FORMULA_CARDS, QUICK_REVISION_TIPS } from '@/lib/ncertClass10Data';
+import { getPYQByYear, getQuestionsByChapter, getNumericalQuestions, getMostAskedQuestions, getChapterSummary } from '@/services/pyqPracticeService';
+
 import { isSunday, hasCompletedWeeklyTest, getWeeklyTestNumber, getWeeklyTestHistory } from '@/services/weeklyTestService';
 import {
     getExclusiveTests,
@@ -130,7 +136,7 @@ export default function StudentDashboard() {
     const [newTestNotification, setNewTestNotification] = useState<Test | null>(null);
 
     // My Reports state
-    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings'>('tests');
+    const [activeTab, setActiveTab] = useState<'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings' | 'pyq' | 'quick-tools'>('tests');
     const [selectedReport, setSelectedReport] = useState<TestResult | null>(null);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -191,7 +197,10 @@ export default function StudentDashboard() {
     // const [coinsRefreshKey, setCoinsRefreshKey] = useState(0);
 
     // Mobile swipe-to-switch-tab (Instagram-style)
-    const mobileTabOrder: Array<'tests' | 'practice' | 'notes' | 'homework'> = ['tests', 'practice', 'notes', 'homework'];
+    const isClass10 = user?.studentClass === 10;
+    const mobileTabOrder: Array<'tests' | 'practice' | 'notes' | 'homework' | 'pyq' | 'quick-tools'> = isClass10
+        ? ['tests', 'pyq', 'practice', 'quick-tools']
+        : ['tests', 'practice', 'notes', 'homework'];
     const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
@@ -2368,11 +2377,34 @@ export default function StudentDashboard() {
 
                 {/* Practice Mode Tab */}
                 {activeTab === 'practice' && (
-                    <PracticeModeTab
-                        mistakeItems={mistakeBucketItems}
-                        masteredCount={masteredCount}
-                        onRecordAttempt={recordAttempt}
-                    />
+                    <>
+                        {/* Class 10: Enhanced Practice Zone */}
+                        {user.studentClass === 10 && (
+                            <Class10PracticeZone
+                                mistakeItems={mistakeBucketItems}
+                                masteredCount={masteredCount}
+                                onRecordAttempt={recordAttempt}
+                            />
+                        )}
+                        {/* Other classes: Original Practice Mode */}
+                        {user.studentClass !== 10 && (
+                            <PracticeModeTab
+                                mistakeItems={mistakeBucketItems}
+                                masteredCount={masteredCount}
+                                onRecordAttempt={recordAttempt}
+                            />
+                        )}
+                    </>
+                )}
+
+                {/* PYQ Bank Tab — Class 10 only */}
+                {activeTab === 'pyq' && user.studentClass === 10 && (
+                    <PYQBankTab />
+                )}
+
+                {/* Quick Tools Tab — Class 10 only */}
+                {activeTab === 'quick-tools' && user.studentClass === 10 && (
+                    <QuickToolsTab />
                 )}
 
                 {/* Help Center Tab */}
@@ -3110,8 +3142,8 @@ export default function StudentDashboard() {
 
             </div>{/* Close flex-1 content wrapper */}
 
-            {/* Daily Surprise Reward Overlay */}
-            <DailySurpriseReward userId={user.uid} />
+            {/* Daily Surprise Reward Overlay — disabled for Class 10 */}
+            {user.studentClass !== 10 && <DailySurpriseReward userId={user.uid} />}
         </div>
     );
 }
@@ -5305,6 +5337,847 @@ function HelpCenterTab() {
                 <Shield className="w-3 h-3" />
                 Help Center will be available exclusively for Premium members
             </p>
+        </motion.div>
+    );
+}
+
+
+// ==================== PYQ BANK TAB (CLASS 10 ONLY) ====================
+function PYQBankTab() {
+    const [selectedYear, setSelectedYear] = useState<number>(2025);
+    const [selectedSubject, setSelectedSubject] = useState<'Mathematics' | 'Science'>('Mathematics');
+    const [selectedChapter, setSelectedChapter] = useState<number>(0); // 0 = All
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [expandedQ, setExpandedQ] = useState<string | null>(null);
+
+
+    const chapters = selectedSubject === 'Mathematics' ? MATHS_CHAPTERS : SCIENCE_CHAPTERS;
+
+    useEffect(() => {
+        setLoading(true);
+        setExpandedQ(null);
+        const fetchQuestions = async () => {
+            try {
+                let data = await getPYQByYear(selectedSubject, selectedYear);
+                if (selectedChapter > 0) {
+                    data = data.filter((q: any) => q.chapterNumber === selectedChapter);
+                }
+                setQuestions(data);
+            } catch (e) {
+                console.error('[PYQ] Error:', e);
+                setQuestions([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchQuestions();
+    }, [selectedYear, selectedSubject, selectedChapter]);
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center">
+                    <FileQuestion className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
+                </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                        PYQ Bank
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                        Previous Year Questions · CBSE Board Pattern
+                    </p>
+                </div>
+            </div>
+
+            {/* Subject Toggle */}
+            <div className="flex gap-2 mb-4">
+                {(['Mathematics', 'Science'] as const).map(sub => (
+                    <button
+                        key={sub}
+                        onClick={() => { setSelectedSubject(sub); setSelectedChapter(0); }}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                            selectedSubject === sub
+                                ? sub === 'Mathematics'
+                                    ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/15'
+                                    : 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/15'
+                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                    >
+                        {sub === 'Mathematics' ? '📐' : '🔬'} {sub}
+                    </button>
+                ))}
+            </div>
+
+            {/* Year Pills */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+                {PYQ_YEARS.map((year: number) => (
+                    <button
+                        key={year}
+                        onClick={() => setSelectedYear(year)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                            selectedYear === year
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-700'
+                        }`}
+                    >
+                        {year}
+                    </button>
+                ))}
+            </div>
+
+            {/* Chapter Filter */}
+            <div className="relative mb-5">
+                <select
+                    value={selectedChapter}
+                    onChange={e => setSelectedChapter(Number(e.target.value))}
+                    className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 outline-none cursor-pointer"
+                >
+                    <option value={0}>📚 All Chapters</option>
+                    {chapters.map((ch: any) => (
+                        <option key={ch.number} value={ch.number}>
+                            {ch.emoji} Ch {ch.number}: {ch.shortName}
+                        </option>
+                    ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Results Count */}
+            <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    {loading ? 'Loading...' : `${questions.length} question${questions.length !== 1 ? 's' : ''} found`}
+                </p>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                    CBSE {selectedYear} · {selectedSubject}
+                </span>
+            </div>
+
+            {/* Questions */}
+            {loading ? (
+                <div className="flex justify-center py-12">
+                    <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                </div>
+            ) : questions.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <FileQuestion className="w-8 h-8 text-amber-400" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">No PYQs Yet</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+                        Questions will appear here once your teacher creates {selectedSubject} tests. Ask your teacher to upload PYQ papers!
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {questions.map((q: any, idx: number) => (
+                        <motion.div
+                            key={q.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.03 }}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                        >
+                            <button
+                                onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
+                                className="w-full text-left p-4 flex items-start gap-3"
+                            >
+                                <span className="flex-shrink-0 w-7 h-7 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center justify-center text-xs font-bold text-amber-600">
+                                    {idx + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">
+                                        {q.text}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                            {q.chapterName || 'General'}
+                                        </span>
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                                            {q.type === 'mcq' ? 'MCQ' : q.type === 'fill_blank' ? 'Fill' : q.type === 'true_false' ? 'T/F' : q.type}
+                                        </span>
+                                    </div>
+                                </div>
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 mt-1 ${expandedQ === q.id ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Expanded — show answer & explanation */}
+                            <AnimatePresence>
+                                {expandedQ === q.id && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="border-t border-gray-100 dark:border-gray-800"
+                                    >
+                                        <div className="p-4 space-y-3">
+                                            {/* Options (for MCQ) */}
+                                            {q.options && q.options.length > 0 && (
+                                                <div className="space-y-2">
+                                                    {q.options.map((opt: string, oi: number) => (
+                                                        <div
+                                                            key={oi}
+                                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+                                                                oi === q.correctOption
+                                                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800'
+                                                                    : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400'
+                                                            }`}
+                                                        >
+                                                            <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                                                                oi === q.correctOption
+                                                                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                                                                    : 'border-gray-300 dark:border-gray-600'
+                                                            }`}>
+                                                                {String.fromCharCode(65 + oi)}
+                                                            </span>
+                                                            <span>{opt}</span>
+                                                            {oi === q.correctOption && (
+                                                                <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto flex-shrink-0" />
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {/* Correct answer for non-MCQ */}
+                                            {q.correctAnswer && (
+                                                <div className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                                                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-0.5">Correct Answer</p>
+                                                    <p className="text-sm text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
+                                                </div>
+                                            )}
+                                            {/* Explanation */}
+                                            {q.explanation && (
+                                                <div className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800">
+                                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
+                                                    <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+
+// ==================== QUICK TOOLS TAB (CLASS 10 ONLY) ====================
+function QuickToolsTab() {
+    const [activeSection, setActiveSection] = useState<'formulas' | 'revision' | 'weightage'>('formulas');
+    const [selectedSubject, setSelectedSubject] = useState<'Mathematics' | 'Science'>('Mathematics');
+    const [expandedCard, setExpandedCard] = useState<number | null>(null);
+
+
+    const chapters = selectedSubject === 'Mathematics' ? MATHS_CHAPTERS : SCIENCE_CHAPTERS;
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-violet-50 dark:bg-violet-900/20 rounded-2xl flex items-center justify-center">
+                    <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+                </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                        Quick Tools
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                        Formulas, revision tips & chapter weightage
+                    </p>
+                </div>
+            </div>
+
+            {/* Section Toggle */}
+            <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
+                {([
+                    { id: 'formulas', label: '📝 Formulas', color: 'violet' },
+                    { id: 'weightage', label: '📊 Weightage', color: 'blue' },
+                    { id: 'revision', label: '💡 Revision Tips', color: 'amber' },
+                ] as const).map(sec => (
+                    <button
+                        key={sec.id}
+                        onClick={() => setActiveSection(sec.id)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                            activeSection === sec.id
+                                ? (sec.color === 'violet' ? 'bg-violet-600 text-white border-violet-600 shadow-md'
+                                : sec.color === 'blue' ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md'
+                                : 'bg-amber-500 text-white border-amber-500 shadow-md')
+                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                        }`}
+                    >
+                        {sec.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Formula Cards */}
+            {activeSection === 'formulas' && (
+                <div className="space-y-3">
+                    {MATHS_FORMULA_CARDS.map((card: any) => (
+                        <motion.div
+                            key={card.chapterNumber}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: card.chapterNumber * 0.03 }}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                        >
+                            <button
+                                onClick={() => setExpandedCard(expandedCard === card.chapterNumber ? null : card.chapterNumber)}
+                                className="w-full text-left p-4 flex items-center gap-3"
+                            >
+                                <span className="text-xl">{card.emoji}</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                        Ch {card.chapterNumber}: {card.chapter}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{card.title}</p>
+                                </div>
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400">
+                                    {card.formulas.length} formulas
+                                </span>
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedCard === card.chapterNumber ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {expandedCard === card.chapterNumber && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="border-t border-gray-100 dark:border-gray-800"
+                                    >
+                                        <div className="p-4 space-y-2">
+                                            {card.formulas.map((formula: string, fi: number) => (
+                                                <div
+                                                    key={fi}
+                                                    className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-violet-50/50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900/30"
+                                                >
+                                                    <span className="w-5 h-5 rounded-md bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                        {fi + 1}
+                                                    </span>
+                                                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
+                                                        {formula}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+
+            {/* Chapter Weightage */}
+            {activeSection === 'weightage' && (
+                <div>
+                    {/* Subject Toggle */}
+                    <div className="flex gap-2 mb-4">
+                        {(['Mathematics', 'Science'] as const).map(sub => (
+                            <button
+                                key={sub}
+                                onClick={() => setSelectedSubject(sub)}
+                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                                    selectedSubject === sub
+                                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md'
+                                        : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                                }`}
+                            >
+                                {sub === 'Mathematics' ? '📐' : '🔬'} {sub}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2.5">
+                        {chapters
+                            .sort((a: any, b: any) => b.weightage - a.weightage)
+                            .map((ch: any, idx: number) => {
+                                const maxWeightage = Math.max(...chapters.map((c: any) => c.weightage));
+                                const widthPercent = Math.max(10, (ch.weightage / maxWeightage) * 100);
+                                return (
+                                    <motion.div
+                                        key={ch.number}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.03 }}
+                                        className="flex items-center gap-3"
+                                    >
+                                        <span className="text-base w-6 text-center">{ch.emoji}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                                                    Ch {ch.number}: {ch.shortName}
+                                                </p>
+                                                <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400 flex-shrink-0 ml-2">
+                                                    {ch.weightage} marks
+                                                </span>
+                                            </div>
+                                            <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${widthPercent}%` }}
+                                                    transition={{ duration: 0.6, delay: idx * 0.05 }}
+                                                    className="h-full rounded-full"
+                                                    style={{
+                                                        background: ch.weightage >= 8
+                                                            ? 'linear-gradient(90deg, #2563EB, #3B82F6)'
+                                                            : ch.weightage >= 6
+                                                            ? 'linear-gradient(90deg, #10B981, #34D399)'
+                                                            : 'linear-gradient(90deg, #9CA3AF, #D1D5DB)',
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-4 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#2563EB] rounded-full" /> High (8+ marks)</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-500 rounded-full" /> Medium (6-7)</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-400 rounded-full" /> Low (&lt;6)</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Revision Tips */}
+            {activeSection === 'revision' && (
+                <div className="space-y-4">
+                    {QUICK_REVISION_TIPS.map((tip: any, idx: number) => (
+                        <motion.div
+                            key={tip.title}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.08 }}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4"
+                        >
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-lg">{tip.emoji}</span>
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">{tip.title}</h3>
+                            </div>
+                            <ul className="space-y-2">
+                                {tip.tips.map((t: string, ti: number) => (
+                                    <li key={ti} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        <span className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
+                                        {t}
+                                    </li>
+                                ))}
+                            </ul>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+
+// ==================== CLASS 10 PRACTICE ZONE ====================
+interface Class10PracticeZoneProps {
+    mistakeItems: MistakeBucketItem[];
+    masteredCount: number;
+    onRecordAttempt: (itemId: string, isCorrect: boolean, currentStreak: number) => Promise<{ newStreak: number; isMastered: boolean }>;
+}
+
+function Class10PracticeZone({ mistakeItems, masteredCount, onRecordAttempt }: Class10PracticeZoneProps) {
+    const [activeSection, setActiveSection] = useState<'overview' | 'chapter' | 'numericals' | 'most-asked' | 'mistakes'>('overview');
+    const [selectedChapter, setSelectedChapter] = useState<number>(0);
+    const [selectedSubject, setSelectedSubject] = useState<'Mathematics' | 'Science'>('Mathematics');
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [expandedQ, setExpandedQ] = useState<string | null>(null);
+
+
+    const chapters = selectedSubject === 'Mathematics' ? MATHS_CHAPTERS : SCIENCE_CHAPTERS;
+
+    const [chapterSummary, setChapterSummary] = useState<{chapter: any; count: number}[]>([]);
+
+    // Load chapter summary on mount
+    useEffect(() => {
+        getChapterSummary(selectedSubject).then((data: any) => setChapterSummary(data)).catch(console.error);
+    }, [selectedSubject]);
+
+    // Load questions when section changes
+    useEffect(() => {
+        if (activeSection === 'overview' || activeSection === 'mistakes') return;
+        setLoading(true);
+        setExpandedQ(null);
+        const fetch = async () => {
+            try {
+                let data: any[] = [];
+                if (activeSection === 'chapter' && selectedChapter > 0) {
+                    data = await getQuestionsByChapter(selectedSubject, selectedChapter);
+                } else if (activeSection === 'numericals') {
+                    data = await getNumericalQuestions(selectedSubject);
+                } else if (activeSection === 'most-asked') {
+                    data = await getMostAskedQuestions(selectedSubject);
+                }
+                setQuestions(data);
+            } catch (e) {
+                console.error('[Practice] Error:', e);
+                setQuestions([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetch();
+    }, [activeSection, selectedChapter, selectedSubject]);
+
+    // Render question card (reusable)
+    const renderQuestionCard = (q: any, idx: number) => (
+        <motion.div
+            key={q.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.02 }}
+            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+        >
+            <button
+                onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
+                className="w-full text-left p-4 flex items-start gap-3"
+            >
+                <span className="flex-shrink-0 w-7 h-7 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-center text-xs font-bold text-emerald-600">
+                    {idx + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">{q.text}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
+                            {q.chapterName || 'General'}
+                        </span>
+                    </div>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 mt-1 ${expandedQ === q.id ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+                {expandedQ === q.id && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-gray-100 dark:border-gray-800"
+                    >
+                        <div className="p-4 space-y-2">
+                            {q.options?.length > 0 && q.options.map((opt: string, oi: number) => (
+                                <div key={oi} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+                                    oi === q.correctOption
+                                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800'
+                                        : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400'
+                                }`}>
+                                    <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{String.fromCharCode(65 + oi)}</span>
+                                    <span>{opt}</span>
+                                    {oi === q.correctOption && <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto flex-shrink-0" />}
+                                </div>
+                            ))}
+                            {q.correctAnswer && (
+                                <div className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-0.5">Answer</p>
+                                    <p className="text-sm text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
+                                </div>
+                            )}
+                            {q.explanation && (
+                                <div className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800">
+                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-0.5">💡 Explanation</p>
+                                    <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{q.explanation}</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center">
+                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
+                </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                        Practice Zone
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                        Chapter-wise practice · Numericals · Most Asked
+                    </p>
+                </div>
+            </div>
+
+            {/* Section Navigation */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
+                {([
+                    { id: 'overview', label: '🏠 Overview' },
+                    { id: 'chapter', label: '📖 Chapter-wise' },
+                    { id: 'numericals', label: '🔢 Numericals' },
+                    { id: 'most-asked', label: '⭐ Most Asked' },
+                    { id: 'mistakes', label: `🔄 Mistake Bucket (${mistakeItems.length})` },
+                ] as const).map(sec => (
+                    <button
+                        key={sec.id}
+                        onClick={() => setActiveSection(sec.id)}
+                        className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border whitespace-nowrap ${
+                            activeSection === sec.id
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/15'
+                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                        }`}
+                    >
+                        {sec.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Overview */}
+            {activeSection === 'overview' && (
+                <div className="space-y-4">
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-center">
+                            <p className="text-2xl font-bold text-emerald-600">{chapterSummary.reduce((sum: number, s: any) => sum + s.count, 0)}</p>
+                            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">Total Questions</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-center">
+                            <p className="text-2xl font-bold text-[#2563EB]">{chapterSummary.filter((s: any) => s.count > 0).length}</p>
+                            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">Chapters Covered</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-center">
+                            <p className="text-2xl font-bold text-amber-500">{mistakeItems.length}</p>
+                            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">Mistakes to Fix</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-center">
+                            <p className="text-2xl font-bold text-violet-500">{masteredCount}</p>
+                            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">Mastered</p>
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setActiveSection('chapter')}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-left hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group"
+                        >
+                            <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mb-3">
+                                <BookOpen className="w-4 h-4 text-[#2563EB]" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Chapter Practice</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">NCERT chapter-wise questions</p>
+                        </button>
+                        <button
+                            onClick={() => setActiveSection('numericals')}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-left hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group"
+                        >
+                            <div className="w-9 h-9 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center mb-3">
+                                <Hash className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Numerical Bank</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">Calculation-based problems</p>
+                        </button>
+                        <button
+                            onClick={() => setActiveSection('most-asked')}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-left hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group"
+                        >
+                            <div className="w-9 h-9 bg-violet-50 dark:bg-violet-900/20 rounded-xl flex items-center justify-center mb-3">
+                                <Star className="w-4 h-4 text-violet-600" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Most Asked</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">High-weightage questions</p>
+                        </button>
+                        <button
+                            onClick={() => setActiveSection('mistakes')}
+                            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-left hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group"
+                        >
+                            <div className="w-9 h-9 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center mb-3">
+                                <Repeat className="w-4 h-4 text-red-500" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Mistake Bucket</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{mistakeItems.length} questions to revise</p>
+                        </button>
+                    </div>
+
+                    {/* Chapter Summary Grid */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Chapter Coverage</p>
+                            <div className="flex gap-1.5">
+                                {(['Mathematics', 'Science'] as const).map(sub => (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setSelectedSubject(sub)}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                                            selectedSubject === sub
+                                                ? 'bg-[#2563EB] text-white'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                                        }`}
+                                    >
+                                        {sub === 'Mathematics' ? 'Maths' : 'Science'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {chapterSummary.map((item: any) => (
+                                <button
+                                    key={item.chapter.number}
+                                    onClick={() => { setSelectedChapter(item.chapter.number); setActiveSection('chapter'); }}
+                                    className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800 p-3 text-left hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-sm">{item.chapter.emoji}</span>
+                                        <span className="text-[10px] font-bold text-gray-900 dark:text-white truncate">{item.chapter.shortName}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {item.count > 0 ? `${item.count} question${item.count > 1 ? 's' : ''}` : 'No questions yet'}
+                                    </p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Chapter-wise Practice */}
+            {activeSection === 'chapter' && (
+                <div>
+                    <div className="flex gap-2 mb-4">
+                        {(['Mathematics', 'Science'] as const).map(sub => (
+                            <button
+                                key={sub}
+                                onClick={() => { setSelectedSubject(sub); setSelectedChapter(0); }}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                                    selectedSubject === sub
+                                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md'
+                                        : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                                }`}
+                            >
+                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="relative mb-4">
+                        <select
+                            value={selectedChapter}
+                            onChange={e => setSelectedChapter(Number(e.target.value))}
+                            className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl text-[13px] font-semibold bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none cursor-pointer"
+                        >
+                            <option value={0}>📚 Select a chapter</option>
+                            {chapters.map((ch: any) => (
+                                <option key={ch.number} value={ch.number}>
+                                    {ch.emoji} Ch {ch.number}: {ch.shortName}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                    {selectedChapter === 0 ? (
+                        <div className="text-center py-12">
+                            <BookOpen className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Select a chapter to start practicing</p>
+                        </div>
+                    ) : loading ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
+                        </div>
+                    ) : questions.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No questions available for this chapter yet</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{questions.length} question{questions.length > 1 ? 's' : ''}</p>
+                            {questions.map((q: any, idx: number) => renderQuestionCard(q, idx))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Numericals */}
+            {activeSection === 'numericals' && (
+                <div>
+                    <div className="flex gap-2 mb-4">
+                        {(['Mathematics', 'Science'] as const).map(sub => (
+                            <button
+                                key={sub}
+                                onClick={() => setSelectedSubject(sub)}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                                    selectedSubject === sub
+                                        ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                                        : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                                }`}
+                            >
+                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                            </button>
+                        ))}
+                    </div>
+                    {loading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-amber-500 animate-spin" /></div>
+                    ) : questions.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Hash className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No numerical questions available yet</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{questions.length} numerical{questions.length > 1 ? 's' : ''}</p>
+                            {questions.map((q: any, idx: number) => renderQuestionCard(q, idx))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Most Asked */}
+            {activeSection === 'most-asked' && (
+                <div>
+                    <div className="flex gap-2 mb-4">
+                        {(['Mathematics', 'Science'] as const).map(sub => (
+                            <button
+                                key={sub}
+                                onClick={() => setSelectedSubject(sub)}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                                    selectedSubject === sub
+                                        ? 'bg-violet-600 text-white border-violet-600 shadow-md'
+                                        : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800'
+                                }`}
+                            >
+                                {sub === 'Mathematics' ? '📐 Maths' : '🔬 Science'}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-400" />
+                        Questions from chapters with highest CBSE weightage (≥6 marks)
+                    </p>
+                    {loading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-violet-500 animate-spin" /></div>
+                    ) : questions.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Star className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No questions available yet</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{questions.length} high-weightage question{questions.length > 1 ? 's' : ''}</p>
+                            {questions.map((q: any, idx: number) => renderQuestionCard(q, idx))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Mistake Bucket — delegate to existing PracticeModeTab */}
+            {activeSection === 'mistakes' && (
+                <PracticeModeTab
+                    mistakeItems={mistakeItems}
+                    masteredCount={masteredCount}
+                    onRecordAttempt={onRecordAttempt}
+                />
+            )}
         </motion.div>
     );
 }

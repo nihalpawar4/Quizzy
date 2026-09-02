@@ -25,6 +25,10 @@ import {
     Star,
     Lock,
     BookOpen as BookOpenIcon,
+    FileQuestion,
+    Zap,
+    ChevronDown,
+    FolderOpen,
 } from 'lucide-react';
 import { usePremium } from '@/contexts/PremiumContext';
 import ProfileFrame from '@/components/ui/ProfileFrame';
@@ -32,8 +36,8 @@ import PremiumBadge from '@/components/ui/PremiumBadge';
 import type { ProfileFrameType, BadgeType } from '@/services/premiumService';
 
 interface SidebarProps {
-    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings';
-    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings') => void;
+    activeTab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings' | 'pyq' | 'quick-tools';
+    onTabChange: (tab: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings' | 'pyq' | 'quick-tools') => void;
     userName: string;
     userClass: number;
     userPhotoURL?: string | null;
@@ -54,7 +58,7 @@ interface NavItem {
     label: string;
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
-    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings';
+    tab?: 'tests' | 'reports' | 'notes' | 'homework' | 'practice' | 'help' | 'premium-features' | 'profile-settings' | 'pyq' | 'quick-tools';
     href?: string;
     badge?: number;
     comingSoon?: boolean;
@@ -84,7 +88,74 @@ export default function StudentSidebar({
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { isPremium, activeProfileFrame, activeBadge } = usePremium();
 
-    const studyItems: NavItem[] = [
+    const isClass10 = userClass === 10;
+
+    // Class 10: Maths-focused tabs | Other classes: original tabs
+    const studyItems: NavItem[] = isClass10 ? [
+        {
+            id: 'tests',
+            label: 'Available Tests',
+            shortLabel: 'Tests',
+            icon: BookOpen,
+            tab: 'tests',
+            activeColor: 'bg-[#2563EB]',
+            iconBg: 'bg-blue-50 dark:bg-blue-900/20',
+            iconColor: 'text-[#2563EB]',
+        },
+        {
+            id: 'pyq',
+            label: 'PYQ Bank',
+            shortLabel: 'PYQ',
+            icon: FileQuestion,
+            tab: 'pyq',
+            activeColor: 'bg-amber-500',
+            iconBg: 'bg-amber-50 dark:bg-amber-900/20',
+            iconColor: 'text-amber-600',
+        },
+        {
+            id: 'practice',
+            label: 'Practice Zone',
+            shortLabel: 'Practice',
+            icon: Target,
+            tab: 'practice',
+            badge: mistakeBucketCount,
+            activeColor: 'bg-emerald-600',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+            iconColor: 'text-emerald-600',
+        },
+        {
+            id: 'quick-tools',
+            label: 'Quick Tools',
+            shortLabel: 'Tools',
+            icon: Zap,
+            tab: 'quick-tools',
+            activeColor: 'bg-violet-500',
+            iconBg: 'bg-violet-50 dark:bg-violet-900/20',
+            iconColor: 'text-violet-500',
+        },
+        {
+            id: 'reports',
+            label: 'My Reports',
+            shortLabel: 'Reports',
+            icon: FileText,
+            tab: 'reports',
+            badge: newReportsCount,
+            activeColor: 'bg-purple-500',
+            iconBg: 'bg-purple-50 dark:bg-purple-900/20',
+            iconColor: 'text-purple-500',
+        },
+        {
+            id: 'premium-features',
+            label: 'Premium Features',
+            shortLabel: 'Premium',
+            icon: Crown,
+            tab: 'premium-features',
+            activeColor: 'bg-violet-500',
+            iconBg: 'bg-violet-50 dark:bg-violet-900/20',
+            iconColor: 'text-violet-500',
+            locked: !isPremium,
+        },
+    ] : [
         {
             id: 'tests',
             label: 'Available Tests',
@@ -149,6 +220,33 @@ export default function StudentSidebar({
             iconBg: 'bg-violet-50 dark:bg-violet-900/20',
             iconColor: 'text-violet-500',
             locked: !isPremium,
+        },
+    ];
+
+    // Class 10: Resources dropdown items (Notes & Homework moved here)
+    const [showResources, setShowResources] = useState(false);
+    const resourceItems: NavItem[] = [
+        {
+            id: 'notes',
+            label: 'Study Notes',
+            shortLabel: 'Notes',
+            icon: BookMarked,
+            tab: 'notes',
+            badge: unreadNotesCount,
+            activeColor: 'bg-emerald-500',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+            iconColor: 'text-emerald-500',
+        },
+        {
+            id: 'homework',
+            label: 'Homework',
+            shortLabel: 'HW',
+            icon: BookOpenIcon,
+            tab: 'homework',
+            badge: pendingHomeworkCount,
+            activeColor: 'bg-indigo-500',
+            iconBg: 'bg-indigo-50 dark:bg-indigo-900/20',
+            iconColor: 'text-indigo-500',
         },
     ];
 
@@ -311,8 +409,35 @@ export default function StudentSidebar({
         );
     };
 
-    // Mobile bottom tab items: Tests, Practice, Notes, Premium Features
-    const mobileBottomItems: NavItem[] = [
+    // Mobile bottom tab items: Class 10 gets Maths-focused tabs, others get original
+    const mobileBottomItems: NavItem[] = isClass10 ? [
+        studyItems.find(i => i.id === 'tests')!,
+        {
+            id: 'pyq',
+            label: 'PYQ Bank',
+            shortLabel: 'PYQ',
+            icon: FileQuestion,
+            tab: 'pyq',
+            activeColor: 'bg-amber-500',
+        },
+        {
+            id: 'practice',
+            label: 'Practice Zone',
+            shortLabel: 'Practice',
+            icon: Target,
+            tab: 'practice',
+            badge: mistakeBucketCount,
+            activeColor: 'bg-emerald-600',
+        },
+        {
+            id: 'quick-tools-mobile',
+            label: 'Quick Tools',
+            shortLabel: 'Tools',
+            icon: Zap,
+            tab: 'quick-tools',
+            activeColor: 'bg-violet-500',
+        },
+    ] : [
         studyItems.find(i => i.id === 'tests')!,
         {
             id: 'practice',
@@ -458,7 +583,7 @@ export default function StudentSidebar({
                 <div>
                     {!isCollapsed && (
                         <p className="px-3 mb-2.5 text-[10px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-[0.12em]">
-                            Study
+                            {isClass10 ? 'Board Prep' : 'Study'}
                         </p>
                     )}
                     <div className="space-y-0.5">
@@ -467,6 +592,35 @@ export default function StudentSidebar({
                         )}
                     </div>
                 </div>
+
+                {/* Class 10: Resources Dropdown (Notes & Homework) */}
+                {isClass10 && (
+                    <div>
+                        {!isCollapsed && (
+                            <button
+                                onClick={() => setShowResources(!showResources)}
+                                className="w-full flex items-center justify-between px-3 mb-2.5 group"
+                            >
+                                <p className="text-[10px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-[0.12em]">
+                                    Resources
+                                </p>
+                                <ChevronDown className={`w-3 h-3 text-gray-300 dark:text-gray-600 transition-transform duration-200 ${showResources ? 'rotate-180' : ''}`} />
+                            </button>
+                        )}
+                        {isCollapsed && (
+                            <div className="flex justify-center mb-1">
+                                <FolderOpen className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                            </div>
+                        )}
+                        {(showResources || isCollapsed) && (
+                            <div className="space-y-0.5">
+                                {resourceItems.map((item) =>
+                                    renderNavItem(item, activeTab === item.tab)
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Quick Actions Section */}
                 <div>
@@ -658,21 +812,58 @@ export default function StudentSidebar({
                         >
                             {/* Menu items */}
                             <div className="p-1.5">
-                                {/* Homework */}
-                                <button
-                                    onClick={() => { setShowMoreMenu(false); onTabChange('homework'); }}
-                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-                                >
-                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-                                        <BookOpenIcon className="w-3.5 h-3.5 text-indigo-500" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Homework</span>
-                                    {pendingHomeworkCount > 0 && (
-                                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
-                                            {pendingHomeworkCount}
-                                        </span>
-                                    )}
-                                </button>
+                                {/* Class 10: Notes & Homework in More menu */}
+                                {isClass10 && (
+                                    <>
+                                        <button
+                                            onClick={() => { setShowMoreMenu(false); onTabChange('notes'); }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                        >
+                                            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                                                <BookMarked className="w-3.5 h-3.5 text-emerald-500" />
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Study Notes</span>
+                                            {unreadNotesCount > 0 && (
+                                                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
+                                                    {unreadNotesCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowMoreMenu(false); onTabChange('homework'); }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                        >
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                                                <BookOpenIcon className="w-3.5 h-3.5 text-indigo-500" />
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Homework</span>
+                                            {pendingHomeworkCount > 0 && (
+                                                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
+                                                    {pendingHomeworkCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <div className="my-1 mx-3 border-t border-gray-100 dark:border-gray-800" />
+                                    </>
+                                )}
+
+                                {/* Homework — only for non-Class-10 */}
+                                {!isClass10 && (
+                                    <button
+                                        onClick={() => { setShowMoreMenu(false); onTabChange('homework'); }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                                    >
+                                        <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                                            <BookOpenIcon className="w-3.5 h-3.5 text-indigo-500" />
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Homework</span>
+                                        {pendingHomeworkCount > 0 && (
+                                            <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 font-bold">
+                                                {pendingHomeworkCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
 
                                 {/* My Reports */}
                                 <button
